@@ -1,0 +1,11 @@
+[package]
+name = "guts"
+version = "0.1.0"
+edition = "2023_11"
+authors = ["Abdel <@AbdelStark>"]
+license = "MIT"
+keywords = ["starknet", "git", "signature"]
+categories = ["onchain", "cryptography"]
+
+[dependencies]
+alexandria_math = { git = "https://github.com/keep-starknet-strange/alexandria.git" }
