@@ -8,4 +8,13 @@ keywords = ["starknet", "git", "signature"]
 categories = ["onchain", "cryptography"]
 
 [dependencies]
+starknet = "2.6.0"
+openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts", branch = "main" }
 alexandria_math = { git = "https://github.com/keep-starknet-strange/alexandria.git" }
+
+[tool.fmt]
+sort-module-level-items = true
+
+[[target.starknet-contract]]
+sierra = true
+casm = true
