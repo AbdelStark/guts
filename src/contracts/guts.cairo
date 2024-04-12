@@ -39,7 +39,7 @@ mod Guts {
             ref self: ContractState, pub_key: u256, msg: Span<u8>, signature: Span<u256>
         ) {
             let is_valid: bool = verify_signature(msg, signature, pub_key);
-            println!("valid: {is_valid}");
+            assert!(is_valid, "Invalid signature");
         }
     }
 

@@ -58,14 +58,8 @@ name = "guts"
 version = "0.1.0"
 dependencies = [
  "alexandria_math",
- "openzeppelin",
  "snforge_std",
 ]
-
-[[package]]
-name = "openzeppelin"
-version = "0.11.0"
-source = "git+https://github.com/OpenZeppelin/cairo-contracts?branch=main#17e6bcc83965a660d22dcf2859fb7958c38d908f"
 
 [[package]]
 name = "snforge_std"
