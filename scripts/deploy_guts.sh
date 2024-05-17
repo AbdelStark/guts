@@ -9,11 +9,11 @@ target_dir="./target/dev"
 contract_class_file="$target_dir/guts_Guts.contract_class.json"
 
 # Declare the contract and capture the command output
-#command_output=$(starkli declare $contract_class_file --compiler-version=$compiler_version)
+#command_output=$(starkli declare $contract_class_file --compiler-version=$compiler_version --watch)
 
 from_string="Class hash declared:"
 #class_hash="${command_output#*$from_string}"
-class_hash="0x05e540e69c3a834dc920c45ecb0d57b902130ece8a9a5d8c96b9c30dec5d0733"
+class_hash="0x005bae77c6195ffeee99f8ea5740ff77a0629482bc5beb90b062081d7c90756b"
 
 echo "Deploying contract with class hash: $class_hash"
 

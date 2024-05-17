@@ -9,7 +9,7 @@ categories = ["onchain", "cryptography"]
 
 [dependencies]
 starknet = "2.6.0"
-alexandria_math = { git = "https://github.com/edisontim/alexandria", branch = "enh/optimise-ed25519" }
+alexandria_math = { git = "https://github.com/keep-starknet-strange/alexandria", branch = "main" }
 
 [dev-dependencies]
 snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag = "v0.12.0" }
