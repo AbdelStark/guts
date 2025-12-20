@@ -1,0 +1,28 @@
+[package]
+name = "guts-storage"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Git object storage for Guts - content-addressed storage for blobs, trees, and commits."
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+guts-types = { workspace = true }
+
+# Hashing
+sha1 = { workspace = true }
+
+# Compression
+flate2 = { workspace = true }
+
+# Utilities
+bytes = { workspace = true }
+hex = { workspace = true }
+parking_lot = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+guts-git = { workspace = true }
