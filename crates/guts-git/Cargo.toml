@@ -1,0 +1,26 @@
+[package]
+name = "guts-git"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Git protocol implementation for Guts - pack files and smart HTTP protocol."
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+guts-storage = { workspace = true }
+
+# Hashing
+sha1 = { workspace = true }
+
+# Compression
+flate2 = { workspace = true }
+
+# Utilities
+bytes = { workspace = true }
+hex = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

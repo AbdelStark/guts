@@ -50,7 +50,7 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
 
   # ============================================================================
-  # Tests
+  # Unit Tests
   # ============================================================================
   test:
     name: Test (${{ matrix.os }})
@@ -68,8 +68,29 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Run tests
-        run: cargo test --workspace
+      - name: Run unit tests
+        run: cargo test --workspace --lib
+
+      - name: Run integration tests
+        run: cargo test --workspace --test '*'
+
+  # ============================================================================
+  # E2E Collaboration Test
+  # ============================================================================
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run E2E collaboration tests
+        run: cargo test -p guts-storage --test e2e_collaboration -- --nocapture
 
   # ============================================================================
   # Documentation

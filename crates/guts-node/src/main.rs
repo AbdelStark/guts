@@ -5,9 +5,13 @@
 use clap::Parser;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+mod api;
 mod config;
+
+use api::{create_router, AppState, RepoStore};
 
 /// Guts Node - Decentralized code collaboration infrastructure
 #[derive(Parser, Debug)]
@@ -39,14 +43,15 @@ struct Args {
     local: bool,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     // Initialize tracing
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| format!("guts={}", args.log_level).into()),
+                .unwrap_or_else(|_| format!("guts={},tower_http=debug", args.log_level).into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
@@ -62,17 +67,32 @@ fn main() {
     );
 
     // Create data directory
-    if let Err(e) = std::fs::create_dir_all(&args.data_dir) {
-        tracing::error!(error = %e, "Failed to create data directory");
-        std::process::exit(1);
-    }
+    std::fs::create_dir_all(&args.data_dir)?;
 
-    // TODO: Initialize commonware runtime and start node
-    // This will be expanded with full P2P and consensus integration
+    // Create application state
+    let state = AppState {
+        repos: Arc::new(RepoStore::new()),
+    };
 
-    tracing::info!("Guts node initialized successfully");
-    tracing::info!("Node is ready. Press Ctrl+C to stop.");
+    // Create router
+    let app = create_router(state);
 
-    // For now, just wait for interrupt
-    std::thread::park();
+    // Create TCP listener
+    let listener = tokio::net::TcpListener::bind(&args.api_addr).await?;
+    tracing::info!(addr = %args.api_addr, "HTTP server listening");
+
+    // Start server
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
+
+    tracing::info!("Guts node stopped");
+    Ok(())
+}
+
+async fn shutdown_signal() {
+    tokio::signal::ctrl_c()
+        .await
+        .expect("Failed to install CTRL+C handler");
+    tracing::info!("Shutdown signal received");
 }
