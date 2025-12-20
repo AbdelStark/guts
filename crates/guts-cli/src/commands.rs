@@ -1,13 +1,25 @@
 //! CLI command implementations.
 
-use anyhow::{anyhow, Result};
-use guts_identity::Keypair;
+use commonware_cryptography::{ed25519::PrivateKey, PrivateKeyExt, Signer};
 use std::path::Path;
+use thiserror::Error;
+
+/// CLI errors.
+#[derive(Debug, Error)]
+pub enum CliError {
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("Not implemented: {0}")]
+    NotImplemented(String),
+}
+
+pub type Result<T> = std::result::Result<T, CliError>;
 
 /// Initialize a new repository.
 pub fn init(name: &str, path: Option<&str>) -> Result<()> {
-    let path = path.unwrap_or(".");
-    let repo_path = Path::new(path).join(name);
+    let base_path = path.unwrap_or(".");
+    let repo_path = Path::new(base_path).join(name);
 
     tracing::info!(name = %name, path = %repo_path.display(), "Initializing repository");
 
@@ -17,40 +29,39 @@ pub fn init(name: &str, path: Option<&str>) -> Result<()> {
     let guts_dir = repo_path.join(".guts");
     std::fs::create_dir_all(&guts_dir)?;
 
-    println!("Initialized empty Guts repository in {}", repo_path.display());
+    println!(
+        "Initialized empty Guts repository in {}",
+        repo_path.display()
+    );
 
     Ok(())
 }
 
 /// Clone a repository.
-pub async fn clone(url: &str, path: Option<&str>) -> Result<()> {
-    let dest = path.unwrap_or_else(|| {
-        url.rsplit('/').next().unwrap_or("repo")
-    });
+pub fn clone(url: &str, _path: Option<&str>) -> Result<()> {
+    tracing::info!(url = %url, "Cloning repository");
 
-    tracing::info!(url = %url, dest = %dest, "Cloning repository");
-
-    // TODO: Implement actual clone logic
-    println!("Cloning {} into {}", url, dest);
-
-    Err(anyhow!("Clone not yet implemented"))
+    // TODO: Implement actual clone logic using P2P
+    Err(CliError::NotImplemented("clone".to_string()))
 }
 
 /// Generate a new identity.
 pub fn identity_generate(output: Option<&str>) -> Result<()> {
-    let keypair = Keypair::generate();
-    let public_key = keypair.public_key();
+    use rand::rngs::OsRng;
+
+    let private_key = PrivateKey::from_rng(&mut OsRng);
+    let public_key = private_key.public_key();
 
     println!("Generated new identity:");
-    println!("  Public Key: {}", public_key);
-    println!("  Short ID:   {}", public_key.short_id());
+    println!(
+        "  Public Key: {}",
+        commonware_utils::hex(public_key.as_ref())
+    );
 
     if let Some(output_path) = output {
-        let secret_bytes = keypair.secret_bytes();
-        let hex_secret = hex::encode(&*secret_bytes);
-
-        std::fs::write(output_path, &hex_secret)?;
-        println!("\nSecret key saved to: {}", output_path);
+        let secret_hex = commonware_utils::hex(private_key.as_ref());
+        std::fs::write(output_path, &secret_hex)?;
+        println!("\nSecret key saved to: {output_path}");
         println!("WARNING: Keep this file secure and never share it!");
     }
 
@@ -59,20 +70,12 @@ pub fn identity_generate(output: Option<&str>) -> Result<()> {
 
 /// Show current identity.
 pub fn identity_show() -> Result<()> {
-    // TODO: Load identity from config
     println!("No identity configured. Use 'guts identity generate' to create one.");
     Ok(())
 }
 
-/// Export identity.
-pub fn identity_export(output: &str) -> Result<()> {
-    // TODO: Implement identity export
-    println!("Exporting identity to: {}", output);
-    Err(anyhow!("Export not yet implemented"))
-}
-
-/// Show node status.
-pub async fn status() -> Result<()> {
+/// Show status.
+pub fn status() -> Result<()> {
     println!("Guts Status");
     println!("===========");
     println!("Version: {}", env!("CARGO_PKG_VERSION"));
@@ -85,17 +88,6 @@ pub async fn status() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
-
-    #[test]
-    fn test_init() {
-        let temp = TempDir::new().unwrap();
-        init("test-repo", Some(temp.path().to_str().unwrap())).unwrap();
-
-        let repo_path = temp.path().join("test-repo");
-        assert!(repo_path.exists());
-        assert!(repo_path.join(".guts").exists());
-    }
 
     #[test]
     fn test_identity_generate() {

@@ -12,7 +12,7 @@ This project adheres to a code of conduct. By participating, you are expected to
 2. **Clone your fork** locally
 3. **Set up the development environment**:
    ```bash
-   # Install Rust (1.85+)
+   # Install Rust (stable)
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
    # Clone and build
@@ -73,7 +73,7 @@ docs(readme): update installation instructions
 cargo test --workspace
 
 # Run specific crate tests
-cargo test -p guts-core
+cargo test -p guts-types
 
 # Run with logging
 RUST_LOG=debug cargo test -- --nocapture
@@ -108,16 +108,9 @@ RUST_LOG=debug cargo test -- --nocapture
 
 | Crate | Purpose |
 |-------|---------|
-| `guts-core` | Core types, traits, errors |
-| `guts-identity` | Cryptographic identity |
-| `guts-storage` | Content-addressed storage |
-| `guts-repo` | Git operations |
-| `guts-protocol` | Network protocol |
-| `guts-consensus` | BFT consensus |
-| `guts-p2p` | P2P networking |
-| `guts-api` | HTTP/gRPC API |
-| `guts-node` | Node binary |
-| `guts-cli` | CLI binary |
+| `guts-types` | Core types and primitives |
+| `guts-node` | Full node binary |
+| `guts-cli` | CLI client binary |
 
 ### Design Principles
 

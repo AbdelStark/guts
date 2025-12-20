@@ -1,97 +1,71 @@
-//! Node configuration.
+//! Node configuration types.
 
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::path::Path;
 
-/// Node configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NodeConfig {
-    /// API configuration.
-    pub api: ApiConfig,
-    /// P2P configuration.
-    pub p2p: P2pConfig,
-    /// Storage configuration.
-    pub storage: StorageConfig,
-}
+/// Configuration for the Guts node.
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Config {
+    /// Ed25519 private key (hex encoded).
+    pub private_key: String,
+    /// BLS share (hex encoded).
+    pub share: String,
+    /// BLS polynomial (hex encoded).
+    pub polynomial: String,
 
-/// API server configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ApiConfig {
-    /// Listen address.
-    pub listen_addr: SocketAddr,
-    /// Enable CORS.
-    pub cors_enabled: bool,
-}
-
-/// P2P network configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct P2pConfig {
-    /// Listen address.
-    pub listen_addr: SocketAddr,
-    /// Bootstrap nodes.
-    pub bootstrap_nodes: Vec<SocketAddr>,
-    /// Maximum peers.
-    pub max_peers: usize,
-}
-
-/// Storage configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StorageConfig {
+    /// P2P listen port.
+    pub port: u16,
+    /// Metrics HTTP port.
+    pub metrics_port: u16,
     /// Data directory.
-    pub data_dir: String,
+    pub directory: String,
+    /// Number of worker threads.
+    pub worker_threads: usize,
+    /// Log level.
+    pub log_level: String,
+
+    /// Run in local mode.
+    pub local: bool,
+    /// Allowed peers (public keys).
+    pub allowed_peers: Vec<String>,
+    /// Bootstrap node addresses.
+    pub bootstrappers: Vec<String>,
+
+    /// Message backlog size.
+    pub message_backlog: usize,
+    /// Mailbox size.
+    pub mailbox_size: usize,
+    /// Deque size for pending messages.
+    pub deque_size: usize,
 }
 
-impl Default for NodeConfig {
+impl Default for Config {
     fn default() -> Self {
         Self {
-            api: ApiConfig {
-                listen_addr: "127.0.0.1:8080".parse().unwrap(),
-                cors_enabled: true,
-            },
-            p2p: P2pConfig {
-                listen_addr: "0.0.0.0:9000".parse().unwrap(),
-                bootstrap_nodes: vec![],
-                max_peers: 50,
-            },
-            storage: StorageConfig {
-                data_dir: "./data".to_string(),
-            },
+            private_key: String::new(),
+            share: String::new(),
+            polynomial: String::new(),
+            port: 9000,
+            metrics_port: 9090,
+            directory: "./data".to_string(),
+            worker_threads: 4,
+            log_level: "info".to_string(),
+            local: false,
+            allowed_peers: Vec::new(),
+            bootstrappers: Vec::new(),
+            message_backlog: 1024,
+            mailbox_size: 1024,
+            deque_size: 10,
         }
     }
 }
 
-impl NodeConfig {
-    /// Loads configuration from a TOML file.
-    pub fn from_file(path: &Path) -> Result<Self> {
-        let content = std::fs::read_to_string(path)?;
-        let config: NodeConfig = toml::from_str(&content)?;
-        Ok(config)
-    }
-
-    /// Saves configuration to a TOML file.
-    pub fn to_file(&self, path: &Path) -> Result<()> {
-        let content = toml::to_string_pretty(self)?;
-        std::fs::write(path, content)?;
-        Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::TempDir;
-
-    #[test]
-    fn config_roundtrip() {
-        let temp = TempDir::new().unwrap();
-        let path = temp.path().join("config.toml");
-
-        let config = NodeConfig::default();
-        config.to_file(&path).unwrap();
-
-        let loaded = NodeConfig::from_file(&path).unwrap();
-        assert_eq!(config.api.listen_addr, loaded.api.listen_addr);
-    }
+/// Peer addresses for local mode.
+#[allow(dead_code)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Peers {
+    /// Map of public key to socket address.
+    pub addresses: HashMap<String, SocketAddr>,
 }

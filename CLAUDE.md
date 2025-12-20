@@ -22,7 +22,7 @@ cargo build --workspace
 cargo test --workspace
 
 # Run a local node
-cargo run --bin guts-node -- --config config/dev.toml
+cargo run --bin guts-node -- --api-addr 127.0.0.1:8080
 
 # Run CLI
 cargo run --bin guts -- --help
@@ -33,14 +33,7 @@ cargo run --bin guts -- --help
 ```
 guts/
 ├── crates/                     # Rust workspace crates
-│   ├── guts-core/              # Core types, traits, and errors
-│   ├── guts-identity/          # Cryptographic identity (Ed25519)
-│   ├── guts-storage/           # Content-addressed storage
-│   ├── guts-repo/              # Git repository operations
-│   ├── guts-protocol/          # P2P protocol definitions
-│   ├── guts-consensus/         # BFT consensus integration
-│   ├── guts-p2p/               # Peer-to-peer networking
-│   ├── guts-api/               # HTTP/gRPC API server
+│   ├── guts-types/             # Core types and primitives
 │   ├── guts-node/              # Full node binary
 │   └── guts-cli/               # CLI client binary
 ├── infra/                      # Infrastructure as code
@@ -50,8 +43,6 @@ guts/
 ├── docs/                       # Documentation
 │   ├── PRD.md                  # Product requirements
 │   └── adr/                    # Architecture decisions
-├── tests/                      # Integration tests
-├── benches/                    # Benchmarks
 └── .claude/                    # AI agent configuration
     ├── skills/                 # Claude skills
     └── commands/               # Custom commands
@@ -61,13 +52,11 @@ guts/
 
 | Component | Technology |
 |-----------|------------|
-| Language | Rust 1.85+ |
-| Async Runtime | Tokio |
+| Language | Rust (stable) |
+| Async Runtime | commonware::runtime |
 | Consensus | commonware::consensus |
 | Networking | commonware::p2p |
-| Storage | RocksDB |
-| Git | gitoxide (gix) |
-| API | axum (HTTP) + tonic (gRPC) |
+| Cryptography | commonware::cryptography |
 | Serialization | commonware::codec |
 | CLI | clap |
 
@@ -115,48 +104,30 @@ test(identity): add signature verification tests
 
 ### Implementing a New Protocol Message
 
-1. Define message in `guts-protocol/src/messages.rs`
-2. Implement `Codec` trait
-3. Add handler in `guts-p2p/src/handlers.rs`
-4. Add tests in `guts-protocol/src/tests.rs`
-
-### Adding an API Endpoint
-
-1. Define request/response types in `guts-api/src/types.rs`
-2. Implement handler in `guts-api/src/handlers/`
-3. Add route in `guts-api/src/router.rs`
-4. Add OpenAPI documentation
-5. Add integration test
+1. Define message in `guts-types/src/`
+2. Implement `Codec` trait from commonware
+3. Add tests for the new message type
 
 ## Key Abstractions
 
 ### Identity
 
 ```rust
-use guts_identity::Identity;
+use guts_types::{Identity, PublicKey, Signature};
+use commonware_cryptography::ed25519;
 
-let identity = Identity::generate();
-let signature = identity.sign(message);
-identity.verify(message, &signature)?;
+// Generate a new keypair
+let signer = ed25519::Keypair::random(&mut rand::thread_rng());
+let public_key = signer.public_key();
 ```
 
 ### Repository
 
 ```rust
-use guts_repo::Repository;
+use guts_types::{Repository, RepositoryId};
 
-let repo = Repository::create("my-repo", owner_id).await?;
-let commit_id = repo.commit(tree, message).await?;
-```
-
-### P2P Network
-
-```rust
-use guts_p2p::Node;
-
-let node = Node::new(config).await?;
-node.connect(peer_addr).await?;
-node.broadcast(message).await?;
+let repo = Repository::new("my-repo", owner_id, "A description");
+let repo_id = repo.id();
 ```
 
 ## Error Handling
@@ -164,7 +135,7 @@ node.broadcast(message).await?;
 Each crate defines its own error type:
 
 ```rust
-// In guts-core/src/error.rs
+// In guts-types/src/error.rs
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("not found: {0}")]
@@ -182,8 +153,7 @@ pub enum Error {
 
 - Use `Arc` for shared ownership across async tasks
 - Prefer `bytes::Bytes` for zero-copy networking
-- Batch database operations where possible
-- Use connection pooling for RocksDB
+- Leverage commonware's optimized primitives
 
 ## Security Requirements
 

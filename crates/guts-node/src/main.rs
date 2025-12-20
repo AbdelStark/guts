@@ -1,8 +1,7 @@
-//! # Guts Node
+//! Guts Node - Decentralized code collaboration node.
 //!
-//! The main entry point for running a Guts node.
+//! This is the main entry point for running a Guts validator node.
 
-use anyhow::Result;
 use clap::Parser;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -10,15 +9,13 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod config;
 
-use config::NodeConfig;
-
-/// Guts Node - Decentralized code collaboration
+/// Guts Node - Decentralized code collaboration infrastructure
 #[derive(Parser, Debug)]
 #[command(name = "guts-node")]
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Path to configuration file
-    #[arg(short, long, default_value = "config.toml")]
+    #[arg(short, long, default_value = "config.yaml")]
     config: PathBuf,
 
     /// API listen address
@@ -33,13 +30,16 @@ struct Args {
     #[arg(long, default_value = "./data")]
     data_dir: PathBuf,
 
-    /// Log level
+    /// Log level (trace, debug, info, warn, error)
     #[arg(long, default_value = "info")]
     log_level: String,
+
+    /// Run in local development mode
+    #[arg(long)]
+    local: bool,
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() {
     let args = Args::parse();
 
     // Initialize tracing
@@ -51,58 +51,28 @@ async fn main() -> Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    tracing::info!(
-        version = env!("CARGO_PKG_VERSION"),
-        "Starting Guts node"
-    );
-
-    // Load configuration
-    let config = if args.config.exists() {
-        NodeConfig::from_file(&args.config)?
-    } else {
-        NodeConfig::default()
-    };
+    tracing::info!(version = env!("CARGO_PKG_VERSION"), "Starting Guts node");
 
     tracing::info!(
         api_addr = %args.api_addr,
         p2p_addr = %args.p2p_addr,
         data_dir = %args.data_dir.display(),
-        "Node configuration loaded"
+        local = args.local,
+        "Node configuration"
     );
 
     // Create data directory
-    std::fs::create_dir_all(&args.data_dir)?;
+    if let Err(e) = std::fs::create_dir_all(&args.data_dir) {
+        tracing::error!(error = %e, "Failed to create data directory");
+        std::process::exit(1);
+    }
 
-    // Generate or load identity
-    let keypair = guts_identity::Keypair::generate();
-    tracing::info!(
-        peer_id = %guts_p2p::PeerId::from_public_key(&keypair.public_key()),
-        "Node identity initialized"
-    );
+    // TODO: Initialize commonware runtime and start node
+    // This will be expanded with full P2P and consensus integration
 
-    // Start API server
-    let api_router = guts_api::create_router();
-    let api_handle = tokio::spawn(async move {
-        let listener = tokio::net::TcpListener::bind(args.api_addr).await.unwrap();
-        tracing::info!(addr = %args.api_addr, "API server listening");
-        axum::serve(listener, api_router).await.unwrap();
-    });
+    tracing::info!("Guts node initialized successfully");
+    tracing::info!("Node is ready. Press Ctrl+C to stop.");
 
-    // Start P2P node
-    let p2p_config = guts_p2p::NodeConfig {
-        listen_addr: args.p2p_addr,
-        ..Default::default()
-    };
-    let p2p_node = guts_p2p::Node::new(p2p_config, keypair);
-    p2p_node.start().await?;
-
-    tracing::info!("Guts node running. Press Ctrl+C to stop.");
-
-    // Wait for shutdown signal
-    tokio::signal::ctrl_c().await?;
-
-    tracing::info!("Shutting down...");
-    p2p_node.stop().await;
-
-    Ok(())
+    // For now, just wait for interrupt
+    std::thread::park();
 }

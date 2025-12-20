@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/AbdelStark/guts/actions/workflows/ci.yml/badge.svg)](https://github.com/AbdelStark/guts/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
-[![Rust](https://img.shields.io/badge/rust-1.85%2B-orange.svg)](https://www.rust-lang.org/)
+[![Rust](https://img.shields.io/badge/rust-stable-orange.svg)](https://www.rust-lang.org/)
 
 > **Decentralized code collaboration infrastructure that can't be taken down, censored, or controlled by any single entity.**
 
@@ -43,16 +43,9 @@ cargo run --bin guts-node
 ```
 guts/
 ├── crates/                 # Rust workspace crates
-│   ├── guts-core/          # Core types and traits
-│   ├── guts-identity/      # Cryptographic identity
-│   ├── guts-storage/       # Content-addressed storage
-│   ├── guts-repo/          # Git operations
-│   ├── guts-protocol/      # Network protocol
-│   ├── guts-consensus/     # BFT consensus
-│   ├── guts-p2p/           # P2P networking
-│   ├── guts-api/           # HTTP/gRPC API
-│   ├── guts-node/          # Node binary
-│   └── guts-cli/           # CLI binary
+│   ├── guts-types/         # Core types and primitives
+│   ├── guts-node/          # Full node binary
+│   └── guts-cli/           # CLI client binary
 ├── infra/                  # Infrastructure as code
 ├── docs/                   # Documentation
 └── .github/                # CI/CD workflows
@@ -62,7 +55,7 @@ guts/
 
 ### Prerequisites
 
-- Rust 1.85+
+- Rust (stable)
 - Docker (optional, for containerized development)
 
 ### Building
@@ -117,4 +110,5 @@ at your option.
 ## Acknowledgments
 
 - [commonware](https://github.com/commonwarexyz/monorepo) - Modular blockchain primitives
+- [Alto](https://github.com/commonwarexyz/alto) - Minimal blockchain reference implementation
 - [gitoxide](https://github.com/Byron/gitoxide) - Pure Rust Git implementation

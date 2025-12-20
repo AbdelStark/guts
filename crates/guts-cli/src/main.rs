@@ -1,8 +1,5 @@
-//! # Guts CLI
-//!
-//! Command-line interface for interacting with Guts.
+//! Guts CLI - Command-line interface for Guts.
 
-use anyhow::Result;
 use clap::{Parser, Subcommand};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -13,7 +10,7 @@ mod commands;
 #[command(name = "guts")]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    /// Increase verbosity
+    /// Increase verbosity (-v, -vv, -vvv)
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
 
@@ -47,7 +44,7 @@ enum Commands {
         command: IdentityCommands,
     },
 
-    /// Show node status
+    /// Show status
     Status,
 
     /// Show version information
@@ -65,17 +62,9 @@ enum IdentityCommands {
 
     /// Show current identity
     Show,
-
-    /// Export identity
-    Export {
-        /// Output path
-        #[arg(short, long)]
-        output: String,
-    },
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() {
     let cli = Cli::parse();
 
     // Initialize tracing
@@ -94,31 +83,22 @@ async fn main() -> Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    match cli.command {
-        Commands::Init { name, path } => {
-            commands::init(&name, path.as_deref())?;
-        }
-        Commands::Clone { url, path } => {
-            commands::clone(&url, path.as_deref()).await?;
-        }
+    let result = match cli.command {
+        Commands::Init { name, path } => commands::init(&name, path.as_deref()),
+        Commands::Clone { url, path } => commands::clone(&url, path.as_deref()),
         Commands::Identity { command } => match command {
-            IdentityCommands::Generate { output } => {
-                commands::identity_generate(output.as_deref())?;
-            }
-            IdentityCommands::Show => {
-                commands::identity_show()?;
-            }
-            IdentityCommands::Export { output } => {
-                commands::identity_export(&output)?;
-            }
+            IdentityCommands::Generate { output } => commands::identity_generate(output.as_deref()),
+            IdentityCommands::Show => commands::identity_show(),
         },
-        Commands::Status => {
-            commands::status().await?;
-        }
+        Commands::Status => commands::status(),
         Commands::Version => {
             println!("guts {}", env!("CARGO_PKG_VERSION"));
+            Ok(())
         }
-    }
+    };
 
-    Ok(())
+    if let Err(e) = result {
+        eprintln!("Error: {e}");
+        std::process::exit(1);
+    }
 }
