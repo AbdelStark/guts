@@ -1,0 +1,73 @@
+[workspace]
+members = [
+    "crates/guts-types",
+    "crates/guts-node",
+    "crates/guts-cli",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/AbdelStark/guts"
+homepage = "https://github.com/AbdelStark/guts"
+authors = ["Guts Contributors"]
+
+[workspace.dependencies]
+# Internal crates
+guts-types = { version = "0.1.0", path = "crates/guts-types" }
+
+# Commonware dependencies (matching Alto's versions)
+commonware-broadcast = "0.0.63"
+commonware-codec = "0.0.63"
+commonware-consensus = "0.0.63"
+commonware-cryptography = "0.0.63"
+commonware-deployer = { version = "0.0.63", default-features = false }
+commonware-macros = "0.0.63"
+commonware-p2p = "0.0.63"
+commonware-resolver = "0.0.63"
+commonware-runtime = "0.0.63"
+commonware-storage = "0.0.63"
+commonware-stream = "0.0.63"
+commonware-utils = "0.0.63"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+prost = "0.13.5"
+prost-build = "0.13.5"
+
+# Error handling
+thiserror = "2.0.12"
+
+# Async
+futures = "0.3.31"
+futures-util = "0.3.31"
+
+# Logging & Tracing
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
+
+# Utilities
+bytes = "1.7.1"
+rand = "0.8.5"
+clap = "4.5"
+uuid = { version = "1.15", features = ["v4"] }
+governor = "0.6.3"
+prometheus-client = "0.22.3"
+
+# Testing
+proptest = "1.5"
+
+[profile.bench]
+overflow-checks = true
+
+[profile.dev]
+overflow-checks = true
+
+[profile.release]
+overflow-checks = true
+
+[profile.test]
+overflow-checks = true

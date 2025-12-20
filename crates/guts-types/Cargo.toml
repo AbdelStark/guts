@@ -1,0 +1,13 @@
+[package]
+name = "guts-types"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Common types used throughout Guts - a decentralized GitHub alternative."
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+commonware-cryptography = { workspace = true }
+commonware-utils = { workspace = true }
+serde = { workspace = true }

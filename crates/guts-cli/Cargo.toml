@@ -1,0 +1,24 @@
+[package]
+name = "guts-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "CLI tools for interacting with Guts - a decentralized GitHub alternative."
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+guts-types = { workspace = true }
+commonware-cryptography = { workspace = true }
+commonware-utils = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+thiserror = { workspace = true }
+rand = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[[bin]]
+name = "guts"
+path = "src/main.rs"

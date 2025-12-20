@@ -1,0 +1,78 @@
+# Guts Development Environment
+# Usage: docker-compose up -d
+
+version: '3.8'
+
+services:
+  # Node 1 - Bootstrap node
+  node1:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    container_name: guts-node1
+    ports:
+      - "8081:8080"   # API
+      - "9001:9000"   # P2P
+    environment:
+      - GUTS_NODE_ID=node1
+      - GUTS_LOG_LEVEL=info
+      - RUST_LOG=guts=info
+    volumes:
+      - node1-data:/data
+    networks:
+      - guts-network
+    restart: unless-stopped
+
+  # Node 2
+  node2:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    container_name: guts-node2
+    ports:
+      - "8082:8080"
+      - "9002:9000"
+    environment:
+      - GUTS_NODE_ID=node2
+      - GUTS_BOOTSTRAP_NODES=node1:9000
+      - GUTS_LOG_LEVEL=info
+      - RUST_LOG=guts=info
+    volumes:
+      - node2-data:/data
+    networks:
+      - guts-network
+    depends_on:
+      - node1
+    restart: unless-stopped
+
+  # Node 3
+  node3:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    container_name: guts-node3
+    ports:
+      - "8083:8080"
+      - "9003:9000"
+    environment:
+      - GUTS_NODE_ID=node3
+      - GUTS_BOOTSTRAP_NODES=node1:9000,node2:9000
+      - GUTS_LOG_LEVEL=info
+      - RUST_LOG=guts=info
+    volumes:
+      - node3-data:/data
+    networks:
+      - guts-network
+    depends_on:
+      - node1
+      - node2
+    restart: unless-stopped
+
+networks:
+  guts-network:
+    driver: bridge
+
+volumes:
+  node1-data:
+  node2-data:
+  node3-data:

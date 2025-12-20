@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/schemas/settings.json",
+  "project": {
+    "name": "guts",
+    "description": "Decentralized GitHub alternative built on commonware"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(cargo:*)",
+      "Bash(git:*)",
+      "Bash(docker:*)",
+      "Bash(terraform:*)",
+      "Bash(kubectl:*)",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep"
+    ]
+  },
+  "mcpServers": {},
+  "skills": {
+    "directories": [
+      ".claude/skills"
+    ]
+  }
+}

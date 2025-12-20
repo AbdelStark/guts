@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: guts
+  labels:
+    app.kubernetes.io/name: guts
+    app.kubernetes.io/part-of: guts-network
