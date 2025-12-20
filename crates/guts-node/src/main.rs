@@ -10,6 +10,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod api;
 mod config;
+mod p2p;
 
 use api::{create_router, AppState, RepoStore};
 
@@ -72,6 +73,7 @@ async fn main() -> anyhow::Result<()> {
     // Create application state
     let state = AppState {
         repos: Arc::new(RepoStore::new()),
+        p2p: None, // P2P is optional, enabled via configuration
     };
 
     // Create router
