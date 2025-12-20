@@ -1,0 +1,53 @@
+version: 2
+updates:
+  # Rust dependencies
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      rust-dependencies:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "tokio*"
+          - "axum*"
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+      - "rust"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "ci"
+
+  # Docker
+  - package-ecosystem: "docker"
+    directory: "/infra/docker"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "docker"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # Terraform
+  - package-ecosystem: "terraform"
+    directory: "/infra/terraform"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "infra"
+    labels:
+      - "dependencies"
+      - "infrastructure"

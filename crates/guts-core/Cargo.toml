@@ -1,0 +1,30 @@
+[package]
+name = "guts-core"
+description = "Core types, traits, and error definitions for Guts"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+thiserror = { workspace = true }
+serde = { workspace = true }
+bytes = { workspace = true }
+hex = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[lints.clippy]
+all = "warn"
+pedantic = "warn"

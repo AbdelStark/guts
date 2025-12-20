@@ -1,0 +1,34 @@
+[package]
+name = "guts-repo"
+description = "Git repository operations for Guts"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+guts-core = { workspace = true }
+guts-identity = { workspace = true }
+guts-storage = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+# Git operations via gitoxide
+gix = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tokio-test = { workspace = true }
+pretty_assertions = { workspace = true }
+
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[lints.clippy]
+all = "warn"
+pedantic = "warn"

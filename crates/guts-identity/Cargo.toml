@@ -1,0 +1,31 @@
+[package]
+name = "guts-identity"
+description = "Cryptographic identity management for Guts"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+guts-core = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+ed25519-dalek = { workspace = true }
+rand = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+zeroize = { version = "1.8", features = ["derive"] }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+proptest = { workspace = true }
+
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[lints.clippy]
+all = "warn"
+pedantic = "warn"

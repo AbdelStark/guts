@@ -1,0 +1,95 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # ============================================================================
+  # Dependency Audit
+  # ============================================================================
+  audit:
+    name: Cargo Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Run audit
+        run: cargo audit --json > audit.json || true
+
+      - name: Upload audit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-audit
+          path: audit.json
+
+  # ============================================================================
+  # License Check
+  # ============================================================================
+  licenses:
+    name: License Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cargo-deny
+        run: cargo install cargo-deny
+
+      - name: Check licenses
+        run: cargo deny check licenses
+
+  # ============================================================================
+  # SAST with CodeQL
+  # ============================================================================
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: rust
+
+      - name: Build
+        run: cargo build --workspace
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  # ============================================================================
+  # Container Scanning
+  # ============================================================================
+  container-scan:
+    name: Container Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t guts:scan -f infra/docker/Dockerfile .
+
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'guts:scan'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'

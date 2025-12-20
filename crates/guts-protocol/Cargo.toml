@@ -1,0 +1,28 @@
+[package]
+name = "guts-protocol"
+description = "Network protocol definitions for Guts"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+guts-core = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+bytes = { workspace = true }
+bincode = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+proptest = { workspace = true }
+
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[lints.clippy]
+all = "warn"
+pedantic = "warn"

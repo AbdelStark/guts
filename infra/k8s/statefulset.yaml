@@ -1,0 +1,124 @@
+---
+# Guts Node StatefulSet
+# Provides stable network identities and persistent storage for nodes
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: guts-node
+  namespace: guts
+  labels:
+    app.kubernetes.io/name: guts-node
+    app.kubernetes.io/component: node
+spec:
+  serviceName: guts-nodes
+  replicas: 3
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: guts-node
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: guts-node
+        app.kubernetes.io/component: node
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: guts-node
+          image: ghcr.io/abdelstark/guts-node:latest
+          imagePullPolicy: Always
+          ports:
+            - name: api
+              containerPort: 8080
+              protocol: TCP
+            - name: p2p
+              containerPort: 9000
+              protocol: TCP
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: GUTS_NODE_ID
+              value: "$(POD_NAME)"
+            - name: GUTS_LOG_LEVEL
+              value: "info"
+            - name: RUST_LOG
+              value: "guts=info"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: api
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: api
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 50Gi
+
+---
+# Headless service for StatefulSet
+apiVersion: v1
+kind: Service
+metadata:
+  name: guts-nodes
+  namespace: guts
+  labels:
+    app.kubernetes.io/name: guts-node
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: guts-node
+  ports:
+    - name: api
+      port: 8080
+      targetPort: api
+    - name: p2p
+      port: 9000
+      targetPort: p2p
+
+---
+# External service for API access
+apiVersion: v1
+kind: Service
+metadata:
+  name: guts-api
+  namespace: guts
+  labels:
+    app.kubernetes.io/name: guts-api
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: guts-node
+  ports:
+    - name: api
+      port: 80
+      targetPort: api
