@@ -122,13 +122,13 @@ jobs:
   # MSRV Check
   # ============================================================================
   msrv:
-    name: MSRV (1.75)
+    name: MSRV (1.85)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust 1.75
-        uses: dtolnay/rust-toolchain@1.75
+      - name: Install Rust 1.85
+        uses: dtolnay/rust-toolchain@1.85
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2

@@ -12,7 +12,7 @@ This project adheres to a code of conduct. By participating, you are expected to
 2. **Clone your fork** locally
 3. **Set up the development environment**:
    ```bash
-   # Install Rust (1.75+)
+   # Install Rust (1.85+)
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
    # Clone and build

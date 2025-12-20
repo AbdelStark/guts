@@ -61,7 +61,7 @@ guts/
 
 | Component | Technology |
 |-----------|------------|
-| Language | Rust 1.75+ |
+| Language | Rust 1.85+ |
 | Async Runtime | Tokio |
 | Consensus | commonware::consensus |
 | Networking | commonware::p2p |

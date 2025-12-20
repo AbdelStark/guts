@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/AbdelStark/guts/actions/workflows/ci.yml/badge.svg)](https://github.com/AbdelStark/guts/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
-[![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
+[![Rust](https://img.shields.io/badge/rust-1.85%2B-orange.svg)](https://www.rust-lang.org/)
 
 > **Decentralized code collaboration infrastructure that can't be taken down, censored, or controlled by any single entity.**
 
@@ -62,7 +62,7 @@ guts/
 
 ### Prerequisites
 
-- Rust 1.75+
+- Rust 1.85+
 - Docker (optional, for containerized development)
 
 ### Building
