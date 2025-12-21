@@ -102,9 +102,9 @@ impl UserStore {
 
         // Check for duplicate public key
         if pubkey_index.contains_key(&public_key) {
-            return Err(CompatError::UsernameExists(format!(
-                "public key already registered"
-            )));
+            return Err(CompatError::UsernameExists(
+                "public key already registered".to_string(),
+            ));
         }
 
         let id = self.next_id.fetch_add(1, Ordering::SeqCst);
@@ -229,9 +229,7 @@ impl TokenStore {
             .ok_or(CompatError::TokenNotFound)?;
 
         let mut tokens = self.tokens.write();
-        let token = tokens
-            .get_mut(id)
-            .ok_or(CompatError::TokenNotFound)?;
+        let token = tokens.get_mut(id).ok_or(CompatError::TokenNotFound)?;
 
         // Verify the secret
         token.verify(&token_value.secret)?;
@@ -575,7 +573,9 @@ mod tests {
         let store = UserStore::new();
 
         // Create a user
-        let user = store.create("alice".to_string(), "pubkey123".to_string()).unwrap();
+        let user = store
+            .create("alice".to_string(), "pubkey123".to_string())
+            .unwrap();
         assert_eq!(user.username, "alice");
 
         // Get by ID
@@ -597,7 +597,12 @@ mod tests {
 
         // Create a token
         let (token, plaintext) = store
-            .create(1, "test token".to_string(), vec![TokenScope::RepoRead], None)
+            .create(
+                1,
+                "test token".to_string(),
+                vec![TokenScope::RepoRead],
+                None,
+            )
             .unwrap();
 
         assert!(plaintext.starts_with("guts_"));

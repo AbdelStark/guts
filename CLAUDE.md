@@ -147,6 +147,26 @@ Key architectural decisions are documented in `docs/adr/`:
 - Use `thiserror` for library errors
 - Prefer explicit over implicit
 
+### Pre-Commit Validation (REQUIRED)
+
+**IMPORTANT: Always run these checks before committing and pushing:**
+
+```bash
+# 1. Format code
+cargo fmt --all
+
+# 2. Run linter (fix all warnings)
+cargo clippy --workspace --all-targets
+
+# 3. Run tests
+cargo test --workspace
+```
+
+All three checks MUST pass before any commit. This ensures:
+- Consistent code formatting across the codebase
+- No clippy warnings or errors
+- All tests remain passing
+
 ### Testing
 
 ```bash

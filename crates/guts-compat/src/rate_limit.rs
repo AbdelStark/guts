@@ -47,10 +47,10 @@ impl RateLimitResource {
     /// Get the reset interval for this resource.
     pub fn reset_interval(&self) -> Duration {
         match self {
-            Self::Core => Duration::from_secs(3600),       // 1 hour
-            Self::Search => Duration::from_secs(60),       // 1 minute
-            Self::Graphql => Duration::from_secs(3600),    // 1 hour
-            Self::Git => Duration::from_secs(3600),        // 1 hour
+            Self::Core => Duration::from_secs(3600),         // 1 hour
+            Self::Search => Duration::from_secs(60),         // 1 minute
+            Self::Graphql => Duration::from_secs(3600),      // 1 hour
+            Self::Git => Duration::from_secs(3600),          // 1 hour
             Self::CodeScanning => Duration::from_secs(3600), // 1 hour
         }
     }

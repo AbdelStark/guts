@@ -36,10 +36,7 @@ impl ArchiveFormat {
     /// Get the Content-Disposition filename.
     pub fn filename(&self, repo_name: &str, ref_name: &str) -> String {
         // Sanitize ref name for filename
-        let safe_ref = ref_name
-            .replace('/', "-")
-            .replace('\\', "-")
-            .replace(':', "-");
+        let safe_ref = ref_name.replace(['/', '\\', ':'], "-");
         format!("{}-{}{}", repo_name, safe_ref, self.extension())
     }
 }

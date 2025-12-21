@@ -226,7 +226,9 @@ pub fn detect_spdx_id(content: &str) -> Option<&'static str> {
     let content_lower = content.to_lowercase();
 
     // Check for common license signatures
-    if content_lower.contains("mit license") || content_lower.contains("permission is hereby granted, free of charge") {
+    if content_lower.contains("mit license")
+        || content_lower.contains("permission is hereby granted, free of charge")
+    {
         Some("MIT")
     } else if content_lower.contains("apache license") && content_lower.contains("version 2.0") {
         Some("Apache-2.0")
@@ -278,7 +280,7 @@ pub struct ContentsQuery {
 pub fn base64_encode(data: &[u8]) -> String {
     const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-    let mut result = String::with_capacity((data.len() + 2) / 3 * 4);
+    let mut result = String::with_capacity(data.len().div_ceil(3) * 4);
 
     for chunk in data.chunks(3) {
         let b0 = chunk[0] as usize;

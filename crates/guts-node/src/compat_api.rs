@@ -80,10 +80,10 @@ use axum::{
     Json, Router,
 };
 use guts_compat::{
-    AddSshKeyRequest, ArchiveEntry, ArchiveFormat, CompatError, CompatStore, ContentEntry,
-    ContentType, CreateReleaseRequest, CreateTokenRequest, CreateUserRequest, PaginationParams,
-    UpdateReleaseRequest, UpdateUserRequest, User,
-    base64_encode, create_archive, is_readme_file, paginate,
+    base64_encode, create_archive, is_readme_file, paginate, AddSshKeyRequest, ArchiveEntry,
+    ArchiveFormat, CompatError, CompatStore, ContentEntry, ContentType, CreateReleaseRequest,
+    CreateTokenRequest, CreateUserRequest, PaginationParams, UpdateReleaseRequest,
+    UpdateUserRequest, User,
 };
 use guts_storage::{GitObject, ObjectId, ObjectType, Reference, Repository};
 use serde::{Deserialize, Serialize};
@@ -99,7 +99,10 @@ pub fn compat_routes() -> Router<AppState> {
             "/api/users/{username}",
             get(get_user).patch(update_user_by_name),
         )
-        .route("/api/user", get(get_current_user).patch(update_current_user))
+        .route(
+            "/api/user",
+            get(get_current_user).patch(update_current_user),
+        )
         // Token endpoints
         .route("/api/user/tokens", get(list_tokens).post(create_token))
         .route("/api/user/tokens/{id}", get(get_token).delete(revoke_token))
@@ -124,7 +127,9 @@ pub fn compat_routes() -> Router<AppState> {
         )
         .route(
             "/api/repos/{owner}/{name}/releases/{id}",
-            get(get_release).patch(update_release).delete(delete_release),
+            get(get_release)
+                .patch(update_release)
+                .delete(delete_release),
         )
         // Contents endpoints
         .route("/api/repos/{owner}/{name}/contents", get(get_contents_root))
@@ -153,7 +158,8 @@ impl From<CompatError> for CompatApiError {
 
 impl IntoResponse for CompatApiError {
     fn into_response(self) -> Response {
-        let status = StatusCode::from_u16(self.0.status_code()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        let status =
+            StatusCode::from_u16(self.0.status_code()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
         let message = self.0.github_message();
 
         (
@@ -186,7 +192,9 @@ fn get_identity_from_header(headers: &axum::http::HeaderMap) -> Option<String> {
 
 /// Get user ID from identity header.
 fn get_user_from_identity(compat: &CompatStore, identity: &str) -> Option<User> {
-    compat.users.get_by_username(identity)
+    compat
+        .users
+        .get_by_username(identity)
         .or_else(|| compat.users.get_by_public_key(identity))
 }
 
@@ -232,7 +240,7 @@ async fn get_user(
         .compat
         .users
         .get_by_username(&username)
-        .ok_or_else(|| CompatError::UserNotFound(username))?;
+        .ok_or(CompatError::UserNotFound(username))?;
 
     // Count repos owned by user
     let repos = state.repos.list();
@@ -251,7 +259,7 @@ async fn update_user_by_name(
         .compat
         .users
         .get_by_username(&username)
-        .ok_or_else(|| CompatError::UserNotFound(username))?;
+        .ok_or(CompatError::UserNotFound(username))?;
 
     if let Some(name) = req.name {
         user.display_name = Some(name);
@@ -283,11 +291,10 @@ async fn get_current_user(
     State(state): State<AppState>,
     headers: axum::http::HeaderMap,
 ) -> Result<impl IntoResponse, CompatApiError> {
-    let identity = get_identity_from_header(&headers)
-        .ok_or_else(|| CompatError::TokenNotFound)?;
+    let identity = get_identity_from_header(&headers).ok_or(CompatError::TokenNotFound)?;
 
     let user = get_user_from_identity(&state.compat, &identity)
-        .ok_or_else(|| CompatError::UserNotFound(identity))?;
+        .ok_or(CompatError::UserNotFound(identity))?;
 
     let repos = state.repos.list();
     let repo_count = repos.iter().filter(|r| r.owner == user.username).count() as u64;
@@ -301,11 +308,10 @@ async fn update_current_user(
     headers: axum::http::HeaderMap,
     Json(req): Json<UpdateUserRequest>,
 ) -> Result<impl IntoResponse, CompatApiError> {
-    let identity = get_identity_from_header(&headers)
-        .ok_or_else(|| CompatError::TokenNotFound)?;
+    let identity = get_identity_from_header(&headers).ok_or(CompatError::TokenNotFound)?;
 
     let mut user = get_user_from_identity(&state.compat, &identity)
-        .ok_or_else(|| CompatError::UserNotFound(identity))?;
+        .ok_or(CompatError::UserNotFound(identity))?;
 
     if let Some(name) = req.name {
         user.display_name = Some(name);
@@ -339,11 +345,10 @@ async fn list_tokens(
     State(state): State<AppState>,
     headers: axum::http::HeaderMap,
 ) -> Result<impl IntoResponse, CompatApiError> {
-    let identity = get_identity_from_header(&headers)
-        .ok_or_else(|| CompatError::TokenNotFound)?;
+    let identity = get_identity_from_header(&headers).ok_or(CompatError::TokenNotFound)?;
 
     let user = get_user_from_identity(&state.compat, &identity)
-        .ok_or_else(|| CompatError::UserNotFound(identity))?;
+        .ok_or(CompatError::UserNotFound(identity))?;
 
     let tokens = state.compat.tokens.list_for_user(user.id);
     let responses: Vec<_> = tokens.iter().map(|t| t.to_response(None)).collect();
@@ -357,11 +362,10 @@ async fn create_token(
     headers: axum::http::HeaderMap,
     Json(req): Json<CreateTokenRequest>,
 ) -> Result<impl IntoResponse, CompatApiError> {
-    let identity = get_identity_from_header(&headers)
-        .ok_or_else(|| CompatError::TokenNotFound)?;
+    let identity = get_identity_from_header(&headers).ok_or(CompatError::TokenNotFound)?;
 
     let user = get_user_from_identity(&state.compat, &identity)
-        .ok_or_else(|| CompatError::UserNotFound(identity))?;
+        .ok_or(CompatError::UserNotFound(identity))?;
 
     let expires_at = req.expires_in_days.map(|days| {
         std::time::SystemTime::now()
@@ -376,7 +380,10 @@ async fn create_token(
         .tokens
         .create(user.id, req.name, req.scopes, expires_at)?;
 
-    Ok((StatusCode::CREATED, Json(token.to_response(Some(&plaintext)))))
+    Ok((
+        StatusCode::CREATED,
+        Json(token.to_response(Some(&plaintext))),
+    ))
 }
 
 /// Gets a token by ID.
@@ -385,11 +392,10 @@ async fn get_token(
     headers: axum::http::HeaderMap,
     Path(id): Path<u64>,
 ) -> Result<impl IntoResponse, CompatApiError> {
-    let identity = get_identity_from_header(&headers)
-        .ok_or_else(|| CompatError::TokenNotFound)?;
+    let identity = get_identity_from_header(&headers).ok_or(CompatError::TokenNotFound)?;
 
     let user = get_user_from_identity(&state.compat, &identity)
-        .ok_or_else(|| CompatError::UserNotFound(identity))?;
+        .ok_or(CompatError::UserNotFound(identity))?;
 
     let token = state
         .compat
@@ -407,11 +413,10 @@ async fn revoke_token(
     headers: axum::http::HeaderMap,
     Path(id): Path<u64>,
 ) -> Result<impl IntoResponse, CompatApiError> {
-    let identity = get_identity_from_header(&headers)
-        .ok_or_else(|| CompatError::TokenNotFound)?;
+    let identity = get_identity_from_header(&headers).ok_or(CompatError::TokenNotFound)?;
 
     let user = get_user_from_identity(&state.compat, &identity)
-        .ok_or_else(|| CompatError::UserNotFound(identity))?;
+        .ok_or(CompatError::UserNotFound(identity))?;
 
     // Verify token belongs to user
     let token = state
@@ -433,11 +438,10 @@ async fn list_ssh_keys(
     State(state): State<AppState>,
     headers: axum::http::HeaderMap,
 ) -> Result<impl IntoResponse, CompatApiError> {
-    let identity = get_identity_from_header(&headers)
-        .ok_or_else(|| CompatError::TokenNotFound)?;
+    let identity = get_identity_from_header(&headers).ok_or(CompatError::TokenNotFound)?;
 
     let user = get_user_from_identity(&state.compat, &identity)
-        .ok_or_else(|| CompatError::UserNotFound(identity))?;
+        .ok_or(CompatError::UserNotFound(identity))?;
 
     let keys = state.compat.ssh_keys.list_for_user(user.id);
     let responses: Vec<_> = keys.iter().map(|k| k.to_response()).collect();
@@ -451,11 +455,10 @@ async fn add_ssh_key(
     headers: axum::http::HeaderMap,
     Json(req): Json<AddSshKeyRequest>,
 ) -> Result<impl IntoResponse, CompatApiError> {
-    let identity = get_identity_from_header(&headers)
-        .ok_or_else(|| CompatError::TokenNotFound)?;
+    let identity = get_identity_from_header(&headers).ok_or(CompatError::TokenNotFound)?;
 
     let user = get_user_from_identity(&state.compat, &identity)
-        .ok_or_else(|| CompatError::UserNotFound(identity))?;
+        .ok_or(CompatError::UserNotFound(identity))?;
 
     let key = state.compat.ssh_keys.add(user.id, req.title, req.key)?;
 
@@ -468,11 +471,10 @@ async fn get_ssh_key(
     headers: axum::http::HeaderMap,
     Path(id): Path<u64>,
 ) -> Result<impl IntoResponse, CompatApiError> {
-    let identity = get_identity_from_header(&headers)
-        .ok_or_else(|| CompatError::TokenNotFound)?;
+    let identity = get_identity_from_header(&headers).ok_or(CompatError::TokenNotFound)?;
 
     let user = get_user_from_identity(&state.compat, &identity)
-        .ok_or_else(|| CompatError::UserNotFound(identity))?;
+        .ok_or(CompatError::UserNotFound(identity))?;
 
     let key = state
         .compat
@@ -490,11 +492,10 @@ async fn remove_ssh_key(
     headers: axum::http::HeaderMap,
     Path(id): Path<u64>,
 ) -> Result<impl IntoResponse, CompatApiError> {
-    let identity = get_identity_from_header(&headers)
-        .ok_or_else(|| CompatError::TokenNotFound)?;
+    let identity = get_identity_from_header(&headers).ok_or(CompatError::TokenNotFound)?;
 
     let user = get_user_from_identity(&state.compat, &identity)
-        .ok_or_else(|| CompatError::UserNotFound(identity))?;
+        .ok_or(CompatError::UserNotFound(identity))?;
 
     // Verify key belongs to user
     let key = state
@@ -531,8 +532,7 @@ async fn create_release(
     headers: axum::http::HeaderMap,
     Json(req): Json<CreateReleaseRequest>,
 ) -> Result<impl IntoResponse, CompatApiError> {
-    let identity = get_identity_from_header(&headers)
-        .unwrap_or_else(|| "anonymous".to_string());
+    let identity = get_identity_from_header(&headers).unwrap_or_else(|| "anonymous".to_string());
 
     let repo_key = format!("{}/{}", owner, name);
     let target = req.target_commitish.unwrap_or_else(|| "main".to_string());
@@ -581,7 +581,7 @@ async fn get_release_by_tag(
         .compat
         .releases
         .get_by_tag(&repo_key, &tag)
-        .ok_or_else(|| CompatError::ReleaseNotFound(tag))?;
+        .ok_or(CompatError::ReleaseNotFound(tag))?;
 
     Ok(Json(release.to_response()))
 }
@@ -713,8 +713,8 @@ async fn get_contents_internal(
         .get(&commit_sha)
         .map_err(|_| CompatError::InvalidRef(ref_name.to_string()))?;
 
-    let tree_sha = parse_commit_tree(&commit)
-        .ok_or_else(|| CompatError::InvalidRef(ref_name.to_string()))?;
+    let tree_sha =
+        parse_commit_tree(&commit).ok_or_else(|| CompatError::InvalidRef(ref_name.to_string()))?;
 
     // Navigate to the requested path
     let entries = if path.is_empty() {
@@ -732,26 +732,14 @@ async fn get_contents_internal(
                 };
 
                 let mut entry = match content_type {
-                    ContentType::Dir => ContentEntry::dir(
-                        e.name.clone(),
-                        e.name.clone(),
-                        e.oid.to_hex(),
-                    ),
+                    ContentType::Dir => {
+                        ContentEntry::dir(e.name.clone(), e.name.clone(), e.oid.to_hex())
+                    }
                     ContentType::File => {
                         let size = get_blob(&repo, &e.oid).map(|b| b.len()).unwrap_or(0) as u64;
-                        ContentEntry::file(
-                            e.name.clone(),
-                            e.name.clone(),
-                            e.oid.to_hex(),
-                            size,
-                        )
+                        ContentEntry::file(e.name.clone(), e.name.clone(), e.oid.to_hex(), size)
                     }
-                    _ => ContentEntry::file(
-                        e.name.clone(),
-                        e.name.clone(),
-                        e.oid.to_hex(),
-                        0,
-                    ),
+                    _ => ContentEntry::file(e.name.clone(), e.name.clone(), e.oid.to_hex(), 0),
                 };
                 entry.content_type = content_type;
                 entry
@@ -790,13 +778,12 @@ async fn get_contents_internal(
                             };
 
                             let mut entry = match content_type {
-                                ContentType::Dir => ContentEntry::dir(
-                                    e.name.clone(),
-                                    full_path,
-                                    e.oid.to_hex(),
-                                ),
+                                ContentType::Dir => {
+                                    ContentEntry::dir(e.name.clone(), full_path, e.oid.to_hex())
+                                }
                                 ContentType::File => {
-                                    let size = get_blob(&repo, &e.oid).map(|b| b.len()).unwrap_or(0) as u64;
+                                    let size = get_blob(&repo, &e.oid).map(|b| b.len()).unwrap_or(0)
+                                        as u64;
                                     ContentEntry::file(
                                         e.name.clone(),
                                         full_path,
@@ -804,12 +791,9 @@ async fn get_contents_internal(
                                         size,
                                     )
                                 }
-                                _ => ContentEntry::file(
-                                    e.name.clone(),
-                                    full_path,
-                                    e.oid.to_hex(),
-                                    0,
-                                ),
+                                _ => {
+                                    ContentEntry::file(e.name.clone(), full_path, e.oid.to_hex(), 0)
+                                }
                             };
                             entry.content_type = content_type;
                             entry
@@ -869,11 +853,11 @@ async fn get_readme(
         .get(&commit_sha)
         .map_err(|_| CompatError::InvalidRef(ref_name.to_string()))?;
 
-    let tree_sha = parse_commit_tree(&commit)
-        .ok_or_else(|| CompatError::InvalidRef(ref_name.to_string()))?;
+    let tree_sha =
+        parse_commit_tree(&commit).ok_or_else(|| CompatError::InvalidRef(ref_name.to_string()))?;
 
-    let tree = get_tree(&repo, &tree_sha)
-        .ok_or_else(|| CompatError::PathNotFound("root".to_string()))?;
+    let tree =
+        get_tree(&repo, &tree_sha).ok_or_else(|| CompatError::PathNotFound("root".to_string()))?;
 
     // Find README file
     let readme_entry = tree
@@ -928,16 +912,16 @@ async fn get_archive(
         .map_err(|_| CompatError::PathNotFound(format!("{}/{}", owner, name)))?;
 
     // Resolve ref
-    let commit_sha = resolve_ref(&repo, git_ref)
-        .ok_or_else(|| CompatError::InvalidRef(git_ref.to_string()))?;
+    let commit_sha =
+        resolve_ref(&repo, git_ref).ok_or_else(|| CompatError::InvalidRef(git_ref.to_string()))?;
 
     let commit = repo
         .objects
         .get(&commit_sha)
         .map_err(|_| CompatError::InvalidRef(git_ref.to_string()))?;
 
-    let tree_sha = parse_commit_tree(&commit)
-        .ok_or_else(|| CompatError::InvalidRef(git_ref.to_string()))?;
+    let tree_sha =
+        parse_commit_tree(&commit).ok_or_else(|| CompatError::InvalidRef(git_ref.to_string()))?;
 
     // Collect all files
     let mut entries = Vec::new();
@@ -1003,7 +987,10 @@ async fn get_rate_limit(
     let identity = get_identity_from_header(&headers).unwrap_or_else(|| "anonymous".to_string());
     let authenticated = state.compat.users.get_by_username(&identity).is_some();
 
-    let response = state.compat.rate_limiter.get_response(&identity, authenticated);
+    let response = state
+        .compat
+        .rate_limiter
+        .get_response(&identity, authenticated);
 
     Json(response)
 }

@@ -69,13 +69,8 @@ pub struct PaginationLinks {
 
 impl PaginationLinks {
     /// Create pagination links from current state.
-    pub fn new(
-        base_url: &str,
-        current_page: u32,
-        per_page: u32,
-        total_items: u32,
-    ) -> Self {
-        let total_pages = (total_items + per_page - 1) / per_page;
+    pub fn new(base_url: &str, current_page: u32, per_page: u32, total_items: u32) -> Self {
+        let total_pages = total_items.div_ceil(per_page);
 
         if total_pages <= 1 {
             return Self::default();
@@ -115,10 +110,7 @@ impl PaginationLinks {
 
     /// Check if there are any links.
     pub fn is_empty(&self) -> bool {
-        self.first.is_none()
-            && self.prev.is_none()
-            && self.next.is_none()
-            && self.last.is_none()
+        self.first.is_none() && self.prev.is_none() && self.next.is_none() && self.last.is_none()
     }
 
     /// Format as a Link header value.
@@ -164,7 +156,7 @@ pub struct PaginatedResponse<T> {
 impl<T> PaginatedResponse<T> {
     /// Create a new paginated response.
     pub fn new(items: Vec<T>, total_count: u32, page: u32, per_page: u32) -> Self {
-        let total_pages = (total_count + per_page - 1) / per_page;
+        let total_pages = total_count.div_ceil(per_page);
         Self {
             items,
             total_count,

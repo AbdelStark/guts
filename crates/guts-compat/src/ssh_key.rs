@@ -125,9 +125,8 @@ fn parse_and_validate_key(key: &str) -> Result<(SshKeyType, String)> {
 
     // Validate base64 encoding and calculate fingerprint
     let key_data = parts[1];
-    let decoded = base64_decode(key_data).map_err(|e| {
-        CompatError::InvalidSshKey(format!("invalid base64 encoding: {}", e))
-    })?;
+    let decoded = base64_decode(key_data)
+        .map_err(|e| CompatError::InvalidSshKey(format!("invalid base64 encoding: {}", e)))?;
 
     // Validate key data has correct structure
     validate_key_data(&decoded, key_type)?;
@@ -157,9 +156,12 @@ fn base64_decode(input: &str) -> std::result::Result<Vec<u8>, &'static str> {
         return Err("empty input");
     }
 
-    let bytes: Vec<u8> = input.bytes().filter(|b| *b != b'\n' && *b != b'\r').collect();
+    let bytes: Vec<u8> = input
+        .bytes()
+        .filter(|b| *b != b'\n' && *b != b'\r')
+        .collect();
 
-    if bytes.len() % 4 != 0 {
+    if !bytes.len().is_multiple_of(4) {
         return Err("invalid base64 length");
     }
 
@@ -194,9 +196,7 @@ fn validate_key_data(data: &[u8], key_type: SshKeyType) -> Result<()> {
     let type_len = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as usize;
 
     if data.len() < 4 + type_len {
-        return Err(CompatError::InvalidSshKey(
-            "key data truncated".to_string(),
-        ));
+        return Err(CompatError::InvalidSshKey("key data truncated".to_string()));
     }
 
     // Verify key type matches
@@ -238,7 +238,7 @@ fn calculate_fingerprint(data: &[u8]) -> String {
 fn base64_encode(data: &[u8]) -> String {
     const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-    let mut result = String::with_capacity((data.len() + 2) / 3 * 4);
+    let mut result = String::with_capacity(data.len().div_ceil(3) * 4);
 
     for chunk in data.chunks(3) {
         let b0 = chunk[0] as usize;
@@ -334,7 +334,7 @@ fn format_timestamp(timestamp: u64) -> String {
 }
 
 fn is_leap_year(year: u64) -> bool {
-    (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+    (year.is_multiple_of(4) && !year.is_multiple_of(100)) || year.is_multiple_of(400)
 }
 
 #[cfg(test)]

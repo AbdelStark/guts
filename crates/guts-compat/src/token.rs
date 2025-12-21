@@ -112,12 +112,16 @@ impl PersonalAccessToken {
 
         // Check for parent scope (e.g., RepoWrite includes RepoRead)
         match required {
-            TokenScope::RepoRead => self.scopes.contains(&TokenScope::RepoWrite)
-                || self.scopes.contains(&TokenScope::RepoAdmin),
+            TokenScope::RepoRead => {
+                self.scopes.contains(&TokenScope::RepoWrite)
+                    || self.scopes.contains(&TokenScope::RepoAdmin)
+            }
             TokenScope::RepoWrite => self.scopes.contains(&TokenScope::RepoAdmin),
             TokenScope::UserRead => self.scopes.contains(&TokenScope::UserWrite),
-            TokenScope::OrgRead => self.scopes.contains(&TokenScope::OrgWrite)
-                || self.scopes.contains(&TokenScope::OrgAdmin),
+            TokenScope::OrgRead => {
+                self.scopes.contains(&TokenScope::OrgWrite)
+                    || self.scopes.contains(&TokenScope::OrgAdmin)
+            }
             TokenScope::OrgWrite => self.scopes.contains(&TokenScope::OrgAdmin),
             TokenScope::SshKeyRead => self.scopes.contains(&TokenScope::SshKeyWrite),
             TokenScope::WorkflowRead => self.scopes.contains(&TokenScope::WorkflowWrite),
@@ -336,8 +340,7 @@ fn hash_token_secret(secret: &str) -> Result<String> {
 
 /// Verify a token secret against a hash.
 fn verify_token_secret(secret: &str, hash: &str) -> Result<()> {
-    let parsed_hash =
-        PasswordHash::new(hash).map_err(|e| CompatError::Crypto(e.to_string()))?;
+    let parsed_hash = PasswordHash::new(hash).map_err(|e| CompatError::Crypto(e.to_string()))?;
 
     Argon2::default()
         .verify_password(secret.as_bytes(), &parsed_hash)
@@ -426,7 +429,7 @@ fn format_timestamp(timestamp: u64) -> String {
 }
 
 fn is_leap_year(year: u64) -> bool {
-    (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+    (year.is_multiple_of(4) && !year.is_multiple_of(100)) || year.is_multiple_of(400)
 }
 
 #[cfg(test)]

@@ -81,33 +81,29 @@ pub mod token;
 pub mod user;
 
 // Re-export main types
-pub use archive::{ArchiveEntry, ArchiveFormat, TarGzBuilder, ZipBuilder, create_archive};
+pub use archive::{create_archive, ArchiveEntry, ArchiveFormat, TarGzBuilder, ZipBuilder};
 pub use contents::{
-    ContentEntry, ContentType, ContentsQuery, LicenseResponse, ReadmeResponse,
-    base64_encode, detect_spdx_id, is_readme_file, recognize_license_file,
+    base64_encode, detect_spdx_id, is_readme_file, recognize_license_file, ContentEntry,
+    ContentType, ContentsQuery, LicenseResponse, ReadmeResponse,
 };
 pub use error::{CompatError, Result};
 pub use middleware::{
-    AuthContext, AuthorizationValue, ErrorResponse, ResponseHeaders, ValidationError,
-    ValidationErrorCode, parse_authorization_header, resource_from_path,
+    parse_authorization_header, resource_from_path, AuthContext, AuthorizationValue, ErrorResponse,
+    ResponseHeaders, ValidationError, ValidationErrorCode,
 };
 pub use pagination::{
-    PaginatedResponse, PaginationLinks, PaginationParams, paginate,
-    DEFAULT_PER_PAGE, MAX_PER_PAGE,
+    paginate, PaginatedResponse, PaginationLinks, PaginationParams, DEFAULT_PER_PAGE, MAX_PER_PAGE,
 };
 pub use rate_limit::{
-    RateLimitHeaders, RateLimitInfo, RateLimitResource, RateLimitResponse,
-    RateLimitResources, RateLimitState, RateLimiter,
-    DEFAULT_RATE_LIMIT, UNAUTHENTICATED_RATE_LIMIT,
+    RateLimitHeaders, RateLimitInfo, RateLimitResource, RateLimitResources, RateLimitResponse,
+    RateLimitState, RateLimiter, DEFAULT_RATE_LIMIT, UNAUTHENTICATED_RATE_LIMIT,
 };
 pub use release::{
-    AssetId, AssetResponse, AuthorInfo, CreateReleaseRequest, Release, ReleaseAsset,
-    ReleaseId, ReleaseResponse, UpdateReleaseRequest,
+    AssetId, AssetResponse, AuthorInfo, CreateReleaseRequest, Release, ReleaseAsset, ReleaseId,
+    ReleaseResponse, UpdateReleaseRequest,
 };
 pub use ssh_key::{AddSshKeyRequest, SshKey, SshKeyId, SshKeyResponse, SshKeyType};
-pub use store::{
-    CompatStats, CompatStore, ReleaseStore, SshKeyStore, TokenStore, UserStore,
-};
+pub use store::{CompatStats, CompatStore, ReleaseStore, SshKeyStore, TokenStore, UserStore};
 pub use token::{
     CreateTokenRequest, PersonalAccessToken, TokenId, TokenResponse, TokenScope, TokenValue,
 };
@@ -231,7 +227,11 @@ mod tests {
             ArchiveEntry::file("src/main.rs".to_string(), b"fn main() {}".to_vec()),
         ];
 
-        let archive = create_archive(ArchiveFormat::TarGz, "my-project-v1.0.0".to_string(), entries);
+        let archive = create_archive(
+            ArchiveFormat::TarGz,
+            "my-project-v1.0.0".to_string(),
+            entries,
+        );
         assert!(archive.is_ok());
     }
 

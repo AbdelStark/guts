@@ -348,7 +348,7 @@ fn base64_decode(input: &str) -> Option<Vec<u8>> {
     }
 
     let input = input.trim();
-    if input.is_empty() || input.len() % 4 != 0 {
+    if input.is_empty() || !input.len().is_multiple_of(4) {
         return None;
     }
 
@@ -420,7 +420,8 @@ mod tests {
         let anon = AuthContext::anonymous("10.0.0.1".to_string());
         assert_eq!(anon.rate_limit_key(), "ip:10.0.0.1");
 
-        let auth = AuthContext::authenticated(42, "bob".to_string(), vec![], "10.0.0.1".to_string());
+        let auth =
+            AuthContext::authenticated(42, "bob".to_string(), vec![], "10.0.0.1".to_string());
         assert_eq!(auth.rate_limit_key(), "user:42");
     }
 
