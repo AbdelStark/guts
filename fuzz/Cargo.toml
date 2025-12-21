@@ -48,3 +48,24 @@ path = "fuzz_targets/fuzz_pktline.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "fuzz_git_protocol"
+path = "fuzz_targets/fuzz_git_protocol.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_repo_announce"
+path = "fuzz_targets/fuzz_repo_announce.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_object_data"
+path = "fuzz_targets/fuzz_object_data.rs"
+test = false
+doc = false
+bench = false

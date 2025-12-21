@@ -67,6 +67,7 @@ regex = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+proptest = { workspace = true }
 
 [[bin]]
 name = "guts-node"

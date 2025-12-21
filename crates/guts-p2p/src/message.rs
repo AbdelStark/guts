@@ -5,6 +5,16 @@ use guts_storage::{GitObject, ObjectId, ObjectType};
 
 use crate::{P2PError, Result};
 
+/// Maximum number of objects allowed in a single message.
+/// This prevents memory allocation attacks from malformed messages.
+const MAX_OBJECTS_PER_MESSAGE: usize = 100_000;
+
+/// Maximum number of refs allowed in a single message.
+const MAX_REFS_PER_MESSAGE: usize = 10_000;
+
+/// Maximum object data size (100 MB).
+const MAX_OBJECT_DATA_SIZE: usize = 100 * 1024 * 1024;
+
 /// Message type discriminator.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -96,6 +106,12 @@ impl RepoAnnounce {
             return Err(P2PError::InvalidMessage("truncated object count".into()));
         }
         let obj_count = buf.get_u32() as usize;
+        if obj_count > MAX_OBJECTS_PER_MESSAGE {
+            return Err(P2PError::InvalidMessage(format!(
+                "object count {} exceeds maximum {}",
+                obj_count, MAX_OBJECTS_PER_MESSAGE
+            )));
+        }
         let mut object_ids = Vec::with_capacity(obj_count);
         for _ in 0..obj_count {
             if buf.remaining() < 20 {
@@ -111,6 +127,12 @@ impl RepoAnnounce {
             return Err(P2PError::InvalidMessage("truncated ref count".into()));
         }
         let ref_count = buf.get_u32() as usize;
+        if ref_count > MAX_REFS_PER_MESSAGE {
+            return Err(P2PError::InvalidMessage(format!(
+                "ref count {} exceeds maximum {}",
+                ref_count, MAX_REFS_PER_MESSAGE
+            )));
+        }
         let mut refs = Vec::with_capacity(ref_count);
         for _ in 0..ref_count {
             if buf.remaining() < 2 {
@@ -185,6 +207,12 @@ impl SyncRequest {
             return Err(P2PError::InvalidMessage("truncated want count".into()));
         }
         let want_count = buf.get_u32() as usize;
+        if want_count > MAX_OBJECTS_PER_MESSAGE {
+            return Err(P2PError::InvalidMessage(format!(
+                "want count {} exceeds maximum {}",
+                want_count, MAX_OBJECTS_PER_MESSAGE
+            )));
+        }
         let mut want = Vec::with_capacity(want_count);
         for _ in 0..want_count {
             if buf.remaining() < 20 {
@@ -256,6 +284,12 @@ impl ObjectData {
             return Err(P2PError::InvalidMessage("truncated object count".into()));
         }
         let obj_count = buf.get_u32() as usize;
+        if obj_count > MAX_OBJECTS_PER_MESSAGE {
+            return Err(P2PError::InvalidMessage(format!(
+                "object count {} exceeds maximum {}",
+                obj_count, MAX_OBJECTS_PER_MESSAGE
+            )));
+        }
         let mut objects = Vec::with_capacity(obj_count);
         for _ in 0..obj_count {
             if buf.remaining() < 5 {
@@ -274,6 +308,12 @@ impl ObjectData {
                 }
             };
             let data_len = buf.get_u32() as usize;
+            if data_len > MAX_OBJECT_DATA_SIZE {
+                return Err(P2PError::InvalidMessage(format!(
+                    "object data size {} exceeds maximum {}",
+                    data_len, MAX_OBJECT_DATA_SIZE
+                )));
+            }
             if buf.remaining() < data_len {
                 return Err(P2PError::InvalidMessage("truncated object data".into()));
             }
