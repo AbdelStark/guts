@@ -92,7 +92,7 @@ guts/
 | Milestone 2 | Complete | Multi-node P2P replication with commonware |
 | Milestone 3 | Complete | Collaboration (PRs, Issues, Comments, Reviews) |
 | Milestone 4 | Complete | Governance (Organizations, Teams, Permissions, Webhooks) |
-| Milestone 5 | Phase 4/6 | Web Gateway (Landing, Repo Browse, Collaboration, Orgs) |
+| Milestone 5 | Complete | Web Gateway (Search, API Documentation, Full UI) |
 
 ### Test Coverage
 

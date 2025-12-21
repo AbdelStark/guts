@@ -32,6 +32,10 @@ where
     Router::new()
         .route("/", get(index))
         .route("/explore", get(explore))
+        // Search
+        .route("/search", get(search))
+        // API Documentation
+        .route("/api/docs", get(api_docs))
         // Organizations
         .route("/orgs", get(org_list))
         .route("/orgs/{org}", get(org_view))
@@ -65,6 +69,20 @@ pub struct ListQuery {
 
 fn default_state() -> String {
     "open".to_string()
+}
+
+/// Query parameters for search.
+#[derive(Debug, Deserialize)]
+pub struct SearchQuery {
+    #[serde(default)]
+    pub q: String,
+    #[serde(default = "default_search_type")]
+    #[serde(rename = "type")]
+    pub search_type: String,
+}
+
+fn default_search_type() -> String {
+    "all".to_string()
 }
 
 /// Landing page handler.
@@ -1057,4 +1075,1901 @@ async fn user_profile(
     };
 
     Ok(Html(template.render()?))
+}
+
+// ==================== Search ====================
+
+/// Search handler.
+async fn search(
+    State(state): State<WebState>,
+    Query(query): Query<SearchQuery>,
+) -> Result<impl IntoResponse, WebError> {
+    let search_query = query.q.trim().to_lowercase();
+    let search_type = query.search_type.as_str();
+
+    // Search repositories
+    let repo_results: Vec<RepoSummary> = if search_query.is_empty() {
+        Vec::new()
+    } else if search_type == "all" || search_type == "repositories" {
+        state
+            .repos
+            .list()
+            .into_iter()
+            .filter(|r| {
+                r.name.to_lowercase().contains(&search_query)
+                    || r.owner.to_lowercase().contains(&search_query)
+            })
+            .map(|r| RepoSummary {
+                owner: r.owner.clone(),
+                name: r.name.clone(),
+                description: String::new(),
+                branch_count: 0,
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
+
+    // Search code within repositories
+    let code_results: Vec<CodeSearchResult> = if search_query.is_empty() {
+        Vec::new()
+    } else if search_type == "all" || search_type == "code" {
+        search_code(&state, &search_query, 50)?
+    } else {
+        Vec::new()
+    };
+
+    // Search issues
+    let mut issue_results: Vec<IssueSearchResult> = Vec::new();
+    let mut pr_results: Vec<IssueSearchResult> = Vec::new();
+
+    if !search_query.is_empty() {
+        for repo in state.repos.list() {
+            let repo_key = format!("{}/{}", repo.owner, repo.name);
+
+            // Search issues
+            if search_type == "all" || search_type == "issues" {
+                for issue in state.collaboration.list_issues(&repo_key, None) {
+                    if issue.title.to_lowercase().contains(&search_query)
+                        || issue.description.to_lowercase().contains(&search_query)
+                    {
+                        issue_results.push(IssueSearchResult {
+                            repo_owner: repo.owner.clone(),
+                            repo_name: repo.name.clone(),
+                            number: issue.number,
+                            title: issue.title.clone(),
+                            author: issue.author.clone(),
+                            state: format!("{:?}", issue.state),
+                            labels: issue.labels.iter().map(|l| l.name.clone()).collect(),
+                            is_pull_request: false,
+                        });
+                    }
+                }
+            }
+
+            // Search pull requests
+            if search_type == "all" || search_type == "pullrequests" {
+                for pr in state.collaboration.list_pull_requests(&repo_key, None) {
+                    if pr.title.to_lowercase().contains(&search_query)
+                        || pr.description.to_lowercase().contains(&search_query)
+                    {
+                        pr_results.push(IssueSearchResult {
+                            repo_owner: repo.owner.clone(),
+                            repo_name: repo.name.clone(),
+                            number: pr.number,
+                            title: pr.title.clone(),
+                            author: pr.author.clone(),
+                            state: format!("{:?}", pr.state),
+                            labels: pr.labels.iter().map(|l| l.name.clone()).collect(),
+                            is_pull_request: true,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    // Combine issue and PR results for display
+    let combined_issue_results: Vec<IssueSearchResult> = match search_type {
+        "issues" => issue_results.clone(),
+        "pullrequests" => pr_results.clone(),
+        _ => {
+            let mut combined = issue_results.clone();
+            combined.extend(pr_results.clone());
+            combined
+        }
+    };
+
+    let repo_count = repo_results.len();
+    let code_count = code_results.len();
+    let issue_count = issue_results.len();
+    let pr_count = pr_results.len();
+    let total_count = repo_count + code_count + issue_count + pr_count;
+
+    let template = SearchTemplate {
+        query: query.q.clone(),
+        result_type: query.search_type.clone(),
+        total_count,
+        repo_results,
+        code_results,
+        issue_results: combined_issue_results,
+        repo_count,
+        code_count,
+        issue_count,
+        pr_count,
+    };
+
+    Ok(Html(template.render()?))
+}
+
+/// Context for code search operations.
+struct CodeSearchContext<'a> {
+    repo: &'a guts_storage::Repository,
+    query: &'a str,
+    owner: &'a str,
+    repo_name: &'a str,
+    results: &'a mut Vec<CodeSearchResult>,
+    limit: usize,
+}
+
+/// Search code within repositories.
+fn search_code(
+    state: &WebState,
+    query: &str,
+    limit: usize,
+) -> Result<Vec<CodeSearchResult>, WebError> {
+    let mut results = Vec::new();
+
+    for repo in state.repos.list() {
+        if results.len() >= limit {
+            break;
+        }
+
+        let repository = match state.repos.get(&repo.owner, &repo.name) {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
+
+        // Get HEAD commit
+        let commit_id = match repository.head() {
+            Ok(id) => id,
+            Err(_) => continue,
+        };
+
+        // Get the commit and tree
+        let commit = match repository.objects.get(&commit_id) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+
+        let tree_id = match parse_commit_tree(&commit) {
+            Ok(id) => id,
+            Err(_) => continue,
+        };
+
+        // Search files in the tree
+        let mut ctx = CodeSearchContext {
+            repo: &repository,
+            query,
+            owner: &repo.owner,
+            repo_name: &repo.name,
+            results: &mut results,
+            limit,
+        };
+        search_tree_for_code(&mut ctx, &tree_id, "")?;
+    }
+
+    Ok(results)
+}
+
+/// Recursively search a tree for code matches.
+fn search_tree_for_code(
+    ctx: &mut CodeSearchContext<'_>,
+    tree_id: &ObjectId,
+    base_path: &str,
+) -> Result<(), WebError> {
+    if ctx.results.len() >= ctx.limit {
+        return Ok(());
+    }
+
+    let tree = ctx.repo.objects.get(tree_id)?;
+    if tree.object_type != ObjectType::Tree {
+        return Ok(());
+    }
+
+    let entries = parse_tree_raw(&tree.data)?;
+
+    for (name, mode, id) in entries {
+        if ctx.results.len() >= ctx.limit {
+            break;
+        }
+
+        let path = if base_path.is_empty() {
+            name.clone()
+        } else {
+            format!("{}/{}", base_path, name)
+        };
+
+        let is_dir = mode.starts_with("40") || mode == "40000";
+
+        if is_dir {
+            // Recurse into directory
+            search_tree_for_code(ctx, &id, &path)?;
+        } else {
+            // Check if it's a searchable file
+            let obj = match ctx.repo.objects.get(&id) {
+                Ok(o) => o,
+                Err(_) => continue,
+            };
+
+            // Skip binary files and large files
+            if obj.data.len() > 1024 * 1024 || is_binary_content(&obj.data) {
+                continue;
+            }
+
+            let content = String::from_utf8_lossy(&obj.data);
+            let query_lower = ctx.query.to_lowercase();
+
+            // Search each line
+            for (line_idx, line) in content.lines().enumerate() {
+                if ctx.results.len() >= ctx.limit {
+                    break;
+                }
+
+                if line.to_lowercase().contains(&query_lower) {
+                    let lines: Vec<&str> = content.lines().collect();
+                    let line_num = line_idx + 1;
+
+                    // Get context (2 lines before and after)
+                    let start = line_idx.saturating_sub(2);
+                    let end = (line_idx + 3).min(lines.len());
+
+                    let context_before: Vec<String> = lines[start..line_idx]
+                        .iter()
+                        .map(|s| s.to_string())
+                        .collect();
+                    let context_after: Vec<String> = lines[(line_idx + 1).min(lines.len())..end]
+                        .iter()
+                        .map(|s| s.to_string())
+                        .collect();
+
+                    ctx.results.push(CodeSearchResult {
+                        repo_owner: ctx.owner.to_string(),
+                        repo_name: ctx.repo_name.to_string(),
+                        file_path: path.clone(),
+                        line_number: line_num,
+                        line_content: line.to_string(),
+                        context_before,
+                        context_after,
+                        language: detect_language(&name),
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+// ==================== API Documentation ====================
+
+/// API documentation handler.
+async fn api_docs() -> Result<impl IntoResponse, WebError> {
+    let openapi_spec = generate_openapi_spec();
+
+    let template = ApiDocsTemplate {
+        openapi_spec: serde_json::to_string(&openapi_spec)
+            .map_err(|e| WebError::Internal(e.to_string()))?,
+    };
+
+    Ok(Html(template.render()?))
+}
+
+/// Generate OpenAPI specification.
+fn generate_openapi_spec() -> serde_json::Value {
+    serde_json::json!({
+        "openapi": "3.1.0",
+        "info": {
+            "title": "Guts API",
+            "description": "Decentralized code collaboration platform API. Guts provides a GitHub-like experience for decentralized, censorship-resistant code hosting.",
+            "version": "1.0.0",
+            "license": {
+                "name": "MIT",
+                "url": "https://opensource.org/licenses/MIT"
+            }
+        },
+        "servers": [
+            {
+                "url": "/",
+                "description": "Current server"
+            }
+        ],
+        "tags": [
+            {"name": "Health", "description": "Health check endpoints"},
+            {"name": "Repositories", "description": "Repository management"},
+            {"name": "Git", "description": "Git protocol endpoints"},
+            {"name": "Pull Requests", "description": "Pull request management"},
+            {"name": "Issues", "description": "Issue tracking"},
+            {"name": "Reviews", "description": "Code review management"},
+            {"name": "Organizations", "description": "Organization management"},
+            {"name": "Teams", "description": "Team management"},
+            {"name": "Collaborators", "description": "Repository collaborator management"},
+            {"name": "Branch Protection", "description": "Branch protection rules"},
+            {"name": "Webhooks", "description": "Webhook management"}
+        ],
+        "paths": {
+            "/health": {
+                "get": {
+                    "tags": ["Health"],
+                    "summary": "Health check",
+                    "description": "Check if the API is running and get version info",
+                    "operationId": "healthCheck",
+                    "responses": {
+                        "200": {
+                            "description": "API is healthy",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "status": {"type": "string", "example": "ok"},
+                                            "version": {"type": "string", "example": "0.1.0"}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/repos": {
+                "get": {
+                    "tags": ["Repositories"],
+                    "summary": "List repositories",
+                    "description": "Get a list of all repositories",
+                    "operationId": "listRepositories",
+                    "responses": {
+                        "200": {
+                            "description": "List of repositories",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {"$ref": "#/components/schemas/RepoInfo"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "post": {
+                    "tags": ["Repositories"],
+                    "summary": "Create repository",
+                    "description": "Create a new repository",
+                    "operationId": "createRepository",
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/CreateRepoRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "201": {
+                            "description": "Repository created",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/RepoInfo"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/repos/{owner}/{name}": {
+                "get": {
+                    "tags": ["Repositories"],
+                    "summary": "Get repository",
+                    "description": "Get repository details",
+                    "operationId": "getRepository",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Repository details",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/RepoInfo"}
+                                }
+                            }
+                        },
+                        "404": {"description": "Repository not found"}
+                    }
+                }
+            },
+            "/git/{owner}/{name}/info/refs": {
+                "get": {
+                    "tags": ["Git"],
+                    "summary": "Reference advertisement",
+                    "description": "Git smart HTTP reference advertisement",
+                    "operationId": "gitInfoRefs",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {
+                            "name": "service",
+                            "in": "query",
+                            "required": true,
+                            "schema": {
+                                "type": "string",
+                                "enum": ["git-upload-pack", "git-receive-pack"]
+                            }
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Git reference advertisement",
+                            "content": {
+                                "application/x-git-upload-pack-advertisement": {}
+                            }
+                        }
+                    }
+                }
+            },
+            "/git/{owner}/{name}/git-upload-pack": {
+                "post": {
+                    "tags": ["Git"],
+                    "summary": "Upload pack (fetch/clone)",
+                    "description": "Handle git fetch and clone operations",
+                    "operationId": "gitUploadPack",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"}
+                    ],
+                    "requestBody": {
+                        "content": {
+                            "application/x-git-upload-pack-request": {}
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Pack data",
+                            "content": {
+                                "application/x-git-upload-pack-result": {}
+                            }
+                        }
+                    }
+                }
+            },
+            "/git/{owner}/{name}/git-receive-pack": {
+                "post": {
+                    "tags": ["Git"],
+                    "summary": "Receive pack (push)",
+                    "description": "Handle git push operations",
+                    "operationId": "gitReceivePack",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"}
+                    ],
+                    "requestBody": {
+                        "content": {
+                            "application/x-git-receive-pack-request": {}
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Push result",
+                            "content": {
+                                "application/x-git-receive-pack-result": {}
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/repos/{owner}/{name}/pulls": {
+                "get": {
+                    "tags": ["Pull Requests"],
+                    "summary": "List pull requests",
+                    "description": "Get a list of pull requests for a repository",
+                    "operationId": "listPullRequests",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {
+                            "name": "state",
+                            "in": "query",
+                            "schema": {
+                                "type": "string",
+                                "enum": ["open", "closed", "merged"]
+                            }
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "List of pull requests",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {"$ref": "#/components/schemas/PullRequest"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "post": {
+                    "tags": ["Pull Requests"],
+                    "summary": "Create pull request",
+                    "description": "Create a new pull request",
+                    "operationId": "createPullRequest",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"}
+                    ],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/CreatePRRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "201": {
+                            "description": "Pull request created",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/PullRequest"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/repos/{owner}/{name}/pulls/{number}": {
+                "get": {
+                    "tags": ["Pull Requests"],
+                    "summary": "Get pull request",
+                    "description": "Get pull request details",
+                    "operationId": "getPullRequest",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/number"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Pull request details",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/PullRequest"}
+                                }
+                            }
+                        },
+                        "404": {"description": "Pull request not found"}
+                    }
+                },
+                "patch": {
+                    "tags": ["Pull Requests"],
+                    "summary": "Update pull request",
+                    "description": "Update pull request title, description, or state",
+                    "operationId": "updatePullRequest",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/number"}
+                    ],
+                    "requestBody": {
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/UpdatePRRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Pull request updated",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/PullRequest"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/repos/{owner}/{name}/pulls/{number}/merge": {
+                "post": {
+                    "tags": ["Pull Requests"],
+                    "summary": "Merge pull request",
+                    "description": "Merge a pull request",
+                    "operationId": "mergePullRequest",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/number"}
+                    ],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/MergePRRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Pull request merged",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/PullRequest"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/repos/{owner}/{name}/pulls/{number}/comments": {
+                "get": {
+                    "tags": ["Pull Requests"],
+                    "summary": "List PR comments",
+                    "description": "Get comments on a pull request",
+                    "operationId": "listPRComments",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/number"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "List of comments",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {"$ref": "#/components/schemas/Comment"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "post": {
+                    "tags": ["Pull Requests"],
+                    "summary": "Add PR comment",
+                    "description": "Add a comment to a pull request",
+                    "operationId": "addPRComment",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/number"}
+                    ],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/CreateCommentRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "201": {
+                            "description": "Comment added",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Comment"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/repos/{owner}/{name}/pulls/{number}/reviews": {
+                "get": {
+                    "tags": ["Reviews"],
+                    "summary": "List reviews",
+                    "description": "Get reviews on a pull request",
+                    "operationId": "listReviews",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/number"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "List of reviews",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {"$ref": "#/components/schemas/Review"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "post": {
+                    "tags": ["Reviews"],
+                    "summary": "Submit review",
+                    "description": "Submit a code review",
+                    "operationId": "submitReview",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/number"}
+                    ],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/CreateReviewRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "201": {
+                            "description": "Review submitted",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Review"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/repos/{owner}/{name}/issues": {
+                "get": {
+                    "tags": ["Issues"],
+                    "summary": "List issues",
+                    "description": "Get a list of issues for a repository",
+                    "operationId": "listIssues",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {
+                            "name": "state",
+                            "in": "query",
+                            "schema": {
+                                "type": "string",
+                                "enum": ["open", "closed"]
+                            }
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "List of issues",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {"$ref": "#/components/schemas/Issue"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "post": {
+                    "tags": ["Issues"],
+                    "summary": "Create issue",
+                    "description": "Create a new issue",
+                    "operationId": "createIssue",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"}
+                    ],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/CreateIssueRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "201": {
+                            "description": "Issue created",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Issue"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/repos/{owner}/{name}/issues/{number}": {
+                "get": {
+                    "tags": ["Issues"],
+                    "summary": "Get issue",
+                    "description": "Get issue details",
+                    "operationId": "getIssue",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/number"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Issue details",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Issue"}
+                                }
+                            }
+                        },
+                        "404": {"description": "Issue not found"}
+                    }
+                },
+                "patch": {
+                    "tags": ["Issues"],
+                    "summary": "Update issue",
+                    "description": "Update issue title, description, or state",
+                    "operationId": "updateIssue",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/number"}
+                    ],
+                    "requestBody": {
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/UpdateIssueRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Issue updated",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Issue"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/repos/{owner}/{name}/issues/{number}/comments": {
+                "get": {
+                    "tags": ["Issues"],
+                    "summary": "List issue comments",
+                    "description": "Get comments on an issue",
+                    "operationId": "listIssueComments",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/number"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "List of comments",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {"$ref": "#/components/schemas/Comment"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "post": {
+                    "tags": ["Issues"],
+                    "summary": "Add issue comment",
+                    "description": "Add a comment to an issue",
+                    "operationId": "addIssueComment",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/number"}
+                    ],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/CreateCommentRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "201": {
+                            "description": "Comment added",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Comment"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/orgs": {
+                "get": {
+                    "tags": ["Organizations"],
+                    "summary": "List organizations",
+                    "description": "Get a list of all organizations",
+                    "operationId": "listOrganizations",
+                    "responses": {
+                        "200": {
+                            "description": "List of organizations",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {"$ref": "#/components/schemas/Organization"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "post": {
+                    "tags": ["Organizations"],
+                    "summary": "Create organization",
+                    "description": "Create a new organization",
+                    "operationId": "createOrganization",
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/CreateOrgRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "201": {
+                            "description": "Organization created",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Organization"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/orgs/{org}": {
+                "get": {
+                    "tags": ["Organizations"],
+                    "summary": "Get organization",
+                    "description": "Get organization details",
+                    "operationId": "getOrganization",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/org"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Organization details",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Organization"}
+                                }
+                            }
+                        },
+                        "404": {"description": "Organization not found"}
+                    }
+                },
+                "patch": {
+                    "tags": ["Organizations"],
+                    "summary": "Update organization",
+                    "description": "Update organization details",
+                    "operationId": "updateOrganization",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/org"}
+                    ],
+                    "requestBody": {
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/UpdateOrgRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Organization updated",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Organization"}
+                                }
+                            }
+                        }
+                    }
+                },
+                "delete": {
+                    "tags": ["Organizations"],
+                    "summary": "Delete organization",
+                    "description": "Delete an organization",
+                    "operationId": "deleteOrganization",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/org"}
+                    ],
+                    "responses": {
+                        "204": {"description": "Organization deleted"}
+                    }
+                }
+            },
+            "/api/orgs/{org}/members": {
+                "get": {
+                    "tags": ["Organizations"],
+                    "summary": "List members",
+                    "description": "List organization members",
+                    "operationId": "listOrgMembers",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/org"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "List of members",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {"$ref": "#/components/schemas/OrgMember"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "post": {
+                    "tags": ["Organizations"],
+                    "summary": "Add member",
+                    "description": "Add a member to organization",
+                    "operationId": "addOrgMember",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/org"}
+                    ],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/AddOrgMemberRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "201": {
+                            "description": "Member added",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/OrgMember"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/orgs/{org}/teams": {
+                "get": {
+                    "tags": ["Teams"],
+                    "summary": "List teams",
+                    "description": "List teams in organization",
+                    "operationId": "listTeams",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/org"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "List of teams",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {"$ref": "#/components/schemas/Team"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "post": {
+                    "tags": ["Teams"],
+                    "summary": "Create team",
+                    "description": "Create a new team",
+                    "operationId": "createTeam",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/org"}
+                    ],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/CreateTeamRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "201": {
+                            "description": "Team created",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Team"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/orgs/{org}/teams/{team}": {
+                "get": {
+                    "tags": ["Teams"],
+                    "summary": "Get team",
+                    "description": "Get team details",
+                    "operationId": "getTeam",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/org"},
+                        {"$ref": "#/components/parameters/team"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Team details",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Team"}
+                                }
+                            }
+                        },
+                        "404": {"description": "Team not found"}
+                    }
+                },
+                "patch": {
+                    "tags": ["Teams"],
+                    "summary": "Update team",
+                    "description": "Update team details",
+                    "operationId": "updateTeam",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/org"},
+                        {"$ref": "#/components/parameters/team"}
+                    ],
+                    "requestBody": {
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/UpdateTeamRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Team updated",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Team"}
+                                }
+                            }
+                        }
+                    }
+                },
+                "delete": {
+                    "tags": ["Teams"],
+                    "summary": "Delete team",
+                    "description": "Delete a team",
+                    "operationId": "deleteTeam",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/org"},
+                        {"$ref": "#/components/parameters/team"}
+                    ],
+                    "responses": {
+                        "204": {"description": "Team deleted"}
+                    }
+                }
+            },
+            "/api/repos/{owner}/{name}/collaborators": {
+                "get": {
+                    "tags": ["Collaborators"],
+                    "summary": "List collaborators",
+                    "description": "List repository collaborators",
+                    "operationId": "listCollaborators",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "List of collaborators",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {"$ref": "#/components/schemas/Collaborator"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/repos/{owner}/{name}/collaborators/{user}": {
+                "get": {
+                    "tags": ["Collaborators"],
+                    "summary": "Get collaborator",
+                    "description": "Get collaborator details",
+                    "operationId": "getCollaborator",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/user"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Collaborator details",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Collaborator"}
+                                }
+                            }
+                        },
+                        "404": {"description": "Collaborator not found"}
+                    }
+                },
+                "put": {
+                    "tags": ["Collaborators"],
+                    "summary": "Add/update collaborator",
+                    "description": "Add or update a collaborator",
+                    "operationId": "addCollaborator",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/user"}
+                    ],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/AddCollaboratorRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "201": {
+                            "description": "Collaborator added/updated",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Collaborator"}
+                                }
+                            }
+                        }
+                    }
+                },
+                "delete": {
+                    "tags": ["Collaborators"],
+                    "summary": "Remove collaborator",
+                    "description": "Remove a collaborator",
+                    "operationId": "removeCollaborator",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/user"}
+                    ],
+                    "responses": {
+                        "204": {"description": "Collaborator removed"}
+                    }
+                }
+            },
+            "/api/repos/{owner}/{name}/branches/{branch}/protection": {
+                "get": {
+                    "tags": ["Branch Protection"],
+                    "summary": "Get branch protection",
+                    "description": "Get branch protection rules",
+                    "operationId": "getBranchProtection",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/branch"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Branch protection rules",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/BranchProtection"}
+                                }
+                            }
+                        },
+                        "404": {"description": "No protection rules"}
+                    }
+                },
+                "put": {
+                    "tags": ["Branch Protection"],
+                    "summary": "Set branch protection",
+                    "description": "Set or update branch protection rules",
+                    "operationId": "setBranchProtection",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/branch"}
+                    ],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/BranchProtectionRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Branch protection set",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/BranchProtection"}
+                                }
+                            }
+                        }
+                    }
+                },
+                "delete": {
+                    "tags": ["Branch Protection"],
+                    "summary": "Remove branch protection",
+                    "description": "Remove branch protection rules",
+                    "operationId": "removeBranchProtection",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/branch"}
+                    ],
+                    "responses": {
+                        "204": {"description": "Protection removed"}
+                    }
+                }
+            },
+            "/api/repos/{owner}/{name}/hooks": {
+                "get": {
+                    "tags": ["Webhooks"],
+                    "summary": "List webhooks",
+                    "description": "List repository webhooks",
+                    "operationId": "listWebhooks",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "List of webhooks",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {"$ref": "#/components/schemas/Webhook"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "post": {
+                    "tags": ["Webhooks"],
+                    "summary": "Create webhook",
+                    "description": "Create a new webhook",
+                    "operationId": "createWebhook",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"}
+                    ],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/CreateWebhookRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "201": {
+                            "description": "Webhook created",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Webhook"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/repos/{owner}/{name}/hooks/{id}": {
+                "get": {
+                    "tags": ["Webhooks"],
+                    "summary": "Get webhook",
+                    "description": "Get webhook details",
+                    "operationId": "getWebhook",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/id"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Webhook details",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Webhook"}
+                                }
+                            }
+                        },
+                        "404": {"description": "Webhook not found"}
+                    }
+                },
+                "patch": {
+                    "tags": ["Webhooks"],
+                    "summary": "Update webhook",
+                    "description": "Update webhook configuration",
+                    "operationId": "updateWebhook",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/id"}
+                    ],
+                    "requestBody": {
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/UpdateWebhookRequest"}
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Webhook updated",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Webhook"}
+                                }
+                            }
+                        }
+                    }
+                },
+                "delete": {
+                    "tags": ["Webhooks"],
+                    "summary": "Delete webhook",
+                    "description": "Delete a webhook",
+                    "operationId": "deleteWebhook",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/id"}
+                    ],
+                    "responses": {
+                        "204": {"description": "Webhook deleted"}
+                    }
+                }
+            },
+            "/api/repos/{owner}/{name}/hooks/{id}/ping": {
+                "post": {
+                    "tags": ["Webhooks"],
+                    "summary": "Ping webhook",
+                    "description": "Test a webhook by sending a ping event",
+                    "operationId": "pingWebhook",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/id"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Ping result",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {"type": "integer"},
+                                            "url": {"type": "string"},
+                                            "message": {"type": "string"}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/repos/{owner}/{name}/permission/{user}": {
+                "get": {
+                    "tags": ["Collaborators"],
+                    "summary": "Check permission",
+                    "description": "Check a user's effective permission on a repository",
+                    "operationId": "checkPermission",
+                    "parameters": [
+                        {"$ref": "#/components/parameters/owner"},
+                        {"$ref": "#/components/parameters/name"},
+                        {"$ref": "#/components/parameters/user"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Permission level",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/PermissionResponse"}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "components": {
+            "parameters": {
+                "owner": {
+                    "name": "owner",
+                    "in": "path",
+                    "required": true,
+                    "description": "Repository owner",
+                    "schema": {"type": "string"}
+                },
+                "name": {
+                    "name": "name",
+                    "in": "path",
+                    "required": true,
+                    "description": "Repository name",
+                    "schema": {"type": "string"}
+                },
+                "number": {
+                    "name": "number",
+                    "in": "path",
+                    "required": true,
+                    "description": "Issue or PR number",
+                    "schema": {"type": "integer"}
+                },
+                "org": {
+                    "name": "org",
+                    "in": "path",
+                    "required": true,
+                    "description": "Organization name",
+                    "schema": {"type": "string"}
+                },
+                "team": {
+                    "name": "team",
+                    "in": "path",
+                    "required": true,
+                    "description": "Team name",
+                    "schema": {"type": "string"}
+                },
+                "user": {
+                    "name": "user",
+                    "in": "path",
+                    "required": true,
+                    "description": "Username",
+                    "schema": {"type": "string"}
+                },
+                "branch": {
+                    "name": "branch",
+                    "in": "path",
+                    "required": true,
+                    "description": "Branch name",
+                    "schema": {"type": "string"}
+                },
+                "id": {
+                    "name": "id",
+                    "in": "path",
+                    "required": true,
+                    "description": "Resource ID",
+                    "schema": {"type": "integer"}
+                }
+            },
+            "schemas": {
+                "RepoInfo": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "owner": {"type": "string"}
+                    },
+                    "required": ["name", "owner"]
+                },
+                "CreateRepoRequest": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "owner": {"type": "string"}
+                    },
+                    "required": ["name", "owner"]
+                },
+                "PullRequest": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "number": {"type": "integer"},
+                        "title": {"type": "string"},
+                        "description": {"type": "string"},
+                        "author": {"type": "string"},
+                        "state": {"type": "string", "enum": ["Open", "Closed", "Merged"]},
+                        "source_branch": {"type": "string"},
+                        "target_branch": {"type": "string"},
+                        "source_commit": {"type": "string"},
+                        "target_commit": {"type": "string"},
+                        "labels": {"type": "array", "items": {"$ref": "#/components/schemas/Label"}},
+                        "created_at": {"type": "integer"},
+                        "updated_at": {"type": "integer"},
+                        "merged_at": {"type": "integer", "nullable": true},
+                        "merged_by": {"type": "string", "nullable": true}
+                    }
+                },
+                "CreatePRRequest": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "description": {"type": "string"},
+                        "author": {"type": "string"},
+                        "source_branch": {"type": "string"},
+                        "target_branch": {"type": "string"},
+                        "source_commit": {"type": "string"},
+                        "target_commit": {"type": "string"}
+                    },
+                    "required": ["title", "description", "author", "source_branch", "target_branch", "source_commit", "target_commit"]
+                },
+                "UpdatePRRequest": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "description": {"type": "string"},
+                        "state": {"type": "string", "enum": ["open", "closed"]}
+                    }
+                },
+                "MergePRRequest": {
+                    "type": "object",
+                    "properties": {
+                        "merged_by": {"type": "string"}
+                    },
+                    "required": ["merged_by"]
+                },
+                "Issue": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "number": {"type": "integer"},
+                        "title": {"type": "string"},
+                        "description": {"type": "string"},
+                        "author": {"type": "string"},
+                        "state": {"type": "string", "enum": ["Open", "Closed"]},
+                        "labels": {"type": "array", "items": {"$ref": "#/components/schemas/Label"}},
+                        "created_at": {"type": "integer"},
+                        "updated_at": {"type": "integer"},
+                        "closed_at": {"type": "integer", "nullable": true},
+                        "closed_by": {"type": "string", "nullable": true}
+                    }
+                },
+                "CreateIssueRequest": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "description": {"type": "string"},
+                        "author": {"type": "string"},
+                        "labels": {"type": "array", "items": {"type": "string"}}
+                    },
+                    "required": ["title", "description", "author"]
+                },
+                "UpdateIssueRequest": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "description": {"type": "string"},
+                        "state": {"type": "string", "enum": ["open", "closed"]},
+                        "closed_by": {"type": "string"}
+                    }
+                },
+                "Comment": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "author": {"type": "string"},
+                        "body": {"type": "string"},
+                        "created_at": {"type": "integer"},
+                        "updated_at": {"type": "integer"}
+                    }
+                },
+                "CreateCommentRequest": {
+                    "type": "object",
+                    "properties": {
+                        "author": {"type": "string"},
+                        "body": {"type": "string"}
+                    },
+                    "required": ["author", "body"]
+                },
+                "Review": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "pr_number": {"type": "integer"},
+                        "author": {"type": "string"},
+                        "state": {"type": "string", "enum": ["Pending", "Commented", "Approved", "ChangesRequested", "Dismissed"]},
+                        "body": {"type": "string", "nullable": true},
+                        "commit_id": {"type": "string"},
+                        "created_at": {"type": "integer"}
+                    }
+                },
+                "CreateReviewRequest": {
+                    "type": "object",
+                    "properties": {
+                        "author": {"type": "string"},
+                        "state": {"type": "string", "enum": ["approved", "changes_requested", "commented"]},
+                        "body": {"type": "string"},
+                        "commit_id": {"type": "string"}
+                    },
+                    "required": ["author", "state", "commit_id"]
+                },
+                "Label": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "color": {"type": "string"},
+                        "description": {"type": "string", "nullable": true}
+                    }
+                },
+                "Organization": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "name": {"type": "string"},
+                        "display_name": {"type": "string"},
+                        "description": {"type": "string", "nullable": true},
+                        "created_by": {"type": "string"},
+                        "member_count": {"type": "integer"},
+                        "team_count": {"type": "integer"},
+                        "repo_count": {"type": "integer"},
+                        "created_at": {"type": "integer"},
+                        "updated_at": {"type": "integer"}
+                    }
+                },
+                "CreateOrgRequest": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "display_name": {"type": "string"},
+                        "description": {"type": "string"},
+                        "creator": {"type": "string"}
+                    },
+                    "required": ["name", "display_name", "creator"]
+                },
+                "UpdateOrgRequest": {
+                    "type": "object",
+                    "properties": {
+                        "display_name": {"type": "string"},
+                        "description": {"type": "string"}
+                    }
+                },
+                "OrgMember": {
+                    "type": "object",
+                    "properties": {
+                        "user": {"type": "string"},
+                        "role": {"type": "string", "enum": ["Owner", "Admin", "Member"]},
+                        "added_at": {"type": "integer"},
+                        "added_by": {"type": "string"}
+                    }
+                },
+                "AddOrgMemberRequest": {
+                    "type": "object",
+                    "properties": {
+                        "user": {"type": "string"},
+                        "role": {"type": "string", "enum": ["Owner", "Admin", "Member"]},
+                        "added_by": {"type": "string"}
+                    },
+                    "required": ["user", "role", "added_by"]
+                },
+                "Team": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "org_id": {"type": "integer"},
+                        "name": {"type": "string"},
+                        "description": {"type": "string", "nullable": true},
+                        "permission": {"type": "string", "enum": ["Read", "Write", "Admin"]},
+                        "member_count": {"type": "integer"},
+                        "repo_count": {"type": "integer"},
+                        "created_at": {"type": "integer"},
+                        "updated_at": {"type": "integer"}
+                    }
+                },
+                "CreateTeamRequest": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "description": {"type": "string"},
+                        "permission": {"type": "string", "enum": ["Read", "Write", "Admin"]},
+                        "created_by": {"type": "string"}
+                    },
+                    "required": ["name", "permission", "created_by"]
+                },
+                "UpdateTeamRequest": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "description": {"type": "string"},
+                        "permission": {"type": "string", "enum": ["Read", "Write", "Admin"]}
+                    }
+                },
+                "Collaborator": {
+                    "type": "object",
+                    "properties": {
+                        "user": {"type": "string"},
+                        "permission": {"type": "string", "enum": ["Read", "Write", "Admin"]},
+                        "added_by": {"type": "string"},
+                        "created_at": {"type": "integer"}
+                    }
+                },
+                "AddCollaboratorRequest": {
+                    "type": "object",
+                    "properties": {
+                        "permission": {"type": "string", "enum": ["Read", "Write", "Admin"]},
+                        "added_by": {"type": "string"}
+                    },
+                    "required": ["permission", "added_by"]
+                },
+                "BranchProtection": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "pattern": {"type": "string"},
+                        "require_pr": {"type": "boolean"},
+                        "required_reviews": {"type": "integer"},
+                        "required_status_checks": {"type": "array", "items": {"type": "string"}},
+                        "dismiss_stale_reviews": {"type": "boolean"},
+                        "require_code_owner_review": {"type": "boolean"},
+                        "restrict_pushes": {"type": "boolean"},
+                        "allow_force_push": {"type": "boolean"},
+                        "allow_deletion": {"type": "boolean"},
+                        "created_at": {"type": "integer"},
+                        "updated_at": {"type": "integer"}
+                    }
+                },
+                "BranchProtectionRequest": {
+                    "type": "object",
+                    "properties": {
+                        "require_pr": {"type": "boolean"},
+                        "required_reviews": {"type": "integer"},
+                        "required_status_checks": {"type": "array", "items": {"type": "string"}},
+                        "dismiss_stale_reviews": {"type": "boolean"},
+                        "require_code_owner_review": {"type": "boolean"},
+                        "restrict_pushes": {"type": "boolean"},
+                        "allow_force_push": {"type": "boolean"},
+                        "allow_deletion": {"type": "boolean"}
+                    }
+                },
+                "Webhook": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "url": {"type": "string"},
+                        "events": {"type": "array", "items": {"type": "string"}},
+                        "active": {"type": "boolean"},
+                        "content_type": {"type": "string"},
+                        "delivery_count": {"type": "integer"},
+                        "failure_count": {"type": "integer"},
+                        "created_at": {"type": "integer"},
+                        "updated_at": {"type": "integer"}
+                    }
+                },
+                "CreateWebhookRequest": {
+                    "type": "object",
+                    "properties": {
+                        "url": {"type": "string"},
+                        "events": {"type": "array", "items": {"type": "string"}},
+                        "secret": {"type": "string"}
+                    },
+                    "required": ["url", "events"]
+                },
+                "UpdateWebhookRequest": {
+                    "type": "object",
+                    "properties": {
+                        "url": {"type": "string"},
+                        "secret": {"type": "string"},
+                        "events": {"type": "array", "items": {"type": "string"}},
+                        "active": {"type": "boolean"}
+                    }
+                },
+                "PermissionResponse": {
+                    "type": "object",
+                    "properties": {
+                        "user": {"type": "string"},
+                        "permission": {"type": "string", "nullable": true, "enum": ["Read", "Write", "Admin"]},
+                        "has_access": {"type": "boolean"}
+                    }
+                }
+            }
+        }
+    })
 }

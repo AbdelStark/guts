@@ -5,6 +5,10 @@
 //! - Pull request and issue viewing
 //! - Markdown rendering for README files
 //! - Syntax-highlighted code viewing
+//! - Search functionality
+//! - API documentation with Swagger UI
+
+#![recursion_limit = "512"]
 
 pub mod error;
 pub mod markdown;
