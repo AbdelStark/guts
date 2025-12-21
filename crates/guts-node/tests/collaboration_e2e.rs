@@ -6,6 +6,7 @@ use guts_ci::CiStore;
 use guts_collaboration::CollaborationStore;
 use guts_compat::CompatStore;
 use guts_node::api::{create_router, AppState, RepoStore};
+use guts_node::health::HealthState;
 use guts_realtime::EventHub;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -21,7 +22,12 @@ fn create_test_app() -> axum::Router {
         ci: Arc::new(CiStore::new()),
         compat: Arc::new(CompatStore::new()),
     };
-    create_router(state)
+    let health_state = HealthState::new();
+    health_state.set_startup_complete(true);
+    health_state.set_ready(true);
+    health_state.set_storage_healthy(true);
+    health_state.set_realtime_healthy(true, 0);
+    create_router(state, health_state)
 }
 
 async fn json_body(response: axum::response::Response) -> Value {
