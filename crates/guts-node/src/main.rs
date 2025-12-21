@@ -6,6 +6,7 @@ use clap::Parser;
 use guts_auth::AuthStore;
 use guts_collaboration::CollaborationStore;
 use guts_node::api::{create_router, AppState};
+use guts_realtime::EventHub;
 use guts_storage::RepoStore;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -74,6 +75,7 @@ async fn main() -> anyhow::Result<()> {
         p2p: None, // P2P is optional, enabled via configuration
         collaboration: Arc::new(CollaborationStore::new()),
         auth: Arc::new(AuthStore::new()),
+        realtime: Arc::new(EventHub::new()),
     };
 
     // Create router

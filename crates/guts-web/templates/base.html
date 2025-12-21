@@ -58,13 +58,100 @@
 
     <footer class="bg-gray-800 border-t border-gray-700 mt-auto">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div class="text-center text-gray-400 text-sm">
-                Guts - Decentralized Code Collaboration
+            <div class="flex items-center justify-between">
+                <div class="text-gray-400 text-sm">
+                    Guts - Decentralized Code Collaboration
+                </div>
+                <div id="ws-status" class="flex items-center text-xs text-gray-500">
+                    <span id="ws-indicator" class="w-2 h-2 rounded-full bg-gray-600 mr-2"></span>
+                    <span id="ws-text">Offline</span>
+                </div>
             </div>
         </div>
     </footer>
 
     <script>hljs.highlightAll();</script>
+    <script>
+    // Guts Real-time WebSocket Client
+    (function() {
+        const wsIndicator = document.getElementById('ws-indicator');
+        const wsText = document.getElementById('ws-text');
+        let ws = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        const reconnectDelay = 3000;
+
+        function updateStatus(status, color) {
+            if (wsIndicator && wsText) {
+                wsIndicator.className = 'w-2 h-2 rounded-full mr-2 ' + color;
+                wsText.textContent = status;
+            }
+        }
+
+        function connect() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = protocol + '//' + window.location.host + '/ws';
+
+            try {
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = function() {
+                    updateStatus('Connected', 'bg-green-500');
+                    reconnectAttempts = 0;
+
+                    // Subscribe to current repository if on a repo page
+                    const pathParts = window.location.pathname.split('/').filter(Boolean);
+                    if (pathParts.length >= 2 && !['explore', 'orgs', 'search', 'api', 'users'].includes(pathParts[0])) {
+                        const channel = 'repo:' + pathParts[0] + '/' + pathParts[1];
+                        ws.send(JSON.stringify({ type: 'subscribe', channel: channel }));
+                    }
+                };
+
+                ws.onmessage = function(event) {
+                    try {
+                        const msg = JSON.parse(event.data);
+                        if (msg.type === 'event') {
+                            handleEvent(msg);
+                        }
+                    } catch (e) {
+                        console.debug('WS message parse error:', e);
+                    }
+                };
+
+                ws.onclose = function() {
+                    updateStatus('Disconnected', 'bg-gray-600');
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        setTimeout(connect, reconnectDelay * reconnectAttempts);
+                    }
+                };
+
+                ws.onerror = function() {
+                    updateStatus('Error', 'bg-red-500');
+                };
+            } catch (e) {
+                updateStatus('Unavailable', 'bg-gray-600');
+            }
+        }
+
+        function handleEvent(msg) {
+            // Show notification for new events
+            const notification = document.createElement('div');
+            notification.className = 'fixed bottom-20 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg transition-opacity duration-500';
+            notification.textContent = 'New ' + msg.event + ' in ' + msg.channel.replace('repo:', '');
+            document.body.appendChild(notification);
+            setTimeout(function() {
+                notification.style.opacity = '0';
+                setTimeout(function() { notification.remove(); }, 500);
+            }, 3000);
+        }
+
+        // Start connection when page loads
+        if (typeof WebSocket !== 'undefined') {
+            connect();
+        }
+    })();
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

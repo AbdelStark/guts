@@ -15,6 +15,7 @@ guts-p2p = { workspace = true }
 guts-collaboration = { workspace = true }
 guts-auth = { workspace = true }
 guts-web = { workspace = true }
+guts-realtime = { workspace = true }
 
 # Commonware
 commonware-broadcast = { workspace = true }
@@ -38,6 +39,7 @@ tokio = { workspace = true }
 hyper = { workspace = true }
 
 # Utilities
+futures-util = { workspace = true }
 bytes = { workspace = true }
 rand = { workspace = true }
 thiserror = { workspace = true }

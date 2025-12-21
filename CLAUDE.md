@@ -21,6 +21,7 @@
 | [Milestone 3](docs/MILESTONE-3.md) | Collaboration features spec |
 | [Milestone 4](docs/MILESTONE-4.md) | Governance features spec |
 | [Milestone 5](docs/MILESTONE-5.md) | Web gateway spec |
+| [Milestone 6](docs/MILESTONE-6.md) | Real-time updates spec |
 | [Contributing](CONTRIBUTING.md) | Contribution guidelines |
 
 ## Quick Start
@@ -46,7 +47,7 @@ cd infra/docker && docker compose -f docker-compose.devnet.yml up
 
 ```
 guts/
-├── crates/                     # Rust workspace crates (9 crates)
+├── crates/                     # Rust workspace crates (10 crates)
 │   ├── guts-types/             # Core types and primitives
 │   ├── guts-storage/           # Git object storage (content-addressed)
 │   ├── guts-git/               # Git protocol (pack files, smart HTTP)
@@ -54,6 +55,7 @@ guts/
 │   ├── guts-collaboration/     # PRs, Issues, Comments, Reviews, Labels
 │   ├── guts-auth/              # Organizations, Teams, Permissions, Webhooks
 │   ├── guts-web/               # Web gateway (HTML views, Markdown rendering)
+│   ├── guts-realtime/          # WebSocket real-time updates and notifications
 │   ├── guts-node/              # Full node binary & HTTP API
 │   └── guts-cli/               # CLI client binary
 ├── infra/                      # Infrastructure as code
@@ -93,10 +95,11 @@ guts/
 | Milestone 3 | Complete | Collaboration (PRs, Issues, Comments, Reviews) |
 | Milestone 4 | Complete | Governance (Organizations, Teams, Permissions, Webhooks) |
 | Milestone 5 | Complete | Web Gateway (Search, API Documentation, Full UI) |
+| Milestone 6 | Complete | Real-time Updates (WebSocket, Notifications) |
 
 ### Test Coverage
 
-- **254+ tests** across all crates
+- **270+ tests** across all crates
 - Unit tests, E2E tests, integration tests
 - Multi-node P2P replication tests
 - Collaboration and governance scenario tests
@@ -108,7 +111,7 @@ guts-types (foundation)
     ↓
 guts-storage + guts-git
     ↓
-guts-p2p + guts-collaboration + guts-auth
+guts-p2p + guts-collaboration + guts-auth + guts-realtime
     ↓
 guts-node + guts-web
     ↓

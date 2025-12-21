@@ -4,6 +4,7 @@ use axum::{body::Body, http::Request};
 use guts_auth::AuthStore;
 use guts_collaboration::CollaborationStore;
 use guts_node::api::{create_router, AppState, RepoStore};
+use guts_realtime::EventHub;
 use serde_json::{json, Value};
 use std::sync::Arc;
 use tower::ServiceExt;
@@ -14,6 +15,7 @@ fn create_test_app() -> axum::Router {
         p2p: None,
         collaboration: Arc::new(CollaborationStore::new()),
         auth: Arc::new(AuthStore::new()),
+        realtime: Arc::new(EventHub::new()),
     };
     create_router(state)
 }

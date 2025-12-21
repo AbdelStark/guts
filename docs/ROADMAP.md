@@ -36,6 +36,7 @@ All running on a 3-node Guts network with consensus.
 | Milestone 3 | ✅ Complete | Collaboration (PRs, Issues, Comments, Reviews) |
 | Milestone 4 | ✅ Complete | Governance (Orgs, Teams, Permissions, Webhooks) |
 | Milestone 5 | ✅ Complete | Web Gateway (Search, API Docs) |
+| Milestone 6 | ✅ Complete | Real-time Updates (WebSocket, Notifications) |
 
 ## Phase 1: Core Infrastructure ✅
 
@@ -199,6 +200,19 @@ The following features have been implemented:
 | Search & Discovery | Repository, Code, Issue/PR search | ✅ Complete |
 | API Documentation | OpenAPI 3.1 with Swagger UI | ✅ Complete |
 
+## Completed: Milestone 6 (Real-time Updates)
+
+The following features have been implemented:
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| WebSocket Server | Persistent connections for real-time communication | ✅ Complete |
+| Event Broadcasting | Broadcast repository events to connected clients | ✅ Complete |
+| Channel Subscriptions | Subscribe to repo, user, and org channels | ✅ Complete |
+| Live UI Updates | Real-time notifications in web interface | ✅ Complete |
+| Connection Management | Automatic reconnection with backoff | ✅ Complete |
+| Stats API | Real-time connection statistics endpoint | ✅ Complete |
+
 ## Future Milestones
 
 | Feature | Description | Priority |
@@ -206,7 +220,7 @@ The following features have been implemented:
 | CI/CD Integration | Decentralized build pipelines | P3 |
 | Package Registry | Decentralized package hosting | P3 |
 | Federation | Inter-network repository bridging | P3 |
-| Real-time Updates | WebSocket for live notifications | P3 |
+| Push Notifications | Mobile/desktop push via service workers | P4 |
 
 ## Test Coverage
 

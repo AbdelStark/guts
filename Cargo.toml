@@ -7,6 +7,7 @@ members = [
     "crates/guts-collaboration",
     "crates/guts-auth",
     "crates/guts-web",
+    "crates/guts-realtime",
     "crates/guts-node",
     "crates/guts-cli",
 ]
@@ -29,6 +30,7 @@ guts-p2p = { version = "0.1.0", path = "crates/guts-p2p" }
 guts-collaboration = { version = "0.1.0", path = "crates/guts-collaboration" }
 guts-auth = { version = "0.1.0", path = "crates/guts-auth" }
 guts-web = { version = "0.1.0", path = "crates/guts-web" }
+guts-realtime = { version = "0.1.0", path = "crates/guts-realtime" }
 
 # Commonware dependencies (matching Alto's versions)
 commonware-broadcast = "0.0.63"
@@ -45,7 +47,7 @@ commonware-stream = "0.0.63"
 commonware-utils = "0.0.63"
 
 # HTTP server
-axum = "0.8"
+axum = { version = "0.8", features = ["ws"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["cors", "trace"] }
 hyper = "1.0"
