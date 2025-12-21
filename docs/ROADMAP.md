@@ -29,6 +29,8 @@ All running on a 3-node Guts network with consensus.
 
 ## Current Status
 
+### Completed Milestones
+
 | Milestone | Status | Description |
 |-----------|--------|-------------|
 | Milestone 1 | ✅ Complete | Foundation (Git Storage, Protocol, Node API) |
@@ -40,6 +42,16 @@ All running on a 3-node Guts network with consensus.
 | Milestone 7 | ✅ Complete | CI/CD Integration (Workflows, Runs, Artifacts) |
 | Milestone 8 | ✅ Complete | Git/GitHub Compatibility (Tokens, Users, Contents) |
 | Milestone 9 | ✅ Complete | Production Quality (Observability, Testing, Resilience) |
+
+### Planned Milestones (Path to Production)
+
+| Milestone | Status | Description |
+|-----------|--------|-------------|
+| Milestone 10 | 📋 Planned | Security Hardening & Audit Preparation |
+| Milestone 11 | 📋 Planned | Performance & Scalability Validation |
+| Milestone 12 | 📋 Planned | True Decentralization |
+| Milestone 13 | 📋 Planned | Operator Experience & Documentation |
+| Milestone 14 | 📋 Planned | User Adoption & Ecosystem |
 
 ## Phase 1: Core Infrastructure ✅
 
@@ -263,14 +275,91 @@ The following features have been implemented:
 | Load Testing | Performance benchmarks and stress tests | ✅ Complete |
 | Failure Injection | Storage/network failure recovery tests | ✅ Complete |
 
-## Future Milestones
+## Upcoming Milestones
+
+The following milestones represent the path from current state to a production-grade, truly decentralized platform:
+
+| Milestone | Status | Description | Priority |
+|-----------|--------|-------------|----------|
+| Milestone 10 | Planned | [Security Hardening & Audit Preparation](MILESTONE-10.md) | Critical |
+| Milestone 11 | Planned | [Performance & Scalability Validation](MILESTONE-11.md) | Critical |
+| Milestone 12 | Planned | [True Decentralization](MILESTONE-12.md) | Critical |
+| Milestone 13 | Planned | [Operator Experience & Documentation](MILESTONE-13.md) | High |
+| Milestone 14 | Planned | [User Adoption & Ecosystem](MILESTONE-14.md) | High |
+
+### Milestone 10: Security Hardening & Audit Preparation
+
+Prepare Guts for a professional security audit and establish robust security infrastructure.
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Threat Model | Comprehensive STRIDE threat analysis | Planned |
+| Security Policy | Vulnerability disclosure and bug bounty | Planned |
+| Cryptographic Review | Audit all crypto implementations | Planned |
+| Extended Fuzzing | 15+ fuzz targets for all protocols | Planned |
+| Supply Chain | SBOM generation, reproducible builds | Planned |
+| Key Rotation | Automated key rotation infrastructure | Planned |
+
+### Milestone 11: Performance & Scalability Validation
+
+Validate and optimize for production-scale workloads.
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Benchmarking | Criterion + K6 comprehensive benchmarks | Planned |
+| RocksDB Integration | Persistent storage backend | Planned |
+| Consensus Optimization | Batch proposals, throughput tuning | Planned |
+| Memory Optimization | Object pooling, string interning | Planned |
+| Caching Strategy | Multi-level cache hierarchy | Planned |
+| CDN Integration | Cache headers, archive pre-generation | Planned |
+
+### Milestone 12: True Decentralization
+
+Transform from replicated system to fully permissionless network.
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| DHT Discovery | Kademlia-based peer discovery | Planned |
+| Gossip Protocol | Plumtree hybrid gossip | Planned |
+| Validator Governance | Stake-based validator set management | Planned |
+| Sybil Resistance | Stake or PoW protection | Planned |
+| Partition Handling | Graceful split/recovery | Planned |
+| Public Testnet | 20+ independent operators | Planned |
+
+### Milestone 13: Operator Experience & Documentation
+
+Make Guts easy to deploy, operate, and maintain.
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Operator Documentation | Comprehensive deployment guides | Planned |
+| Runbooks | 15+ operational runbooks | Planned |
+| Monitoring Dashboards | Pre-built Grafana dashboards | Planned |
+| Alert Rules | PagerDuty/OpsGenie integration | Planned |
+| Disaster Recovery | Backup/restore procedures | Planned |
+| Cloud Deployment | AWS, GCP, Azure Terraform modules | Planned |
+
+### Milestone 14: User Adoption & Ecosystem
+
+Enable mass adoption through tooling and migration paths.
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Migration Tools | GitHub/GitLab/Bitbucket migration | Planned |
+| SDKs | TypeScript, Python, Go, Rust | Planned |
+| IDE Integration | VS Code extension, JetBrains plugin | Planned |
+| SSH Support | Git over SSH | Planned |
+| Developer Docs | Comprehensive API documentation | Planned |
+| Community | Forum, Discord, support infrastructure | Planned |
+
+## Future Milestones (Post-1.0)
 
 | Feature | Description | Priority |
 |---------|-------------|----------|
-| SSH Protocol | Git over SSH support | P2 |
 | Package Registry | Decentralized package hosting | P3 |
 | Federation | Inter-network repository bridging | P3 |
-| Push Notifications | Mobile/desktop push via service workers | P4 |
+| Mobile Apps | iOS/Android native applications | P4 |
+| Enterprise Features | SSO, audit logs, compliance | P4 |
 
 ## Test Coverage
 
