@@ -1036,11 +1036,14 @@ async fn user_profile(
         .list_user_teams(&username)
         .into_iter()
         .filter_map(|team| {
-            state.auth.get_organization(team.org_id).map(|org| UserTeamView {
-                org_name: org.name.clone(),
-                team_name: team.name.clone(),
-                permission: format!("{:?}", team.permission),
-            })
+            state
+                .auth
+                .get_organization(team.org_id)
+                .map(|org| UserTeamView {
+                    org_name: org.name.clone(),
+                    team_name: team.name.clone(),
+                    permission: format!("{:?}", team.permission),
+                })
         })
         .collect();
 
