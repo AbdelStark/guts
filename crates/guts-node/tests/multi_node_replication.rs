@@ -11,7 +11,9 @@ use commonware_cryptography::{ed25519, PrivateKeyExt, Signer};
 use commonware_p2p::simulated::{Config as SimConfig, Link, Network};
 use commonware_p2p::{Receiver as P2PReceiverTrait, Recipients, Sender as P2PSenderTrait};
 use commonware_runtime::{deterministic, Metrics, Runner};
-use guts_p2p::{Message, ObjectData, RepoAnnounce, ReplicationProtocol, SyncRequest, REPLICATION_CHANNEL};
+use guts_p2p::{
+    Message, ObjectData, ReplicationProtocol, RepoAnnounce, SyncRequest, REPLICATION_CHANNEL,
+};
 use guts_storage::{GitObject, ObjectType, Reference, Repository};
 use std::sync::Arc;
 use std::time::Duration;
@@ -574,12 +576,30 @@ fn test_concurrent_push_replication() {
         repo3.objects.put(obj_a.clone());
 
         // Verify all nodes have both objects
-        assert!(repo1.objects.contains(&obj_a_id), "Node 1 should have object A");
-        assert!(repo1.objects.contains(&obj_b_id), "Node 1 should have object B");
-        assert!(repo2.objects.contains(&obj_a_id), "Node 2 should have object A");
-        assert!(repo2.objects.contains(&obj_b_id), "Node 2 should have object B");
-        assert!(repo3.objects.contains(&obj_a_id), "Node 3 should have object A");
-        assert!(repo3.objects.contains(&obj_b_id), "Node 3 should have object B");
+        assert!(
+            repo1.objects.contains(&obj_a_id),
+            "Node 1 should have object A"
+        );
+        assert!(
+            repo1.objects.contains(&obj_b_id),
+            "Node 1 should have object B"
+        );
+        assert!(
+            repo2.objects.contains(&obj_a_id),
+            "Node 2 should have object A"
+        );
+        assert!(
+            repo2.objects.contains(&obj_b_id),
+            "Node 2 should have object B"
+        );
+        assert!(
+            repo3.objects.contains(&obj_a_id),
+            "Node 3 should have object A"
+        );
+        assert!(
+            repo3.objects.contains(&obj_b_id),
+            "Node 3 should have object B"
+        );
 
         println!("SUCCESS: Concurrent push test passed - all nodes have both objects!");
     });
@@ -640,7 +660,11 @@ fn test_network_partition_recovery() {
         let blob_id = repo1.objects.put(blob.clone());
 
         assert_eq!(repo1.objects.len(), 1, "Node 1 should have 1 object");
-        assert_eq!(repo2.objects.len(), 0, "Node 2 should have 0 objects (partitioned)");
+        assert_eq!(
+            repo2.objects.len(),
+            0,
+            "Node 2 should have 0 objects (partitioned)"
+        );
 
         // Now restore network connectivity
         oracle
@@ -682,7 +706,10 @@ fn test_network_partition_recovery() {
             .expect("Failed to send announcement");
 
         // Node 2 receives and requests objects
-        let (_, msg_data) = receivers[1].recv().await.expect("Node 2 should receive announcement");
+        let (_, msg_data) = receivers[1]
+            .recv()
+            .await
+            .expect("Node 2 should receive announcement");
         let msg = Message::decode(&msg_data).expect("Should decode message");
 
         match msg {
@@ -693,7 +720,11 @@ fn test_network_partition_recovery() {
                     want: announce.object_ids.clone(),
                 };
                 senders[1]
-                    .send(Recipients::One(node_keys[0].1.clone()), sync_request.encode(), false)
+                    .send(
+                        Recipients::One(node_keys[0].1.clone()),
+                        sync_request.encode(),
+                        false,
+                    )
                     .await
                     .expect("Failed to send sync request");
             }
@@ -701,12 +732,17 @@ fn test_network_partition_recovery() {
         }
 
         // Node 1 responds with objects
-        let (_, msg_data) = receivers[0].recv().await.expect("Node 1 should receive sync request");
+        let (_, msg_data) = receivers[0]
+            .recv()
+            .await
+            .expect("Node 1 should receive sync request");
         let msg = Message::decode(&msg_data).expect("Should decode message");
 
         match msg {
             Message::SyncRequest(request) => {
-                let objects: Vec<_> = request.want.iter()
+                let objects: Vec<_> = request
+                    .want
+                    .iter()
                     .filter_map(|oid| repo1.objects.get(oid).ok())
                     .collect();
 
@@ -716,7 +752,11 @@ fn test_network_partition_recovery() {
                 };
 
                 senders[0]
-                    .send(Recipients::One(node_keys[1].1.clone()), object_data.encode(), false)
+                    .send(
+                        Recipients::One(node_keys[1].1.clone()),
+                        object_data.encode(),
+                        false,
+                    )
                     .await
                     .expect("Failed to send objects");
             }
@@ -724,7 +764,10 @@ fn test_network_partition_recovery() {
         }
 
         // Node 2 receives objects
-        let (_, msg_data) = receivers[1].recv().await.expect("Node 2 should receive objects");
+        let (_, msg_data) = receivers[1]
+            .recv()
+            .await
+            .expect("Node 2 should receive objects");
         let msg = Message::decode(&msg_data).expect("Should decode message");
 
         match msg {
@@ -739,7 +782,10 @@ fn test_network_partition_recovery() {
         // Verify both nodes now have the same object
         assert_eq!(repo1.objects.len(), 1, "Node 1 should have 1 object");
         assert_eq!(repo2.objects.len(), 1, "Node 2 should have 1 object");
-        assert!(repo2.objects.contains(&blob_id), "Node 2 should have the blob created during partition");
+        assert!(
+            repo2.objects.contains(&blob_id),
+            "Node 2 should have the blob created during partition"
+        );
 
         println!("SUCCESS: Network partition recovery test passed!");
     });

@@ -93,9 +93,7 @@ impl RepoAnnounce {
 
         // Object IDs
         if buf.remaining() < 4 {
-            return Err(P2PError::InvalidMessage(
-                "truncated object count".into(),
-            ));
+            return Err(P2PError::InvalidMessage("truncated object count".into()));
         }
         let obj_count = buf.get_u32() as usize;
         let mut object_ids = Vec::with_capacity(obj_count);
@@ -116,9 +114,7 @@ impl RepoAnnounce {
         let mut refs = Vec::with_capacity(ref_count);
         for _ in 0..ref_count {
             if buf.remaining() < 2 {
-                return Err(P2PError::InvalidMessage(
-                    "truncated ref name length".into(),
-                ));
+                return Err(P2PError::InvalidMessage("truncated ref name length".into()));
             }
             let name_len = buf.get_u16() as usize;
             if buf.remaining() < name_len + 20 {
@@ -342,9 +338,7 @@ impl RefUpdate {
 
         // Ref name
         if buf.remaining() < 2 {
-            return Err(P2PError::InvalidMessage(
-                "truncated ref name length".into(),
-            ));
+            return Err(P2PError::InvalidMessage("truncated ref name length".into()));
         }
         let ref_len = buf.get_u16() as usize;
         if buf.remaining() < ref_len + 40 {
@@ -419,9 +413,10 @@ mod tests {
                 ObjectId::from_bytes([1u8; 20]),
                 ObjectId::from_bytes([2u8; 20]),
             ],
-            refs: vec![
-                ("refs/heads/main".to_string(), ObjectId::from_bytes([3u8; 20])),
-            ],
+            refs: vec![(
+                "refs/heads/main".to_string(),
+                ObjectId::from_bytes([3u8; 20]),
+            )],
         };
 
         let encoded = msg.encode();

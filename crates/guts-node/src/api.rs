@@ -261,10 +261,7 @@ async fn git_receive_pack(
     // Calculate new objects
     let objects_after: std::collections::HashSet<_> =
         repo.objects.list_objects().into_iter().collect();
-    let new_objects: Vec<_> = objects_after
-        .difference(&objects_before)
-        .copied()
-        .collect();
+    let new_objects: Vec<_> = objects_after.difference(&objects_before).copied().collect();
 
     // Get current refs
     let refs: Vec<_> = repo

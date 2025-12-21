@@ -72,10 +72,7 @@ impl P2PManager {
             let msg = message.clone();
             // We need to spawn this since send is async
             tokio::spawn(async move {
-                if let Err(e) = sender_clone
-                    .send(Recipients::All, msg, false)
-                    .await
-                {
+                if let Err(e) = sender_clone.send(Recipients::All, msg, false).await {
                     error!("Failed to broadcast message: {:?}", e);
                 }
             });
@@ -161,10 +158,7 @@ impl MultiNodeTestEnv {
     /// Create a new multi-node test environment.
     ///
     /// This must be called from within a deterministic runtime context.
-    pub async fn new(
-        context: deterministic::Context,
-        config: MultiNodeConfig,
-    ) -> Self {
+    pub async fn new(context: deterministic::Context, config: MultiNodeConfig) -> Self {
         // Create the simulated network
         let (network, mut oracle) = Network::new(
             context.with_label("network"),

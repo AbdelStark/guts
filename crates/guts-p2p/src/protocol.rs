@@ -145,11 +145,7 @@ impl ReplicationProtocol {
     }
 
     /// Handle a sync request.
-    fn handle_sync_request(
-        &self,
-        peer_id: &[u8],
-        request: SyncRequest,
-    ) -> Result<Option<Message>> {
+    fn handle_sync_request(&self, peer_id: &[u8], request: SyncRequest) -> Result<Option<Message>> {
         debug!(
             repo = %request.repo_key,
             want = request.want.len(),
@@ -258,7 +254,12 @@ impl ReplicationProtocol {
     /// Broadcast a repository update to all peers.
     ///
     /// Called after a push to notify peers about new objects.
-    pub fn broadcast_update(&self, repo_key: &str, new_objects: Vec<ObjectId>, refs: Vec<(String, ObjectId)>) {
+    pub fn broadcast_update(
+        &self,
+        repo_key: &str,
+        new_objects: Vec<ObjectId>,
+        refs: Vec<(String, ObjectId)>,
+    ) {
         if let Some(handler) = &self.handler {
             let announce = RepoAnnounce {
                 repo_key: repo_key.to_string(),
@@ -270,7 +271,13 @@ impl ReplicationProtocol {
     }
 
     /// Broadcast a reference update to all peers.
-    pub fn broadcast_ref_update(&self, repo_key: &str, ref_name: &str, old_id: ObjectId, new_id: ObjectId) {
+    pub fn broadcast_ref_update(
+        &self,
+        repo_key: &str,
+        ref_name: &str,
+        old_id: ObjectId,
+        new_id: ObjectId,
+    ) {
         if let Some(handler) = &self.handler {
             let update = RefUpdate {
                 repo_key: repo_key.to_string(),
@@ -447,11 +454,7 @@ mod tests {
         let handler = Arc::new(MockHandler::new());
         protocol.set_handler(handler.clone());
 
-        protocol.broadcast_update(
-            "test/repo",
-            vec![ObjectId::from_bytes([1u8; 20])],
-            vec![],
-        );
+        protocol.broadcast_update("test/repo", vec![ObjectId::from_bytes([1u8; 20])], vec![]);
 
         assert_eq!(handler.broadcast_count.load(Ordering::SeqCst), 1);
         assert_eq!(handler.messages.read().len(), 1);
