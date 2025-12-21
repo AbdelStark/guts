@@ -1,0 +1,50 @@
+[package]
+name = "guts-fuzz"
+version = "0.0.0"
+authors = ["Guts Contributors"]
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+
+# Internal crates to fuzz
+guts-git = { path = "../crates/guts-git" }
+guts-p2p = { path = "../crates/guts-p2p" }
+guts-storage = { path = "../crates/guts-storage" }
+guts-compat = { path = "../crates/guts-compat" }
+
+# Dependencies needed for constructing test data
+bytes = "1.7"
+
+[[bin]]
+name = "fuzz_p2p_message"
+path = "fuzz_targets/fuzz_p2p_message.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_pack_parser"
+path = "fuzz_targets/fuzz_pack_parser.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_username_validation"
+path = "fuzz_targets/fuzz_username_validation.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_pktline"
+path = "fuzz_targets/fuzz_pktline.rs"
+test = false
+doc = false
+bench = false

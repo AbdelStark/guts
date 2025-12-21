@@ -483,6 +483,40 @@ mod tests {
     }
 
     #[test]
+    fn test_token_parse_wrong_prefix() {
+        // Wrong starting word
+        assert!(TokenValue::parse("github_abc12345_12345678901234567890123456789012").is_err());
+        assert!(TokenValue::parse("pat_12345678_12345678901234567890123456789012").is_err());
+    }
+
+    #[test]
+    fn test_token_parse_wrong_part_count() {
+        // Too few parts
+        assert!(TokenValue::parse("guts_12345678901234567890123456789012").is_err());
+        // Too many parts
+        assert!(TokenValue::parse("guts_abc12345_12345678901234567890123456789012_extra").is_err());
+    }
+
+    #[test]
+    fn test_token_parse_wrong_prefix_length() {
+        // Prefix too short
+        assert!(TokenValue::parse("guts_abc_12345678901234567890123456789012").is_err());
+        // Prefix too long
+        assert!(TokenValue::parse("guts_abc123456789_12345678901234567890123456789012").is_err());
+    }
+
+    #[test]
+    fn test_token_parse_wrong_secret_length() {
+        // Secret too short
+        assert!(TokenValue::parse("guts_abc12345_short").is_err());
+        // Secret too long
+        assert!(
+            TokenValue::parse("guts_abc12345_123456789012345678901234567890123456789012345")
+                .is_err()
+        );
+    }
+
+    #[test]
     fn test_token_expiration() {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -501,6 +535,19 @@ mod tests {
     }
 
     #[test]
+    fn test_token_expiration_boundary() {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        // Exactly at expiration time should be expired
+        let (token, _) =
+            PersonalAccessToken::generate(1, 1, "test".into(), vec![], Some(now)).unwrap();
+        assert!(token.is_expired());
+    }
+
+    #[test]
     fn test_token_scope_hierarchy() {
         let (token, _) =
             PersonalAccessToken::generate(1, 1, "test".into(), vec![TokenScope::RepoAdmin], None)
@@ -510,6 +557,68 @@ mod tests {
         assert!(token.has_scope(TokenScope::RepoWrite));
         assert!(token.has_scope(TokenScope::RepoRead));
         assert!(!token.has_scope(TokenScope::OrgRead));
+    }
+
+    #[test]
+    fn test_token_scope_user_hierarchy() {
+        let (token, _) =
+            PersonalAccessToken::generate(1, 1, "test".into(), vec![TokenScope::UserWrite], None)
+                .unwrap();
+
+        assert!(token.has_scope(TokenScope::UserWrite));
+        assert!(token.has_scope(TokenScope::UserRead));
+        assert!(!token.has_scope(TokenScope::UserEmail));
+    }
+
+    #[test]
+    fn test_token_scope_org_hierarchy() {
+        let (token, _) =
+            PersonalAccessToken::generate(1, 1, "test".into(), vec![TokenScope::OrgAdmin], None)
+                .unwrap();
+
+        assert!(token.has_scope(TokenScope::OrgAdmin));
+        assert!(token.has_scope(TokenScope::OrgWrite));
+        assert!(token.has_scope(TokenScope::OrgRead));
+    }
+
+    #[test]
+    fn test_token_scope_ssh_hierarchy() {
+        let (token, _) =
+            PersonalAccessToken::generate(1, 1, "test".into(), vec![TokenScope::SshKeyWrite], None)
+                .unwrap();
+
+        assert!(token.has_scope(TokenScope::SshKeyWrite));
+        assert!(token.has_scope(TokenScope::SshKeyRead));
+    }
+
+    #[test]
+    fn test_token_scope_workflow_hierarchy() {
+        let (token, _) = PersonalAccessToken::generate(
+            1,
+            1,
+            "test".into(),
+            vec![TokenScope::WorkflowWrite],
+            None,
+        )
+        .unwrap();
+
+        assert!(token.has_scope(TokenScope::WorkflowWrite));
+        assert!(token.has_scope(TokenScope::WorkflowRead));
+    }
+
+    #[test]
+    fn test_token_scope_webhook_hierarchy() {
+        let (token, _) = PersonalAccessToken::generate(
+            1,
+            1,
+            "test".into(),
+            vec![TokenScope::WebhookWrite],
+            None,
+        )
+        .unwrap();
+
+        assert!(token.has_scope(TokenScope::WebhookWrite));
+        assert!(token.has_scope(TokenScope::WebhookRead));
     }
 
     #[test]
@@ -528,5 +637,309 @@ mod tests {
     fn test_scope_display_names() {
         assert_eq!(TokenScope::RepoRead.display_name(), "repo:read");
         assert_eq!(TokenScope::Admin.display_name(), "admin");
+    }
+
+    #[test]
+    fn test_all_scopes() {
+        let scopes = TokenScope::all();
+        assert_eq!(scopes.len(), 17);
+        assert!(scopes.contains(&TokenScope::RepoRead));
+        assert!(scopes.contains(&TokenScope::Admin));
+    }
+
+    #[test]
+    fn test_all_scope_display_names() {
+        // Every scope should have a unique display name
+        let scopes = TokenScope::all();
+        let display_names: Vec<_> = scopes.iter().map(|s| s.display_name()).collect();
+        let unique: std::collections::HashSet<_> = display_names.iter().collect();
+        assert_eq!(unique.len(), scopes.len());
+    }
+
+    #[test]
+    fn test_token_verify_wrong_secret() {
+        let (token, _plaintext) =
+            PersonalAccessToken::generate(1, 1, "test".into(), vec![TokenScope::RepoRead], None)
+                .unwrap();
+
+        // Verify with wrong secret should fail
+        assert!(token.verify("wrongsecret").is_err());
+        assert!(token.verify("12345678901234567890123456789012").is_err());
+    }
+
+    #[test]
+    fn test_token_touch() {
+        let (mut token, _) =
+            PersonalAccessToken::generate(1, 1, "test".into(), vec![], None).unwrap();
+
+        assert!(token.last_used_at.is_none());
+        token.touch();
+        assert!(token.last_used_at.is_some());
+    }
+
+    #[test]
+    fn test_token_to_response() {
+        let (token, plaintext) = PersonalAccessToken::generate(
+            1,
+            1,
+            "My Token".into(),
+            vec![TokenScope::RepoRead],
+            None,
+        )
+        .unwrap();
+
+        // With plaintext
+        let response = token.to_response(Some(&plaintext));
+        assert_eq!(response.id, 1);
+        assert_eq!(response.name, "My Token");
+        assert!(response.token.is_some());
+        assert_eq!(response.token.as_ref().unwrap(), &plaintext);
+
+        // Without plaintext
+        let response = token.to_response(None);
+        assert!(response.token.is_none());
+    }
+
+    #[test]
+    fn test_token_response_timestamps() {
+        let (token, _) = PersonalAccessToken::generate(1, 1, "test".into(), vec![], None).unwrap();
+
+        let response = token.to_response(None);
+        assert!(!response.created_at.is_empty());
+        assert!(response.created_at.contains('T'));
+        assert!(response.created_at.ends_with('Z'));
+    }
+
+    #[test]
+    fn test_token_uniqueness() {
+        // Generate multiple tokens and ensure they're unique
+        let mut tokens = Vec::new();
+        for _ in 0..10 {
+            let token = TokenValue::generate();
+            tokens.push(token.to_string());
+        }
+
+        let unique: std::collections::HashSet<_> = tokens.iter().collect();
+        assert_eq!(unique.len(), tokens.len());
+    }
+
+    #[test]
+    fn test_token_prefix_format() {
+        // Generate multiple tokens and verify prefix format
+        for _ in 0..10 {
+            let token = TokenValue::generate();
+            // Prefix should be lowercase alphanumeric
+            assert!(token
+                .prefix
+                .chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit()));
+            assert_eq!(token.prefix.len(), 8);
+        }
+    }
+
+    #[test]
+    fn test_token_secret_format() {
+        // Generate multiple tokens and verify secret format
+        for _ in 0..10 {
+            let token = TokenValue::generate();
+            // Secret should be alphanumeric (mixed case)
+            assert!(token.secret.chars().all(|c| c.is_ascii_alphanumeric()));
+            assert_eq!(token.secret.len(), 32);
+        }
+    }
+
+    #[test]
+    fn test_token_scope_no_read_without_write() {
+        // RepoWrite grants RepoRead
+        let (token, _) =
+            PersonalAccessToken::generate(1, 1, "test".into(), vec![TokenScope::RepoWrite], None)
+                .unwrap();
+
+        assert!(token.has_scope(TokenScope::RepoRead));
+        assert!(token.has_scope(TokenScope::RepoWrite));
+        assert!(!token.has_scope(TokenScope::RepoAdmin));
+    }
+
+    #[test]
+    fn test_token_scope_exact_match() {
+        // Token with only RepoRead should only have RepoRead
+        let (token, _) =
+            PersonalAccessToken::generate(1, 1, "test".into(), vec![TokenScope::RepoRead], None)
+                .unwrap();
+
+        assert!(token.has_scope(TokenScope::RepoRead));
+        assert!(!token.has_scope(TokenScope::RepoWrite));
+        assert!(!token.has_scope(TokenScope::RepoAdmin));
+    }
+
+    #[test]
+    fn test_token_multiple_scopes() {
+        let (token, _) = PersonalAccessToken::generate(
+            1,
+            1,
+            "test".into(),
+            vec![TokenScope::RepoRead, TokenScope::UserRead],
+            None,
+        )
+        .unwrap();
+
+        assert!(token.has_scope(TokenScope::RepoRead));
+        assert!(token.has_scope(TokenScope::UserRead));
+        assert!(!token.has_scope(TokenScope::RepoWrite));
+        assert!(!token.has_scope(TokenScope::UserWrite));
+    }
+
+    #[test]
+    fn test_format_timestamp_epoch() {
+        let ts = format_timestamp(0);
+        assert_eq!(ts, "1970-01-01T00:00:00Z");
+    }
+
+    #[test]
+    fn test_format_timestamp_2024() {
+        let ts = format_timestamp(1704067200);
+        assert_eq!(ts, "2024-01-01T00:00:00Z");
+    }
+
+    #[test]
+    fn test_token_scope_delete() {
+        // RepoDelete is standalone
+        let (token, _) =
+            PersonalAccessToken::generate(1, 1, "test".into(), vec![TokenScope::RepoDelete], None)
+                .unwrap();
+
+        assert!(token.has_scope(TokenScope::RepoDelete));
+        assert!(!token.has_scope(TokenScope::RepoRead));
+        assert!(!token.has_scope(TokenScope::RepoWrite));
+    }
+
+    #[test]
+    fn test_token_scope_email() {
+        // UserEmail is standalone
+        let (token, _) =
+            PersonalAccessToken::generate(1, 1, "test".into(), vec![TokenScope::UserEmail], None)
+                .unwrap();
+
+        assert!(token.has_scope(TokenScope::UserEmail));
+        assert!(!token.has_scope(TokenScope::UserRead));
+    }
+}
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        /// Property: Token generation always produces valid parseable tokens
+        #[test]
+        fn prop_token_generation_parseable(
+            id in 0u64..1000,
+            user_id in 0u64..1000,
+            name in "[a-zA-Z0-9 ]{1,50}"
+        ) {
+            let (_, plaintext) = PersonalAccessToken::generate(
+                id,
+                user_id,
+                name,
+                vec![TokenScope::RepoRead],
+                None,
+            ).unwrap();
+
+            let parsed = TokenValue::parse(&plaintext);
+            prop_assert!(parsed.is_ok());
+        }
+
+        /// Property: Token verification succeeds with correct secret
+        #[test]
+        fn prop_token_verification_correct(
+            id in 0u64..100,
+            user_id in 0u64..100
+        ) {
+            let (token, plaintext) = PersonalAccessToken::generate(
+                id,
+                user_id,
+                "test".to_string(),
+                vec![TokenScope::RepoRead],
+                None,
+            ).unwrap();
+
+            let parsed = TokenValue::parse(&plaintext).unwrap();
+            let result = token.verify(&parsed.secret);
+            prop_assert!(result.is_ok());
+        }
+
+        /// Property: Token verification fails with wrong secret
+        #[test]
+        fn prop_token_verification_wrong_secret(
+            wrong_secret in "[a-zA-Z0-9]{32}"
+        ) {
+            let (token, plaintext) = PersonalAccessToken::generate(
+                1,
+                1,
+                "test".to_string(),
+                vec![TokenScope::RepoRead],
+                None,
+            ).unwrap();
+
+            let parsed = TokenValue::parse(&plaintext).unwrap();
+
+            // Only test if the wrong secret is actually different
+            if wrong_secret != parsed.secret {
+                let result = token.verify(&wrong_secret);
+                prop_assert!(result.is_err());
+            }
+        }
+
+        /// Property: Admin scope grants all other scopes
+        #[test]
+        fn prop_admin_grants_all(_seed in 0u32..100) {
+            let (token, _) = PersonalAccessToken::generate(
+                1,
+                1,
+                "test".to_string(),
+                vec![TokenScope::Admin],
+                None,
+            ).unwrap();
+
+            for scope in TokenScope::all() {
+                prop_assert!(token.has_scope(scope), "Admin should grant {:?}", scope);
+            }
+        }
+
+        /// Property: Token prefix is always 8 lowercase alphanumeric chars
+        #[test]
+        fn prop_token_prefix_format(_seed in 0u32..100) {
+            let token = TokenValue::generate();
+            prop_assert_eq!(token.prefix.len(), 8);
+            prop_assert!(token.prefix.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit()));
+        }
+
+        /// Property: Token secret is always 32 alphanumeric chars
+        #[test]
+        fn prop_token_secret_format(_seed in 0u32..100) {
+            let token = TokenValue::generate();
+            prop_assert_eq!(token.secret.len(), 32);
+            prop_assert!(token.secret.chars().all(|c| c.is_ascii_alphanumeric()));
+        }
+
+        /// Property: Tokens are always unique
+        #[test]
+        fn prop_token_uniqueness(_seed in 0u32..100) {
+            let token1 = TokenValue::generate();
+            let token2 = TokenValue::generate();
+            // Extremely unlikely to be the same
+            prop_assert!(token1.to_string() != token2.to_string());
+        }
+
+        /// Property: Invalid token formats are always rejected
+        #[test]
+        fn prop_invalid_token_rejected(s in ".*") {
+            // Unless it happens to be a valid format (extremely unlikely)
+            if !s.starts_with("guts_") || s.split('_').count() != 3 {
+                let result = TokenValue::parse(&s);
+                prop_assert!(result.is_err());
+            }
+        }
     }
 }
