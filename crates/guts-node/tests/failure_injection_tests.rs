@@ -240,7 +240,11 @@ fn test_intermittent_failure_recovery() {
     }
 
     // We should have stored all objects eventually
-    assert_eq!(stored_ids.len(), 50, "Should have stored all objects with retries");
+    assert_eq!(
+        stored_ids.len(),
+        50,
+        "Should have stored all objects with retries"
+    );
 }
 
 // ============================================================================
