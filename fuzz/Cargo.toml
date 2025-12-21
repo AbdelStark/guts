@@ -17,9 +17,11 @@ guts-git = { path = "../crates/guts-git" }
 guts-p2p = { path = "../crates/guts-p2p" }
 guts-storage = { path = "../crates/guts-storage" }
 guts-compat = { path = "../crates/guts-compat" }
+guts-security = { path = "../crates/guts-security" }
 
 # Dependencies needed for constructing test data
 bytes = "1.7"
+serde_json = "1.0"
 
 [[bin]]
 name = "fuzz_p2p_message"
@@ -66,6 +68,27 @@ bench = false
 [[bin]]
 name = "fuzz_object_data"
 path = "fuzz_targets/fuzz_object_data.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_audit_event"
+path = "fuzz_targets/fuzz_audit_event.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_rate_limit"
+path = "fuzz_targets/fuzz_rate_limit.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_secret_string"
+path = "fuzz_targets/fuzz_secret_string.rs"
 test = false
 doc = false
 bench = false

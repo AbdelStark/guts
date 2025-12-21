@@ -55,7 +55,7 @@ cd infra/docker && docker compose -f docker-compose.devnet.yml up
 
 ```
 guts/
-├── crates/                     # Rust workspace crates (12 crates)
+├── crates/                     # Rust workspace crates (13 crates)
 │   ├── guts-types/             # Core types and primitives
 │   ├── guts-storage/           # Git object storage (content-addressed)
 │   ├── guts-git/               # Git protocol (pack files, smart HTTP)
@@ -66,6 +66,7 @@ guts/
 │   ├── guts-realtime/          # WebSocket real-time updates and notifications
 │   ├── guts-ci/                # CI/CD pipelines, workflows, runs, artifacts
 │   ├── guts-compat/            # Git/GitHub compatibility (tokens, users, releases)
+│   ├── guts-security/          # Security utilities, audit logging, key management
 │   ├── guts-node/              # Full node binary & HTTP API
 │   └── guts-cli/               # CLI client binary
 ├── infra/                      # Infrastructure as code
@@ -111,12 +112,12 @@ guts/
 | Milestone 7 | ✅ Complete | CI/CD Integration (Workflows, Runs, Artifacts, Status Checks) |
 | Milestone 8 | ✅ Complete | Git/GitHub Compatibility (Users, Tokens, Releases, Contents) |
 | Milestone 9 | ✅ Complete | Production Quality (Observability, Testing, Resilience) |
+| Milestone 10 | ✅ Complete | Security Hardening & Audit Preparation |
 
 ### Planned Milestones (Production Readiness)
 
 | Milestone | Status | Description | Priority |
 |-----------|--------|-------------|----------|
-| Milestone 10 | 📋 Planned | Security Hardening & Audit Preparation | Critical |
 | Milestone 11 | 📋 Planned | Performance & Scalability Validation | Critical |
 | Milestone 12 | 📋 Planned | True Decentralization (DHT, Governance) | Critical |
 | Milestone 13 | 📋 Planned | Operator Experience & Documentation | High |
@@ -124,22 +125,23 @@ guts/
 
 ### Test Coverage
 
-- **450+ tests** across all crates
+- **500+ tests** across all crates
 - Unit tests, E2E tests, integration tests
 - Multi-node P2P replication tests
 - Collaboration and governance scenario tests
 - Property-based tests (proptest) for protocol parsing
-- Fuzz testing (7 targets) for protocol robustness
+- Fuzz testing (10 targets) for protocol robustness
 - Chaos testing for P2P layer resilience
 - Load testing for performance benchmarks
 - Failure injection tests for recovery patterns
+- Security audit logging tests
 
 ## Crate Dependency Graph
 
 ```
 guts-types (foundation)
     ↓
-guts-storage + guts-git
+guts-storage + guts-git + guts-security
     ↓
 guts-p2p + guts-collaboration + guts-auth + guts-realtime
     ↓
