@@ -322,7 +322,7 @@ async fn blob_view(
     let blob = repository.objects.get(&blob_id)?;
 
     // Get filename
-    let filename = path.split('/').last().unwrap_or("file").to_string();
+    let filename = path.split('/').next_back().unwrap_or("file").to_string();
 
     // Detect language from extension
     let language = detect_language(&filename);
@@ -526,15 +526,12 @@ async fn issue_view(
 // ==================== Helper Functions ====================
 
 /// Resolve a ref name to a commit ID.
-fn resolve_ref(
-    repo: &guts_storage::Repository,
-    ref_name: &str,
-) -> Result<ObjectId, WebError> {
+fn resolve_ref(repo: &guts_storage::Repository, ref_name: &str) -> Result<ObjectId, WebError> {
     // Try as a full ref first
-    if let Ok(reference) = repo.refs.get(&format!("refs/heads/{}", ref_name)) {
-        if let guts_storage::Reference::Direct(id) = reference {
-            return Ok(id);
-        }
+    if let Ok(guts_storage::Reference::Direct(id)) =
+        repo.refs.get(&format!("refs/heads/{}", ref_name))
+    {
+        return Ok(id);
     }
 
     // Try as HEAD
@@ -821,7 +818,7 @@ fn detect_language(filename: &str) -> String {
 fn is_binary_content(data: &[u8]) -> bool {
     // Check first 8000 bytes for null bytes
     let check_len = data.len().min(8000);
-    data[..check_len].iter().any(|&b| b == 0)
+    data[..check_len].contains(&0)
 }
 
 /// Format file size.
