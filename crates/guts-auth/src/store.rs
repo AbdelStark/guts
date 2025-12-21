@@ -58,7 +58,12 @@ impl AuthStore {
     // ==================== Organizations ====================
 
     /// Create a new organization.
-    pub fn create_organization(&self, name: String, display_name: String, creator: String) -> Result<Organization> {
+    pub fn create_organization(
+        &self,
+        name: String,
+        display_name: String,
+        creator: String,
+    ) -> Result<Organization> {
         // Check if name already exists
         if self.org_name_index.read().contains_key(&name) {
             return Err(AuthError::AlreadyExists(format!("organization '{}'", name)));
@@ -107,7 +112,9 @@ impl AuthStore {
         description: Option<String>,
     ) -> Result<Organization> {
         let mut orgs = self.organizations.write();
-        let org = orgs.get_mut(&id).ok_or_else(|| AuthError::NotFound(format!("organization {}", id)))?;
+        let org = orgs
+            .get_mut(&id)
+            .ok_or_else(|| AuthError::NotFound(format!("organization {}", id)))?;
 
         if let Some(dn) = display_name {
             org.display_name = dn;
@@ -123,7 +130,9 @@ impl AuthStore {
     /// Delete an organization.
     pub fn delete_organization(&self, id: u64) -> Result<()> {
         let mut orgs = self.organizations.write();
-        let org = orgs.remove(&id).ok_or_else(|| AuthError::NotFound(format!("organization {}", id)))?;
+        let org = orgs
+            .remove(&id)
+            .ok_or_else(|| AuthError::NotFound(format!("organization {}", id)))?;
 
         // Remove from name index
         self.org_name_index.write().remove(&org.name);
@@ -140,10 +149,15 @@ impl AuthStore {
     /// Add a member to an organization.
     pub fn add_org_member(&self, org_id: u64, member: OrgMember) -> Result<()> {
         let mut orgs = self.organizations.write();
-        let org = orgs.get_mut(&org_id).ok_or_else(|| AuthError::NotFound(format!("organization {}", org_id)))?;
+        let org = orgs
+            .get_mut(&org_id)
+            .ok_or_else(|| AuthError::NotFound(format!("organization {}", org_id)))?;
 
         if !org.add_member(member.clone()) {
-            return Err(AuthError::AlreadyExists(format!("member '{}'", member.user)));
+            return Err(AuthError::AlreadyExists(format!(
+                "member '{}'",
+                member.user
+            )));
         }
 
         Ok(())
@@ -152,7 +166,9 @@ impl AuthStore {
     /// Remove a member from an organization.
     pub fn remove_org_member(&self, org_id: u64, user: &str) -> Result<()> {
         let mut orgs = self.organizations.write();
-        let org = orgs.get_mut(&org_id).ok_or_else(|| AuthError::NotFound(format!("organization {}", org_id)))?;
+        let org = orgs
+            .get_mut(&org_id)
+            .ok_or_else(|| AuthError::NotFound(format!("organization {}", org_id)))?;
 
         org.remove_member(user).map_err(|_| AuthError::LastOwner)?;
 
@@ -162,9 +178,12 @@ impl AuthStore {
     /// Update a member's role in an organization.
     pub fn update_org_member_role(&self, org_id: u64, user: &str, role: OrgRole) -> Result<()> {
         let mut orgs = self.organizations.write();
-        let org = orgs.get_mut(&org_id).ok_or_else(|| AuthError::NotFound(format!("organization {}", org_id)))?;
+        let org = orgs
+            .get_mut(&org_id)
+            .ok_or_else(|| AuthError::NotFound(format!("organization {}", org_id)))?;
 
-        org.update_member_role(user, role).map_err(|_| AuthError::LastOwner)?;
+        org.update_member_role(user, role)
+            .map_err(|_| AuthError::LastOwner)?;
 
         Ok(())
     }
@@ -181,12 +200,17 @@ impl AuthStore {
     ) -> Result<Team> {
         // Verify org exists
         let mut orgs = self.organizations.write();
-        let org = orgs.get_mut(&org_id).ok_or_else(|| AuthError::NotFound(format!("organization {}", org_id)))?;
+        let org = orgs
+            .get_mut(&org_id)
+            .ok_or_else(|| AuthError::NotFound(format!("organization {}", org_id)))?;
 
         // Check for duplicate name
         let teams = self.teams.read();
         if teams.values().any(|t| t.org_id == org_id && t.name == name) {
-            return Err(AuthError::AlreadyExists(format!("team '{}' in organization", name)));
+            return Err(AuthError::AlreadyExists(format!(
+                "team '{}' in organization",
+                name
+            )));
         }
         drop(teams);
 
@@ -242,7 +266,9 @@ impl AuthStore {
         permission: Option<Permission>,
     ) -> Result<Team> {
         let mut teams = self.teams.write();
-        let team = teams.get_mut(&id).ok_or_else(|| AuthError::NotFound(format!("team {}", id)))?;
+        let team = teams
+            .get_mut(&id)
+            .ok_or_else(|| AuthError::NotFound(format!("team {}", id)))?;
 
         if let Some(n) = name {
             team.name = n;
@@ -260,7 +286,11 @@ impl AuthStore {
 
     /// Delete a team.
     pub fn delete_team(&self, id: u64) -> Result<()> {
-        let team = self.teams.write().remove(&id).ok_or_else(|| AuthError::NotFound(format!("team {}", id)))?;
+        let team = self
+            .teams
+            .write()
+            .remove(&id)
+            .ok_or_else(|| AuthError::NotFound(format!("team {}", id)))?;
 
         // Remove from org
         if let Some(org) = self.organizations.write().get_mut(&team.org_id) {
@@ -273,10 +303,15 @@ impl AuthStore {
     /// Add a member to a team.
     pub fn add_team_member(&self, team_id: u64, user: String) -> Result<()> {
         let mut teams = self.teams.write();
-        let team = teams.get_mut(&team_id).ok_or_else(|| AuthError::NotFound(format!("team {}", team_id)))?;
+        let team = teams
+            .get_mut(&team_id)
+            .ok_or_else(|| AuthError::NotFound(format!("team {}", team_id)))?;
 
         if !team.add_member(user.clone()) {
-            return Err(AuthError::AlreadyExists(format!("member '{}' in team", user)));
+            return Err(AuthError::AlreadyExists(format!(
+                "member '{}' in team",
+                user
+            )));
         }
 
         Ok(())
@@ -285,7 +320,9 @@ impl AuthStore {
     /// Remove a member from a team.
     pub fn remove_team_member(&self, team_id: u64, user: &str) -> Result<()> {
         let mut teams = self.teams.write();
-        let team = teams.get_mut(&team_id).ok_or_else(|| AuthError::NotFound(format!("team {}", team_id)))?;
+        let team = teams
+            .get_mut(&team_id)
+            .ok_or_else(|| AuthError::NotFound(format!("team {}", team_id)))?;
 
         if !team.remove_member(user) {
             return Err(AuthError::NotFound(format!("member '{}' in team", user)));
@@ -297,7 +334,9 @@ impl AuthStore {
     /// Add a repository to a team.
     pub fn add_team_repo(&self, team_id: u64, repo_key: String) -> Result<()> {
         let mut teams = self.teams.write();
-        let team = teams.get_mut(&team_id).ok_or_else(|| AuthError::NotFound(format!("team {}", team_id)))?;
+        let team = teams
+            .get_mut(&team_id)
+            .ok_or_else(|| AuthError::NotFound(format!("team {}", team_id)))?;
 
         team.add_repo(repo_key);
         Ok(())
@@ -306,7 +345,9 @@ impl AuthStore {
     /// Remove a repository from a team.
     pub fn remove_team_repo(&self, team_id: u64, repo_key: &str) -> Result<()> {
         let mut teams = self.teams.write();
-        let team = teams.get_mut(&team_id).ok_or_else(|| AuthError::NotFound(format!("team {}", team_id)))?;
+        let team = teams
+            .get_mut(&team_id)
+            .ok_or_else(|| AuthError::NotFound(format!("team {}", team_id)))?;
 
         if !team.remove_repo(repo_key) {
             return Err(AuthError::NotFound(format!("repo '{}' in team", repo_key)));
@@ -318,7 +359,13 @@ impl AuthStore {
     // ==================== Collaborators ====================
 
     /// Add or update a collaborator.
-    pub fn set_collaborator(&self, repo_key: String, user: String, permission: Permission, added_by: String) -> Collaborator {
+    pub fn set_collaborator(
+        &self,
+        repo_key: String,
+        user: String,
+        permission: Permission,
+        added_by: String,
+    ) -> Collaborator {
         let key = (repo_key.clone(), user.clone());
         let mut collabs = self.collaborators.write();
 
@@ -359,7 +406,10 @@ impl AuthStore {
     pub fn remove_collaborator(&self, repo_key: &str, user: &str) -> Result<()> {
         let key = (repo_key.to_string(), user.to_string());
         if self.collaborators.write().remove(&key).is_none() {
-            return Err(AuthError::NotFound(format!("collaborator '{}' on '{}'", user, repo_key)));
+            return Err(AuthError::NotFound(format!(
+                "collaborator '{}' on '{}'",
+                user, repo_key
+            )));
         }
 
         // Update index
@@ -415,10 +465,17 @@ impl AuthStore {
     }
 
     /// Update branch protection.
-    pub fn update_branch_protection(&self, repo_key: &str, pattern: &str, update: impl FnOnce(&mut BranchProtection)) -> Result<BranchProtection> {
+    pub fn update_branch_protection(
+        &self,
+        repo_key: &str,
+        pattern: &str,
+        update: impl FnOnce(&mut BranchProtection),
+    ) -> Result<BranchProtection> {
         let key = (repo_key.to_string(), pattern.to_string());
         let mut protections = self.branch_protections.write();
-        let protection = protections.get_mut(&key).ok_or_else(|| AuthError::NotFound(format!("branch protection for '{}'", pattern)))?;
+        let protection = protections
+            .get_mut(&key)
+            .ok_or_else(|| AuthError::NotFound(format!("branch protection for '{}'", pattern)))?;
 
         update(protection);
         protection.updated_at = Self::now();
@@ -430,7 +487,10 @@ impl AuthStore {
     pub fn remove_branch_protection(&self, repo_key: &str, pattern: &str) -> Result<()> {
         let key = (repo_key.to_string(), pattern.to_string());
         if self.branch_protections.write().remove(&key).is_none() {
-            return Err(AuthError::NotFound(format!("branch protection for '{}'", pattern)));
+            return Err(AuthError::NotFound(format!(
+                "branch protection for '{}'",
+                pattern
+            )));
         }
         Ok(())
     }
@@ -438,14 +498,23 @@ impl AuthStore {
     // ==================== Webhooks ====================
 
     /// Create a webhook.
-    pub fn create_webhook(&self, repo_key: String, url: String, events: std::collections::HashSet<crate::webhook::WebhookEvent>) -> Webhook {
+    pub fn create_webhook(
+        &self,
+        repo_key: String,
+        url: String,
+        events: std::collections::HashSet<crate::webhook::WebhookEvent>,
+    ) -> Webhook {
         let id = self.next_id();
         let webhook = Webhook::new(id, repo_key.clone(), url, events);
 
         self.webhooks.write().insert(id, webhook.clone());
 
         // Update index
-        self.webhook_index.write().entry(repo_key).or_default().push(id);
+        self.webhook_index
+            .write()
+            .entry(repo_key)
+            .or_default()
+            .push(id);
 
         webhook
     }
@@ -468,7 +537,9 @@ impl AuthStore {
     /// Update a webhook.
     pub fn update_webhook(&self, id: u64, update: impl FnOnce(&mut Webhook)) -> Result<Webhook> {
         let mut webhooks = self.webhooks.write();
-        let webhook = webhooks.get_mut(&id).ok_or_else(|| AuthError::NotFound(format!("webhook {}", id)))?;
+        let webhook = webhooks
+            .get_mut(&id)
+            .ok_or_else(|| AuthError::NotFound(format!("webhook {}", id)))?;
 
         update(webhook);
         webhook.updated_at = Self::now();
@@ -478,7 +549,11 @@ impl AuthStore {
 
     /// Delete a webhook.
     pub fn delete_webhook(&self, id: u64) -> Result<()> {
-        let webhook = self.webhooks.write().remove(&id).ok_or_else(|| AuthError::NotFound(format!("webhook {}", id)))?;
+        let webhook = self
+            .webhooks
+            .write()
+            .remove(&id)
+            .ok_or_else(|| AuthError::NotFound(format!("webhook {}", id)))?;
 
         // Update index
         if let Some(ids) = self.webhook_index.write().get_mut(&webhook.repo_key) {
@@ -489,7 +564,11 @@ impl AuthStore {
     }
 
     /// Find webhooks that should fire for an event.
-    pub fn find_webhooks_for_event(&self, repo_key: &str, event: crate::webhook::WebhookEvent) -> Vec<Webhook> {
+    pub fn find_webhooks_for_event(
+        &self,
+        repo_key: &str,
+        event: crate::webhook::WebhookEvent,
+    ) -> Vec<Webhook> {
         self.webhooks
             .read()
             .values()
@@ -605,11 +684,15 @@ mod tests {
         let store = AuthStore::new();
 
         // Create
-        let org = store.create_organization("acme".into(), "Acme Corp".into(), "owner".into()).unwrap();
+        let org = store
+            .create_organization("acme".into(), "Acme Corp".into(), "owner".into())
+            .unwrap();
         assert_eq!(org.name, "acme");
 
         // Duplicate fails
-        assert!(store.create_organization("acme".into(), "Another".into(), "other".into()).is_err());
+        assert!(store
+            .create_organization("acme".into(), "Another".into(), "other".into())
+            .is_err());
 
         // Get by ID
         let org2 = store.get_organization(org.id).unwrap();
@@ -620,7 +703,9 @@ mod tests {
         assert_eq!(org3.id, org.id);
 
         // Update
-        let org4 = store.update_organization(org.id, Some("ACME Inc".into()), Some("Description".into())).unwrap();
+        let org4 = store
+            .update_organization(org.id, Some("ACME Inc".into()), Some("Description".into()))
+            .unwrap();
         assert_eq!(org4.display_name, "ACME Inc");
         assert_eq!(org4.description, Some("Description".into()));
 
@@ -632,10 +717,14 @@ mod tests {
     #[test]
     fn test_team_crud() {
         let store = AuthStore::new();
-        let org = store.create_organization("acme".into(), "Acme Corp".into(), "owner".into()).unwrap();
+        let org = store
+            .create_organization("acme".into(), "Acme Corp".into(), "owner".into())
+            .unwrap();
 
         // Create team
-        let team = store.create_team(org.id, "backend".into(), Permission::Write, "owner".into()).unwrap();
+        let team = store
+            .create_team(org.id, "backend".into(), Permission::Write, "owner".into())
+            .unwrap();
         assert_eq!(team.name, "backend");
 
         // List teams
@@ -671,14 +760,23 @@ mod tests {
         assert!(!store.check_permission("bob", "alice/repo", Permission::Read));
 
         // Add collaborator
-        store.set_collaborator("alice/repo".into(), "bob".into(), Permission::Write, "alice".into());
+        store.set_collaborator(
+            "alice/repo".into(),
+            "bob".into(),
+            Permission::Write,
+            "alice".into(),
+        );
         assert!(store.check_permission("bob", "alice/repo", Permission::Read));
         assert!(store.check_permission("bob", "alice/repo", Permission::Write));
         assert!(!store.check_permission("bob", "alice/repo", Permission::Admin));
 
         // Create org with team
-        let org = store.create_organization("acme".into(), "Acme".into(), "owner".into()).unwrap();
-        let team = store.create_team(org.id, "devs".into(), Permission::Write, "owner".into()).unwrap();
+        let org = store
+            .create_organization("acme".into(), "Acme".into(), "owner".into())
+            .unwrap();
+        let team = store
+            .create_team(org.id, "devs".into(), Permission::Write, "owner".into())
+            .unwrap();
         store.add_team_member(team.id, "charlie".into()).unwrap();
         store.add_team_repo(team.id, "acme/api".into()).unwrap();
 
@@ -686,7 +784,12 @@ mod tests {
         assert!(store.check_permission("charlie", "acme/api", Permission::Write));
 
         // Org admin has full access
-        store.add_org_member(org.id, OrgMember::new("dave".into(), OrgRole::Admin, "owner".into())).unwrap();
+        store
+            .add_org_member(
+                org.id,
+                OrgMember::new("dave".into(), OrgRole::Admin, "owner".into()),
+            )
+            .unwrap();
         assert!(store.check_permission("dave", "acme/api", Permission::Admin));
     }
 
@@ -705,15 +808,19 @@ mod tests {
         assert!(not_found.is_none());
 
         // Update protection
-        let updated = store.update_branch_protection("alice/repo", "main", |p| {
-            p.required_reviews = 2;
-            p.require_code_owner_review = true;
-        }).unwrap();
+        let updated = store
+            .update_branch_protection("alice/repo", "main", |p| {
+                p.required_reviews = 2;
+                p.require_code_owner_review = true;
+            })
+            .unwrap();
         assert_eq!(updated.required_reviews, 2);
         assert!(updated.require_code_owner_review);
 
         // Remove
-        store.remove_branch_protection("alice/repo", "main").unwrap();
+        store
+            .remove_branch_protection("alice/repo", "main")
+            .unwrap();
         assert!(store.find_branch_protection("alice/repo", "main").is_none());
     }
 
@@ -728,7 +835,11 @@ mod tests {
         events.insert(WebhookEvent::Push);
         events.insert(WebhookEvent::PullRequest);
 
-        let webhook = store.create_webhook("alice/repo".into(), "https://example.com/hook".into(), events);
+        let webhook = store.create_webhook(
+            "alice/repo".into(),
+            "https://example.com/hook".into(),
+            events,
+        );
         assert_eq!(webhook.id, 1);
 
         // Find webhooks for event

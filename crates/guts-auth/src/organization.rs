@@ -4,10 +4,13 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 /// Role within an organization.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum OrgRole {
     /// Regular member with default access.
+    #[default]
     Member,
     /// Can manage teams and repositories.
     Admin,
@@ -22,7 +25,7 @@ impl OrgRole {
     }
 
     /// Parse from string.
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "member" => Some(OrgRole::Member),
             "admin" => Some(OrgRole::Admin),
@@ -39,12 +42,6 @@ impl std::fmt::Display for OrgRole {
             OrgRole::Admin => write!(f, "admin"),
             OrgRole::Owner => write!(f, "owner"),
         }
-    }
-}
-
-impl Default for OrgRole {
-    fn default() -> Self {
-        OrgRole::Member
     }
 }
 
@@ -180,7 +177,11 @@ impl Organization {
         // Check if this is an owner and they're the last one
         if let Some(member) = self.get_member(user) {
             if member.role == OrgRole::Owner {
-                let owner_count = self.members.iter().filter(|m| m.role == OrgRole::Owner).count();
+                let owner_count = self
+                    .members
+                    .iter()
+                    .filter(|m| m.role == OrgRole::Owner)
+                    .count();
                 if owner_count <= 1 {
                     return Err("cannot remove last owner");
                 }
@@ -200,11 +201,19 @@ impl Organization {
 
     /// Update a member's role.
     /// Returns an error if demoting the last owner.
-    pub fn update_member_role(&mut self, user: &str, new_role: OrgRole) -> Result<bool, &'static str> {
+    pub fn update_member_role(
+        &mut self,
+        user: &str,
+        new_role: OrgRole,
+    ) -> Result<bool, &'static str> {
         // Check if demoting the last owner
         if let Some(member) = self.get_member(user) {
             if member.role == OrgRole::Owner && new_role != OrgRole::Owner {
-                let owner_count = self.members.iter().filter(|m| m.role == OrgRole::Owner).count();
+                let owner_count = self
+                    .members
+                    .iter()
+                    .filter(|m| m.role == OrgRole::Owner)
+                    .count();
                 if owner_count <= 1 {
                     return Err("cannot demote last owner");
                 }
@@ -254,7 +263,10 @@ impl Organization {
 
     /// Count the number of owners.
     pub fn owner_count(&self) -> usize {
-        self.members.iter().filter(|m| m.role == OrgRole::Owner).count()
+        self.members
+            .iter()
+            .filter(|m| m.role == OrgRole::Owner)
+            .count()
     }
 
     fn now() -> u64 {

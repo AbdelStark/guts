@@ -715,7 +715,7 @@ async fn test_update_webhook() {
     // Update the webhook
     let update_request = Request::builder()
         .method("PATCH")
-        .uri(&format!("/api/repos/jack/api/hooks/{}", webhook_id))
+        .uri(format!("/api/repos/jack/api/hooks/{}", webhook_id))
         .header("content-type", "application/json")
         .body(Body::from(
             json!({
@@ -760,7 +760,7 @@ async fn test_delete_webhook() {
     // Delete the webhook
     let delete_request = Request::builder()
         .method("DELETE")
-        .uri(&format!("/api/repos/kate/repo/hooks/{}", webhook_id))
+        .uri(format!("/api/repos/kate/repo/hooks/{}", webhook_id))
         .body(Body::empty())
         .unwrap();
 
@@ -809,7 +809,7 @@ async fn test_ping_webhook() {
     // Ping the webhook
     let ping_request = Request::builder()
         .method("POST")
-        .uri(&format!("/api/repos/leo/app/hooks/{}/ping", webhook_id))
+        .uri(format!("/api/repos/leo/app/hooks/{}/ping", webhook_id))
         .body(Body::empty())
         .unwrap();
 

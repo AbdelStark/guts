@@ -31,7 +31,7 @@ pub enum WebhookEvent {
 
 impl WebhookEvent {
     /// Parse from string.
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "push" => Some(WebhookEvent::Push),
             "pull_request" | "pr" => Some(WebhookEvent::PullRequest),
@@ -259,11 +259,14 @@ mod tests {
 
     #[test]
     fn test_webhook_event_parsing() {
-        assert_eq!(WebhookEvent::from_str("push"), Some(WebhookEvent::Push));
-        assert_eq!(WebhookEvent::from_str("PUSH"), Some(WebhookEvent::Push));
-        assert_eq!(WebhookEvent::from_str("pull_request"), Some(WebhookEvent::PullRequest));
-        assert_eq!(WebhookEvent::from_str("pr"), Some(WebhookEvent::PullRequest));
-        assert_eq!(WebhookEvent::from_str("invalid"), None);
+        assert_eq!(WebhookEvent::parse("push"), Some(WebhookEvent::Push));
+        assert_eq!(WebhookEvent::parse("PUSH"), Some(WebhookEvent::Push));
+        assert_eq!(
+            WebhookEvent::parse("pull_request"),
+            Some(WebhookEvent::PullRequest)
+        );
+        assert_eq!(WebhookEvent::parse("pr"), Some(WebhookEvent::PullRequest));
+        assert_eq!(WebhookEvent::parse("invalid"), None);
     }
 
     #[test]
@@ -272,7 +275,12 @@ mod tests {
         events.insert(WebhookEvent::Push);
         events.insert(WebhookEvent::PullRequest);
 
-        let webhook = Webhook::new(1, "acme/api".into(), "https://example.com/hook".into(), events);
+        let webhook = Webhook::new(
+            1,
+            "acme/api".into(),
+            "https://example.com/hook".into(),
+            events,
+        );
 
         assert_eq!(webhook.id, 1);
         assert!(webhook.active);
@@ -286,7 +294,12 @@ mod tests {
         let mut events = HashSet::new();
         events.insert(WebhookEvent::Push);
 
-        let mut webhook = Webhook::new(1, "acme/api".into(), "https://example.com/hook".into(), events);
+        let mut webhook = Webhook::new(
+            1,
+            "acme/api".into(),
+            "https://example.com/hook".into(),
+            events,
+        );
 
         assert!(webhook.should_fire(WebhookEvent::Push));
 
@@ -300,7 +313,12 @@ mod tests {
     #[test]
     fn test_webhook_events() {
         let events = HashSet::new();
-        let mut webhook = Webhook::new(1, "acme/api".into(), "https://example.com/hook".into(), events);
+        let mut webhook = Webhook::new(
+            1,
+            "acme/api".into(),
+            "https://example.com/hook".into(),
+            events,
+        );
 
         assert!(!webhook.should_fire(WebhookEvent::Push));
 
@@ -314,7 +332,12 @@ mod tests {
     #[test]
     fn test_webhook_delivery_tracking() {
         let events = HashSet::new();
-        let mut webhook = Webhook::new(1, "acme/api".into(), "https://example.com/hook".into(), events);
+        let mut webhook = Webhook::new(
+            1,
+            "acme/api".into(),
+            "https://example.com/hook".into(),
+            events,
+        );
 
         assert_eq!(webhook.delivery_count, 0);
         assert_eq!(webhook.failure_count, 0);

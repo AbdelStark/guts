@@ -6,10 +6,13 @@ use std::fmt;
 /// Permission level for repository access.
 ///
 /// Permissions are ordered: Read < Write < Admin
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum Permission {
     /// Can read repository contents (clone, pull).
+    #[default]
     Read,
     /// Can read and write (push commits).
     Write,
@@ -24,7 +27,7 @@ impl Permission {
     }
 
     /// Parse from string.
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "read" => Some(Permission::Read),
             "write" | "push" => Some(Permission::Write),
@@ -41,12 +44,6 @@ impl fmt::Display for Permission {
             Permission::Write => write!(f, "write"),
             Permission::Admin => write!(f, "admin"),
         }
-    }
-}
-
-impl Default for Permission {
-    fn default() -> Self {
-        Permission::Read
     }
 }
 
@@ -88,14 +85,14 @@ mod tests {
     }
 
     #[test]
-    fn test_permission_from_str() {
-        assert_eq!(Permission::from_str("read"), Some(Permission::Read));
-        assert_eq!(Permission::from_str("write"), Some(Permission::Write));
-        assert_eq!(Permission::from_str("push"), Some(Permission::Write));
-        assert_eq!(Permission::from_str("admin"), Some(Permission::Admin));
-        assert_eq!(Permission::from_str("owner"), Some(Permission::Admin));
-        assert_eq!(Permission::from_str("ADMIN"), Some(Permission::Admin));
-        assert_eq!(Permission::from_str("invalid"), None);
+    fn test_permission_parse() {
+        assert_eq!(Permission::parse("read"), Some(Permission::Read));
+        assert_eq!(Permission::parse("write"), Some(Permission::Write));
+        assert_eq!(Permission::parse("push"), Some(Permission::Write));
+        assert_eq!(Permission::parse("admin"), Some(Permission::Admin));
+        assert_eq!(Permission::parse("owner"), Some(Permission::Admin));
+        assert_eq!(Permission::parse("ADMIN"), Some(Permission::Admin));
+        assert_eq!(Permission::parse("invalid"), None);
     }
 
     #[test]

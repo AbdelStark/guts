@@ -171,7 +171,10 @@ mod tests {
 
         assert!(team.add_repo("acme/api".into()));
         assert!(team.has_repo("acme/api"));
-        assert_eq!(team.get_repo_permission("acme/api"), Some(Permission::Write));
+        assert_eq!(
+            team.get_repo_permission("acme/api"),
+            Some(Permission::Write)
+        );
         assert_eq!(team.get_repo_permission("acme/other"), None);
 
         assert!(team.remove_repo("acme/api"));
@@ -186,6 +189,9 @@ mod tests {
         assert_eq!(team.get_repo_permission("acme/api"), Some(Permission::Read));
 
         team.set_permission(Permission::Admin);
-        assert_eq!(team.get_repo_permission("acme/api"), Some(Permission::Admin));
+        assert_eq!(
+            team.get_repo_permission("acme/api"),
+            Some(Permission::Admin)
+        );
     }
 }

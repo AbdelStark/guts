@@ -78,7 +78,9 @@ pub fn auth_routes() -> Router<AppState> {
         )
         .route(
             "/api/repos/{owner}/{name}/hooks/{id}",
-            get(get_webhook).patch(update_webhook).delete(delete_webhook),
+            get(get_webhook)
+                .patch(update_webhook)
+                .delete(delete_webhook),
         )
         .route(
             "/api/repos/{owner}/{name}/hooks/{id}/ping",
@@ -446,7 +448,7 @@ async fn add_org_member(
         .get_organization_by_name(&org_name)
         .ok_or_else(|| AuthError::NotFound(format!("organization '{}'", org_name)))?;
 
-    let role = OrgRole::from_str(&req.role)
+    let role = OrgRole::parse(&req.role)
         .ok_or_else(|| AuthError::InvalidInput(format!("invalid role: {}", req.role)))?;
 
     let member = OrgMember::new(req.user, role, req.added_by);
@@ -466,7 +468,7 @@ async fn update_org_member(
         .get_organization_by_name(&org_name)
         .ok_or_else(|| AuthError::NotFound(format!("organization '{}'", org_name)))?;
 
-    let role = OrgRole::from_str(&req.role)
+    let role = OrgRole::parse(&req.role)
         .ok_or_else(|| AuthError::InvalidInput(format!("invalid role: {}", req.role)))?;
 
     state.auth.update_org_member_role(org.id, &user, role)?;
@@ -524,8 +526,9 @@ async fn create_team(
         .get_organization_by_name(&org_name)
         .ok_or_else(|| AuthError::NotFound(format!("organization '{}'", org_name)))?;
 
-    let permission = Permission::from_str(&req.permission)
-        .ok_or_else(|| AuthError::InvalidInput(format!("invalid permission: {}", req.permission)))?;
+    let permission = Permission::parse(&req.permission).ok_or_else(|| {
+        AuthError::InvalidInput(format!("invalid permission: {}", req.permission))
+    })?;
 
     let mut team = state
         .auth
@@ -576,7 +579,7 @@ async fn update_team(
         .permission
         .as_ref()
         .map(|p| {
-            Permission::from_str(p)
+            Permission::parse(p)
                 .ok_or_else(|| AuthError::InvalidInput(format!("invalid permission: {}", p)))
         })
         .transpose()?;
@@ -764,8 +767,9 @@ async fn add_collaborator(
     Json(req): Json<AddCollaboratorRequest>,
 ) -> Result<impl IntoResponse, AuthApiError> {
     let repo_key = format!("{}/{}", owner, name);
-    let permission = Permission::from_str(&req.permission)
-        .ok_or_else(|| AuthError::InvalidInput(format!("invalid permission: {}", req.permission)))?;
+    let permission = Permission::parse(&req.permission).ok_or_else(|| {
+        AuthError::InvalidInput(format!("invalid permission: {}", req.permission))
+    })?;
 
     let collaborator = state
         .auth
@@ -800,7 +804,10 @@ async fn get_branch_protection(
         .auth
         .find_branch_protection(&repo_key, &branch)
         .ok_or_else(|| {
-            AuthError::NotFound(format!("branch protection for '{}' on '{}'", branch, repo_key))
+            AuthError::NotFound(format!(
+                "branch protection for '{}' on '{}'",
+                branch, repo_key
+            ))
         })?;
 
     Ok(Json(BranchProtectionResponse::from(&protection)))
@@ -879,7 +886,7 @@ async fn create_webhook(
     let events: HashSet<WebhookEvent> = req
         .events
         .iter()
-        .filter_map(|e| WebhookEvent::from_str(e))
+        .filter_map(|e| WebhookEvent::parse(e))
         .collect();
 
     if events.is_empty() {
@@ -942,7 +949,7 @@ async fn update_webhook(
         if let Some(events) = &req.events {
             w.events = events
                 .iter()
-                .filter_map(|e| WebhookEvent::from_str(e))
+                .filter_map(|e| WebhookEvent::parse(e))
                 .collect();
         }
         if let Some(active) = req.active {
