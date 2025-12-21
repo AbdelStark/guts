@@ -34,8 +34,8 @@ where
         .route("/{owner}/{repo}", get(repo_home))
         // File browsing
         .route("/{owner}/{repo}/tree/{ref}", get(tree_root))
-        .route("/{owner}/{repo}/tree/{ref}/*path", get(tree_path))
-        .route("/{owner}/{repo}/blob/{ref}/*path", get(blob_view))
+        .route("/{owner}/{repo}/tree/{ref}/{*path}", get(tree_path))
+        .route("/{owner}/{repo}/blob/{ref}/{*path}", get(blob_view))
         // Commits
         .route("/{owner}/{repo}/commits/{ref}", get(commits_list))
         .route("/{owner}/{repo}/commit/{sha}", get(commit_view))
