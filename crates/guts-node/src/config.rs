@@ -401,7 +401,6 @@ pub struct ResilienceConfig {
     pub circuit_breaker: CircuitBreakerConfig,
 }
 
-
 /// Retry configuration.
 #[derive(Debug, Clone, Deserialize, Serialize, Validate)]
 pub struct RetryConfig {
