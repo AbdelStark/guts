@@ -1202,6 +1202,16 @@ async fn search(
     Ok(Html(template.render()?))
 }
 
+/// Context for code search operations.
+struct CodeSearchContext<'a> {
+    repo: &'a guts_storage::Repository,
+    query: &'a str,
+    owner: &'a str,
+    repo_name: &'a str,
+    results: &'a mut Vec<CodeSearchResult>,
+    limit: usize,
+}
+
 /// Search code within repositories.
 fn search_code(
     state: &WebState,
@@ -1238,16 +1248,15 @@ fn search_code(
         };
 
         // Search files in the tree
-        search_tree_for_code(
-            &repository,
-            &tree_id,
-            "",
+        let mut ctx = CodeSearchContext {
+            repo: &repository,
             query,
-            &repo.owner,
-            &repo.name,
-            &mut results,
+            owner: &repo.owner,
+            repo_name: &repo.name,
+            results: &mut results,
             limit,
-        )?;
+        };
+        search_tree_for_code(&mut ctx, &tree_id, "")?;
     }
 
     Ok(results)
@@ -1255,20 +1264,15 @@ fn search_code(
 
 /// Recursively search a tree for code matches.
 fn search_tree_for_code(
-    repo: &guts_storage::Repository,
+    ctx: &mut CodeSearchContext<'_>,
     tree_id: &ObjectId,
     base_path: &str,
-    query: &str,
-    owner: &str,
-    repo_name: &str,
-    results: &mut Vec<CodeSearchResult>,
-    limit: usize,
 ) -> Result<(), WebError> {
-    if results.len() >= limit {
+    if ctx.results.len() >= ctx.limit {
         return Ok(());
     }
 
-    let tree = repo.objects.get(tree_id)?;
+    let tree = ctx.repo.objects.get(tree_id)?;
     if tree.object_type != ObjectType::Tree {
         return Ok(());
     }
@@ -1276,7 +1280,7 @@ fn search_tree_for_code(
     let entries = parse_tree_raw(&tree.data)?;
 
     for (name, mode, id) in entries {
-        if results.len() >= limit {
+        if ctx.results.len() >= ctx.limit {
             break;
         }
 
@@ -1290,10 +1294,10 @@ fn search_tree_for_code(
 
         if is_dir {
             // Recurse into directory
-            search_tree_for_code(repo, &id, &path, query, owner, repo_name, results, limit)?;
+            search_tree_for_code(ctx, &id, &path)?;
         } else {
             // Check if it's a searchable file
-            let obj = match repo.objects.get(&id) {
+            let obj = match ctx.repo.objects.get(&id) {
                 Ok(o) => o,
                 Err(_) => continue,
             };
@@ -1304,11 +1308,11 @@ fn search_tree_for_code(
             }
 
             let content = String::from_utf8_lossy(&obj.data);
-            let query_lower = query.to_lowercase();
+            let query_lower = ctx.query.to_lowercase();
 
             // Search each line
             for (line_idx, line) in content.lines().enumerate() {
-                if results.len() >= limit {
+                if ctx.results.len() >= ctx.limit {
                     break;
                 }
 
@@ -1329,9 +1333,9 @@ fn search_tree_for_code(
                         .map(|s| s.to_string())
                         .collect();
 
-                    results.push(CodeSearchResult {
-                        repo_owner: owner.to_string(),
-                        repo_name: repo_name.to_string(),
+                    ctx.results.push(CodeSearchResult {
+                        repo_owner: ctx.owner.to_string(),
+                        repo_name: ctx.repo_name.to_string(),
                         file_path: path.clone(),
                         line_number: line_num,
                         line_content: line.to_string(),
