@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Explore Repositories - Guts{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold mb-2">Explore Repositories</h1>
+    <p class="text-gray-400">Discover projects on the Guts network</p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for repo in repos %}
+    <a href="/{{ repo.owner }}/{{ repo.name }}" class="block bg-gray-800 rounded-lg p-6 hover:bg-gray-750 border border-gray-700 hover:border-green-500 transition-colors">
+        <div class="flex items-center space-x-2 mb-2">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+            </svg>
+            <span class="text-green-400 font-medium">{{ repo.owner }}</span>
+            <span class="text-gray-500">/</span>
+            <span class="font-medium">{{ repo.name }}</span>
+        </div>
+        <p class="text-gray-400 text-sm mb-4">{{ repo.description }}</p>
+        <div class="flex items-center text-sm text-gray-500 space-x-4">
+            <span class="flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                </svg>
+                {{ repo.branch_count }} branches
+            </span>
+        </div>
+    </a>
+    {% endfor %}
+
+    {% if repos.is_empty() %}
+    <div class="col-span-full text-center text-gray-500 py-16">
+        <svg class="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+        </svg>
+        <p class="text-xl mb-2">No repositories yet</p>
+        <p>Create one using the CLI: <code class="bg-gray-800 px-2 py-1 rounded">guts repo create my-repo</code></p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

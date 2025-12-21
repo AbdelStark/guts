@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}{{ path }} - {{ owner }}/{{ name }} - Guts{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center space-x-2 text-xl">
+        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+        </svg>
+        <a href="/{{ owner }}" class="text-green-400 hover:underline">{{ owner }}</a>
+        <span class="text-gray-500">/</span>
+        <a href="/{{ owner }}/{{ name }}" class="text-green-400 hover:underline">{{ name }}</a>
+    </div>
+</div>
+
+<!-- Breadcrumb -->
+<div class="flex items-center space-x-2 mb-4 text-sm">
+    <a href="/{{ owner }}/{{ name }}" class="text-blue-400 hover:underline">{{ name }}</a>
+    {% for part in breadcrumbs %}
+    <span class="text-gray-500">/</span>
+    {% if loop.last %}
+    <span class="text-gray-100">{{ part.name }}</span>
+    {% else %}
+    <a href="/{{ owner }}/{{ name }}/tree/{{ ref_name }}/{{ part.path }}" class="text-blue-400 hover:underline">{{ part.name }}</a>
+    {% endif %}
+    {% endfor %}
+</div>
+
+<!-- File listing -->
+<div class="bg-gray-800 rounded-lg border border-gray-700">
+    <div class="flex items-center justify-between p-4 border-b border-gray-700">
+        <div class="flex items-center space-x-4">
+            <button class="flex items-center space-x-2 bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-md">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                </svg>
+                <span>{{ ref_name }}</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="divide-y divide-gray-700">
+        {% if show_parent %}
+        <a href="/{{ owner }}/{{ name }}/tree/{{ ref_name }}/{{ parent_path }}" class="flex items-center space-x-3 px-4 py-2 hover:bg-gray-750">
+            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+            </svg>
+            <span class="text-blue-400">..</span>
+        </a>
+        {% endif %}
+
+        {% for file in files %}
+        <a href="/{{ owner }}/{{ name }}/{% if file.is_dir %}tree{% else %}blob{% endif %}/{{ ref_name }}/{{ file.path }}"
+           class="flex items-center space-x-3 px-4 py-2 hover:bg-gray-750">
+            {% if file.is_dir %}
+            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+            </svg>
+            {% else %}
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            {% endif %}
+            <span class="{% if file.is_dir %}text-blue-400{% else %}text-gray-100{% endif %}">{{ file.name }}</span>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
