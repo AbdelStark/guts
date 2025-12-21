@@ -228,3 +228,101 @@ pub struct IssueViewTemplate {
     pub closed_by: Option<String>,
     pub comments: Vec<CommentView>,
 }
+
+// ==================== Organization Templates ====================
+
+/// Organization summary for lists.
+#[derive(Debug, Clone, Serialize)]
+pub struct OrgSummary {
+    pub name: String,
+    pub display_name: String,
+    pub description: Option<String>,
+    pub member_count: usize,
+    pub team_count: usize,
+    pub repo_count: usize,
+}
+
+/// Team summary for lists.
+#[derive(Debug, Clone, Serialize)]
+pub struct TeamSummary {
+    pub name: String,
+    pub description: Option<String>,
+    pub member_count: usize,
+    pub repo_count: usize,
+    pub permission: String,
+}
+
+/// Member view for org members.
+#[derive(Debug, Clone, Serialize)]
+pub struct MemberView {
+    pub username: String,
+    pub role: String,
+}
+
+/// Team view for user profiles (includes org context).
+#[derive(Debug, Clone, Serialize)]
+pub struct UserTeamView {
+    pub org_name: String,
+    pub team_name: String,
+    pub permission: String,
+}
+
+/// Organization list page.
+#[derive(Template)]
+#[template(path = "org/list.html")]
+pub struct OrgListTemplate {
+    pub orgs: Vec<OrgSummary>,
+}
+
+/// Organization detail page.
+#[derive(Template)]
+#[template(path = "org/view.html")]
+pub struct OrgViewTemplate {
+    pub name: String,
+    pub display_name: String,
+    pub description: Option<String>,
+    pub member_count: usize,
+    pub team_count: usize,
+    pub repo_count: usize,
+    pub members: Vec<MemberView>,
+    pub teams: Vec<TeamSummary>,
+    pub repos: Vec<RepoSummary>,
+}
+
+/// Organization teams page.
+#[derive(Template)]
+#[template(path = "org/teams.html")]
+pub struct OrgTeamsTemplate {
+    pub org_name: String,
+    pub org_display_name: String,
+    pub teams: Vec<TeamSummary>,
+}
+
+/// Team detail page.
+#[derive(Template)]
+#[template(path = "org/team.html")]
+pub struct TeamViewTemplate {
+    pub org_name: String,
+    pub org_display_name: String,
+    pub team_name: String,
+    pub team_description: Option<String>,
+    pub permission: String,
+    pub member_count: usize,
+    pub repo_count: usize,
+    pub members: Vec<String>,
+    pub repos: Vec<String>,
+}
+
+// ==================== User Profile Templates ====================
+
+/// User profile page.
+#[derive(Template)]
+#[template(path = "user/profile.html")]
+pub struct UserProfileTemplate {
+    pub username: String,
+    pub repo_count: usize,
+    pub org_count: usize,
+    pub repos: Vec<RepoSummary>,
+    pub orgs: Vec<OrgSummary>,
+    pub teams: Vec<UserTeamView>,
+}

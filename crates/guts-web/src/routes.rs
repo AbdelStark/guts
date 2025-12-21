@@ -20,6 +20,7 @@ use crate::templates::*;
 pub struct WebState {
     pub repos: Arc<guts_storage::RepoStore>,
     pub collaboration: Arc<guts_collaboration::CollaborationStore>,
+    pub auth: Arc<guts_auth::AuthStore>,
 }
 
 /// Create the web router.
@@ -31,6 +32,14 @@ where
     Router::new()
         .route("/", get(index))
         .route("/explore", get(explore))
+        // Organizations
+        .route("/orgs", get(org_list))
+        .route("/orgs/{org}", get(org_view))
+        .route("/orgs/{org}/teams", get(org_teams))
+        .route("/orgs/{org}/teams/{team}", get(team_view))
+        // User profiles
+        .route("/users/{username}", get(user_profile))
+        // Repository routes
         .route("/{owner}/{repo}", get(repo_home))
         // File browsing
         .route("/{owner}/{repo}/tree/{ref}", get(tree_root))
@@ -830,4 +839,222 @@ fn format_size(bytes: usize) -> String {
     } else {
         format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0))
     }
+}
+
+// ==================== Organizations ====================
+
+/// Organization list page.
+async fn org_list(State(state): State<WebState>) -> Result<impl IntoResponse, WebError> {
+    let orgs: Vec<OrgSummary> = state
+        .auth
+        .list_organizations()
+        .into_iter()
+        .map(|org| OrgSummary {
+            name: org.name.clone(),
+            display_name: org.display_name.clone(),
+            description: org.description.clone(),
+            member_count: org.members.len(),
+            team_count: org.teams.len(),
+            repo_count: org.repos.len(),
+        })
+        .collect();
+
+    let template = OrgListTemplate { orgs };
+    Ok(Html(template.render()?))
+}
+
+/// Organization detail view.
+async fn org_view(
+    State(state): State<WebState>,
+    Path(org_name): Path<String>,
+) -> Result<impl IntoResponse, WebError> {
+    let org = state
+        .auth
+        .get_organization_by_name(&org_name)
+        .ok_or_else(|| WebError::NotFound(format!("Organization '{}' not found", org_name)))?;
+
+    // Get teams for this org
+    let teams: Vec<TeamSummary> = state
+        .auth
+        .list_teams(org.id)
+        .into_iter()
+        .map(|team| TeamSummary {
+            name: team.name.clone(),
+            description: team.description.clone(),
+            member_count: team.members.len(),
+            repo_count: team.repos.len(),
+            permission: format!("{:?}", team.permission),
+        })
+        .collect();
+
+    // Get organization's repositories
+    let repos: Vec<RepoSummary> = state
+        .repos
+        .list()
+        .into_iter()
+        .filter(|r| r.owner == org_name)
+        .map(|r| RepoSummary {
+            owner: r.owner.clone(),
+            name: r.name.clone(),
+            description: String::new(),
+            branch_count: 0,
+        })
+        .collect();
+
+    // Get members
+    let members: Vec<MemberView> = org
+        .members
+        .iter()
+        .map(|m| MemberView {
+            username: m.user.clone(),
+            role: format!("{}", m.role),
+        })
+        .collect();
+
+    let template = OrgViewTemplate {
+        name: org.name.clone(),
+        display_name: org.display_name.clone(),
+        description: org.description.clone(),
+        member_count: org.members.len(),
+        team_count: org.teams.len(),
+        repo_count: repos.len(),
+        members,
+        teams,
+        repos,
+    };
+
+    Ok(Html(template.render()?))
+}
+
+/// Organization teams list.
+async fn org_teams(
+    State(state): State<WebState>,
+    Path(org_name): Path<String>,
+) -> Result<impl IntoResponse, WebError> {
+    let org = state
+        .auth
+        .get_organization_by_name(&org_name)
+        .ok_or_else(|| WebError::NotFound(format!("Organization '{}' not found", org_name)))?;
+
+    let teams: Vec<TeamSummary> = state
+        .auth
+        .list_teams(org.id)
+        .into_iter()
+        .map(|team| TeamSummary {
+            name: team.name.clone(),
+            description: team.description.clone(),
+            member_count: team.members.len(),
+            repo_count: team.repos.len(),
+            permission: format!("{:?}", team.permission),
+        })
+        .collect();
+
+    let template = OrgTeamsTemplate {
+        org_name: org.name.clone(),
+        org_display_name: org.display_name.clone(),
+        teams,
+    };
+
+    Ok(Html(template.render()?))
+}
+
+/// Team detail view.
+async fn team_view(
+    State(state): State<WebState>,
+    Path((org_name, team_name)): Path<(String, String)>,
+) -> Result<impl IntoResponse, WebError> {
+    let org = state
+        .auth
+        .get_organization_by_name(&org_name)
+        .ok_or_else(|| WebError::NotFound(format!("Organization '{}' not found", org_name)))?;
+
+    let team = state
+        .auth
+        .get_team_by_name(org.id, &team_name)
+        .ok_or_else(|| WebError::NotFound(format!("Team '{}' not found", team_name)))?;
+
+    // Get team members
+    let members: Vec<String> = team.members.iter().cloned().collect();
+
+    // Get team repositories
+    let repos: Vec<String> = team.repos.iter().cloned().collect();
+
+    let template = TeamViewTemplate {
+        org_name: org.name.clone(),
+        org_display_name: org.display_name.clone(),
+        team_name: team.name.clone(),
+        team_description: team.description.clone(),
+        permission: format!("{:?}", team.permission),
+        member_count: team.members.len(),
+        repo_count: team.repos.len(),
+        members,
+        repos,
+    };
+
+    Ok(Html(template.render()?))
+}
+
+// ==================== User Profiles ====================
+
+/// User profile page.
+async fn user_profile(
+    State(state): State<WebState>,
+    Path(username): Path<String>,
+) -> Result<impl IntoResponse, WebError> {
+    // Get user's repositories
+    let repos: Vec<RepoSummary> = state
+        .repos
+        .list()
+        .into_iter()
+        .filter(|r| r.owner == username)
+        .map(|r| RepoSummary {
+            owner: r.owner.clone(),
+            name: r.name.clone(),
+            description: String::new(),
+            branch_count: 0,
+        })
+        .collect();
+
+    // Get organizations the user belongs to
+    let orgs: Vec<OrgSummary> = state
+        .auth
+        .list_user_organizations(&username)
+        .into_iter()
+        .map(|org| OrgSummary {
+            name: org.name.clone(),
+            display_name: org.display_name.clone(),
+            description: org.description.clone(),
+            member_count: org.members.len(),
+            team_count: org.teams.len(),
+            repo_count: org.repos.len(),
+        })
+        .collect();
+
+    // Get teams the user belongs to
+    let teams: Vec<UserTeamView> = state
+        .auth
+        .list_user_teams(&username)
+        .into_iter()
+        .filter_map(|team| {
+            state
+                .auth
+                .get_organization(team.org_id)
+                .map(|org| UserTeamView {
+                    org_name: org.name.clone(),
+                    team_name: team.name.clone(),
+                    permission: format!("{:?}", team.permission),
+                })
+        })
+        .collect();
+
+    let template = UserProfileTemplate {
+        username: username.clone(),
+        repo_count: repos.len(),
+        org_count: orgs.len(),
+        repos,
+        orgs,
+        teams,
+    };
+
+    Ok(Html(template.render()?))
 }
