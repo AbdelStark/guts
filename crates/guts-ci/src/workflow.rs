@@ -223,8 +223,7 @@ impl Workflow {
         }
 
         // Check for circular dependencies
-        crate::job::resolve_job_order(&self.jobs)
-            .map_err(|e| CiError::CircularDependency(e))?;
+        crate::job::resolve_job_order(&self.jobs).map_err(CiError::CircularDependency)?;
 
         Ok(())
     }

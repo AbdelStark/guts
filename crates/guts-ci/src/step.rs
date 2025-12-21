@@ -154,7 +154,7 @@ fn truncate_command(cmd: &str) -> String {
 }
 
 /// Output from a step execution.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct StepOutput {
     /// Output key-value pairs
     pub outputs: HashMap<String, String>,
@@ -164,17 +164,6 @@ pub struct StepOutput {
     pub stdout: String,
     /// Stderr
     pub stderr: String,
-}
-
-impl Default for StepOutput {
-    fn default() -> Self {
-        Self {
-            outputs: HashMap::new(),
-            exit_code: 0,
-            stdout: String::new(),
-            stderr: String::new(),
-        }
-    }
 }
 
 /// Built-in actions available by default.
@@ -238,10 +227,7 @@ with:
         let step: UsesStep = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(step.name, Some("Checkout".to_string()));
         assert_eq!(step.uses, "checkout");
-        assert_eq!(
-            step.with.get("fetch-depth"),
-            Some(&serde_json::json!(1))
-        );
+        assert_eq!(step.with.get("fetch-depth"), Some(&serde_json::json!(1)));
     }
 
     #[test]

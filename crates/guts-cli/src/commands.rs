@@ -299,10 +299,7 @@ pub fn run_list(node: &str, repo: &str, workflow: Option<&str>) -> Result<()> {
         println!("Listing runs for workflow {} in {}", wf, repo);
         println!();
         println!("Note: HTTP client not yet implemented. Use curl:");
-        println!(
-            "  curl {}/api/repos/{}/runs?workflow_id={}",
-            node, repo, wf
-        );
+        println!("  curl {}/api/repos/{}/runs?workflow_id={}", node, repo, wf);
     } else {
         println!("Listing all workflow runs for {}", repo);
         println!();

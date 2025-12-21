@@ -2,11 +2,11 @@
 
 use crate::error::{CiError, Result};
 use crate::run::RunId;
+use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::sync::Arc;
-use parking_lot::RwLock;
 
 /// A unique identifier for an artifact.
 pub type ArtifactId = String;
@@ -132,7 +132,13 @@ impl ArtifactStore {
         content: Vec<u8>,
         expires_in_days: Option<u32>,
     ) -> Result<Artifact> {
-        let artifact = Artifact::new(run_id.clone(), repo_key.clone(), name, &content, expires_in_days);
+        let artifact = Artifact::new(
+            run_id.clone(),
+            repo_key.clone(),
+            name,
+            &content,
+            expires_in_days,
+        );
 
         // Store content (deduplicated by hash)
         {
@@ -474,6 +480,9 @@ mod tests {
         assert_eq!(guess_content_type("file.json"), "application/json");
         assert_eq!(guess_content_type("file.txt"), "text/plain");
         assert_eq!(guess_content_type("file.png"), "image/png");
-        assert_eq!(guess_content_type("file.unknown"), "application/octet-stream");
+        assert_eq!(
+            guess_content_type("file.unknown"),
+            "application/octet-stream"
+        );
     }
 }

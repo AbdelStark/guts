@@ -68,7 +68,10 @@ impl ExecutionContext {
             env.insert("GUTS_REF".to_string(), format!("refs/heads/{}", branch));
             env.insert("GUTS_BRANCH".to_string(), branch.clone());
         }
-        env.insert("GUTS_WORKSPACE".to_string(), self.work_dir.display().to_string());
+        env.insert(
+            "GUTS_WORKSPACE".to_string(),
+            self.work_dir.display().to_string(),
+        );
 
         // Add step-specific env
         env.extend(step_env.clone());
@@ -114,7 +117,7 @@ impl JobExecutor {
     /// Create a new job executor.
     pub fn new() -> Self {
         Self {
-            default_timeout_secs: 60 * 60, // 1 hour default
+            default_timeout_secs: 60 * 60,     // 1 hour default
             max_output_size: 10 * 1024 * 1024, // 10MB max output
         }
     }
@@ -143,7 +146,12 @@ impl JobExecutor {
         }
 
         job_run.start(Some("default".to_string()));
-        self.log(&log_sender, None, LogLevel::Info, format!("Starting job: {}", job_def.display_name(job_id)));
+        self.log(
+            &log_sender,
+            None,
+            LogLevel::Info,
+            format!("Starting job: {}", job_def.display_name(job_id)),
+        );
 
         // Add job-level environment
         context.env.extend(job_def.env.clone());
@@ -173,21 +181,33 @@ impl JobExecutor {
             if !should_run {
                 step_run.status = RunStatus::Completed;
                 step_run.conclusion = Some(Conclusion::Skipped);
-                self.log(&log_sender, Some(step_idx as u32), LogLevel::Info, format!("Skipping step: {}", step.name()));
+                self.log(
+                    &log_sender,
+                    Some(step_idx as u32),
+                    LogLevel::Info,
+                    format!("Skipping step: {}", step.name()),
+                );
                 continue;
             }
 
             step_run.start();
-            self.log(&log_sender, Some(step_idx as u32), LogLevel::Info, format!("Running step: {}", step.name()));
+            self.log(
+                &log_sender,
+                Some(step_idx as u32),
+                LogLevel::Info,
+                format!("Running step: {}", step.name()),
+            );
 
-            let step_timeout = step.timeout_minutes()
+            let step_timeout = step
+                .timeout_minutes()
                 .map(|m| (m as u64) * 60)
                 .unwrap_or(timeout_secs);
 
             let result = tokio::time::timeout(
                 std::time::Duration::from_secs(step_timeout),
                 self.execute_step(step, &context, &log_sender, step_idx as u32),
-            ).await;
+            )
+            .await;
 
             let conclusion = match result {
                 Ok(Ok(output)) => {
@@ -198,8 +218,12 @@ impl JobExecutor {
                         }
                         Conclusion::Success
                     } else {
-                        self.log(&log_sender, Some(step_idx as u32), LogLevel::Error,
-                            format!("Step failed with exit code: {}", output.exit_code));
+                        self.log(
+                            &log_sender,
+                            Some(step_idx as u32),
+                            LogLevel::Error,
+                            format!("Step failed with exit code: {}", output.exit_code),
+                        );
                         if step.continue_on_error() {
                             Conclusion::Neutral
                         } else {
@@ -209,7 +233,12 @@ impl JobExecutor {
                     }
                 }
                 Ok(Err(e)) => {
-                    self.log(&log_sender, Some(step_idx as u32), LogLevel::Error, format!("Step error: {}", e));
+                    self.log(
+                        &log_sender,
+                        Some(step_idx as u32),
+                        LogLevel::Error,
+                        format!("Step error: {}", e),
+                    );
                     if step.continue_on_error() {
                         Conclusion::Neutral
                     } else {
@@ -218,7 +247,12 @@ impl JobExecutor {
                     }
                 }
                 Err(_) => {
-                    self.log(&log_sender, Some(step_idx as u32), LogLevel::Error, "Step timed out".to_string());
+                    self.log(
+                        &log_sender,
+                        Some(step_idx as u32),
+                        LogLevel::Error,
+                        "Step timed out".to_string(),
+                    );
                     overall_success = false;
                     Conclusion::TimedOut
                 }
@@ -239,7 +273,12 @@ impl JobExecutor {
         };
 
         job_run.complete(conclusion);
-        self.log(&log_sender, None, LogLevel::Info, format!("Job completed: {:?}", conclusion));
+        self.log(
+            &log_sender,
+            None,
+            LogLevel::Info,
+            format!("Job completed: {:?}", conclusion),
+        );
 
         Ok(JobExecutionResult {
             job_run,
@@ -258,10 +297,12 @@ impl JobExecutor {
     ) -> Result<StepOutput> {
         match step {
             Step::Run(run_step) => {
-                self.execute_run_step(run_step, context, log_sender, step_idx).await
+                self.execute_run_step(run_step, context, log_sender, step_idx)
+                    .await
             }
             Step::Uses(uses_step) => {
-                self.execute_uses_step(uses_step, context, log_sender, step_idx).await
+                self.execute_uses_step(uses_step, context, log_sender, step_idx)
+                    .await
             }
         }
     }
@@ -275,7 +316,8 @@ impl JobExecutor {
         step_idx: u32,
     ) -> Result<StepOutput> {
         let shell = step.shell.as_deref().unwrap_or("sh");
-        let work_dir = step.working_directory
+        let work_dir = step
+            .working_directory
             .as_ref()
             .map(|d| context.work_dir.join(d))
             .unwrap_or_else(|| context.work_dir.clone());
@@ -292,7 +334,9 @@ impl JobExecutor {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 
-        let mut child = cmd.spawn().map_err(|e| CiError::ExecutionFailed(e.to_string()))?;
+        let mut child = cmd
+            .spawn()
+            .map_err(|e| CiError::ExecutionFailed(e.to_string()))?;
 
         let stdout = child.stdout.take().expect("stdout not captured");
         let stderr = child.stderr.take().expect("stderr not captured");
@@ -349,7 +393,10 @@ impl JobExecutor {
             self.log(log_sender, Some(step_idx), LogLevel::Warning, line);
         }
 
-        let status = child.wait().await.map_err(|e| CiError::ExecutionFailed(e.to_string()))?;
+        let status = child
+            .wait()
+            .await
+            .map_err(|e| CiError::ExecutionFailed(e.to_string()))?;
         let exit_code = status.code().unwrap_or(-1);
 
         // Parse output commands (simplified)
@@ -375,34 +422,74 @@ impl JobExecutor {
 
         match action {
             BuiltinAction::Checkout => {
-                self.log(log_sender, Some(step_idx), LogLevel::Info, "Checking out repository...".to_string());
+                self.log(
+                    log_sender,
+                    Some(step_idx),
+                    LogLevel::Info,
+                    "Checking out repository...".to_string(),
+                );
                 // In a real implementation, this would clone/checkout the repo
                 // For now, we just verify the work directory exists
                 if !context.work_dir.exists() {
-                    return Err(CiError::ExecutionFailed("Work directory does not exist".into()));
+                    return Err(CiError::ExecutionFailed(
+                        "Work directory does not exist".into(),
+                    ));
                 }
-                self.log(log_sender, Some(step_idx), LogLevel::Info, format!("Checked out at {}", context.sha));
+                self.log(
+                    log_sender,
+                    Some(step_idx),
+                    LogLevel::Info,
+                    format!("Checked out at {}", context.sha),
+                );
                 Ok(StepOutput::default())
             }
             BuiltinAction::Cache => {
-                self.log(log_sender, Some(step_idx), LogLevel::Info, "Cache action (no-op in MVP)".to_string());
+                self.log(
+                    log_sender,
+                    Some(step_idx),
+                    LogLevel::Info,
+                    "Cache action (no-op in MVP)".to_string(),
+                );
                 Ok(StepOutput::default())
             }
             BuiltinAction::UploadArtifact => {
-                self.log(log_sender, Some(step_idx), LogLevel::Info, "Upload artifact action (no-op in MVP)".to_string());
+                self.log(
+                    log_sender,
+                    Some(step_idx),
+                    LogLevel::Info,
+                    "Upload artifact action (no-op in MVP)".to_string(),
+                );
                 Ok(StepOutput::default())
             }
             BuiltinAction::DownloadArtifact => {
-                self.log(log_sender, Some(step_idx), LogLevel::Info, "Download artifact action (no-op in MVP)".to_string());
+                self.log(
+                    log_sender,
+                    Some(step_idx),
+                    LogLevel::Info,
+                    "Download artifact action (no-op in MVP)".to_string(),
+                );
                 Ok(StepOutput::default())
             }
             BuiltinAction::SetupRust => {
-                self.log(log_sender, Some(step_idx), LogLevel::Info, "Rust is already available".to_string());
+                self.log(
+                    log_sender,
+                    Some(step_idx),
+                    LogLevel::Info,
+                    "Rust is already available".to_string(),
+                );
                 Ok(StepOutput::default())
             }
             BuiltinAction::Unknown(name) => {
-                self.log(log_sender, Some(step_idx), LogLevel::Warning, format!("Unknown action: {}", name));
-                Err(CiError::ExecutionFailed(format!("Unknown action: {}", name)))
+                self.log(
+                    log_sender,
+                    Some(step_idx),
+                    LogLevel::Warning,
+                    format!("Unknown action: {}", name),
+                );
+                Err(CiError::ExecutionFailed(format!(
+                    "Unknown action: {}",
+                    name
+                )))
             }
         }
     }
@@ -415,7 +502,7 @@ impl JobExecutor {
             Some("success()") => previous_success,
             Some("failure()") => !previous_success,
             Some("cancelled()") => false, // We don't support cancellation checks yet
-            Some(_) => previous_success, // Unknown condition, default to previous success
+            Some(_) => previous_success,  // Unknown condition, default to previous success
         }
     }
 
@@ -436,7 +523,10 @@ impl JobExecutor {
             }
             // Also support: GUTS_OUTPUT_key=value
             if line.starts_with("GUTS_OUTPUT_") {
-                if let Some((key, value)) = line.strip_prefix("GUTS_OUTPUT_").and_then(|s| s.split_once('=')) {
+                if let Some((key, value)) = line
+                    .strip_prefix("GUTS_OUTPUT_")
+                    .and_then(|s| s.split_once('='))
+                {
                     outputs.insert(key.to_string(), value.to_string());
                 }
             }
@@ -482,8 +572,8 @@ pub async fn execute_workflow(
     let mut job_outputs: HashMap<String, HashMap<String, String>> = HashMap::new();
 
     // Resolve job order
-    let job_order = crate::job::resolve_job_order(&workflow.jobs)
-        .map_err(|e| CiError::CircularDependency(e))?;
+    let job_order =
+        crate::job::resolve_job_order(&workflow.jobs).map_err(CiError::CircularDependency)?;
 
     for job_id in job_order {
         let job_def = match workflow.jobs.get(&job_id) {
@@ -493,7 +583,10 @@ pub async fn execute_workflow(
 
         // Check if dependencies are satisfied
         let deps_ok = job_def.needs.iter().all(|dep| {
-            results.get(dep).map(|r: &JobExecutionResult| r.conclusion.is_success()).unwrap_or(false)
+            results
+                .get(dep)
+                .map(|r: &JobExecutionResult| r.conclusion.is_success())
+                .unwrap_or(false)
         });
 
         if !deps_ok && !job_def.needs.is_empty() {
@@ -507,11 +600,14 @@ pub async fn execute_workflow(
             job_run.status = RunStatus::Completed;
             job_run.conclusion = Some(Conclusion::Skipped);
 
-            results.insert(job_id.clone(), JobExecutionResult {
-                job_run,
-                conclusion: Conclusion::Skipped,
-                outputs: HashMap::new(),
-            });
+            results.insert(
+                job_id.clone(),
+                JobExecutionResult {
+                    job_run,
+                    conclusion: Conclusion::Skipped,
+                    outputs: HashMap::new(),
+                },
+            );
             continue;
         }
 
@@ -520,7 +616,9 @@ pub async fn execute_workflow(
         job_context.job_outputs = job_outputs.clone();
         job_context.env.extend(workflow.env.clone());
 
-        let result = executor.execute_job(&job_id, job_def, job_context, log_sender.clone()).await?;
+        let result = executor
+            .execute_job(&job_id, job_def, job_context, log_sender.clone())
+            .await?;
 
         // Store outputs for dependent jobs
         job_outputs.insert(job_id.clone(), result.outputs.clone());
@@ -542,7 +640,8 @@ mod tests {
             "alice/repo".to_string(),
             PathBuf::from("/tmp/work"),
             "abc123".to_string(),
-        ).with_branch(Some("main".to_string()));
+        )
+        .with_branch(Some("main".to_string()));
 
         let env = ctx.get_env(&HashMap::new());
         assert_eq!(env.get("GUTS_SHA"), Some(&"abc123".to_string()));
@@ -553,7 +652,8 @@ mod tests {
     fn test_output_parsing() {
         let executor = JobExecutor::new();
 
-        let output = "::set-output name=version::1.0.0\nGUTS_OUTPUT_build=success\nsome other output";
+        let output =
+            "::set-output name=version::1.0.0\nGUTS_OUTPUT_build=success\nsome other output";
         let outputs = executor.parse_output_commands(output);
 
         assert_eq!(outputs.get("version"), Some(&"1.0.0".to_string()));
@@ -593,7 +693,10 @@ mod tests {
             id: None,
         };
 
-        let result = executor.execute_run_step(&step, &context, &None, 0).await.unwrap();
+        let result = executor
+            .execute_run_step(&step, &context, &None, 0)
+            .await
+            .unwrap();
         assert_eq!(result.exit_code, 0);
         assert!(result.stdout.contains("hello world"));
     }
@@ -619,7 +722,10 @@ mod tests {
             id: None,
         };
 
-        let result = executor.execute_run_step(&step, &context, &None, 0).await.unwrap();
+        let result = executor
+            .execute_run_step(&step, &context, &None, 0)
+            .await
+            .unwrap();
         assert_eq!(result.exit_code, 1);
     }
 }

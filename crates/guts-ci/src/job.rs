@@ -192,7 +192,10 @@ fn visit_job(
     order: &mut Vec<String>,
 ) -> Result<(), String> {
     if temp_mark.get(job_id).copied().unwrap_or(false) {
-        return Err(format!("Circular dependency detected involving job: {}", job_id));
+        return Err(format!(
+            "Circular dependency detected involving job: {}",
+            job_id
+        ));
     }
 
     if !visited.contains_key(job_id) {
@@ -201,10 +204,7 @@ fn visit_job(
         if let Some(job) = jobs.get(job_id) {
             for dep in &job.needs {
                 if !jobs.contains_key(dep) {
-                    return Err(format!(
-                        "Job '{}' depends on unknown job '{}'",
-                        job_id, dep
-                    ));
+                    return Err(format!("Job '{}' depends on unknown job '{}'", job_id, dep));
                 }
                 visit_job(dep, jobs, visited, temp_mark, order)?;
             }

@@ -59,10 +59,12 @@ pub enum Trigger {
 /// PR event types that can trigger workflows.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum PrEventType {
     Opened,
     Closed,
     Reopened,
+    #[default]
     Synchronize,
     Edited,
     ReadyForReview,
@@ -70,12 +72,6 @@ pub enum PrEventType {
     Unlabeled,
     ReviewRequested,
     ReviewRequestRemoved,
-}
-
-impl Default for PrEventType {
-    fn default() -> Self {
-        Self::Synchronize
-    }
 }
 
 /// Definition for a workflow input parameter.
@@ -166,8 +162,9 @@ impl Trigger {
 
                 // Check path patterns
                 if !paths.is_empty() {
-                    let any_path_matches =
-                        changed_paths.iter().any(|p| Self::matches_patterns(p, paths));
+                    let any_path_matches = changed_paths
+                        .iter()
+                        .any(|p| Self::matches_patterns(p, paths));
                     if !any_path_matches {
                         return false;
                     }
@@ -214,8 +211,9 @@ impl Trigger {
 
                 // Check path patterns
                 if !paths.is_empty() {
-                    let any_path_matches =
-                        changed_paths.iter().any(|p| Self::matches_patterns(p, paths));
+                    let any_path_matches = changed_paths
+                        .iter()
+                        .any(|p| Self::matches_patterns(p, paths));
                     if !any_path_matches {
                         return false;
                     }
@@ -252,17 +250,16 @@ impl Trigger {
             // Handle **/*.ext patterns (any file with extension in any directory)
             if pattern.starts_with("**/") && pattern.contains('.') {
                 let suffix = &pattern[3..]; // e.g., "*.rs"
-                if suffix.starts_with('*') {
+                if let Some(ext) = suffix.strip_prefix('*') {
                     // Pattern like **/*.rs
-                    let ext = &suffix[1..]; // e.g., ".rs"
+                    // e.g., ".rs"
                     return value.ends_with(ext);
                 }
                 // Pattern like **/foo.rs
                 return value.ends_with(suffix) || value.contains(&format!("/{suffix}"));
             }
             // Handle prefix/** patterns
-            if pattern.ends_with("/**") {
-                let prefix = &pattern[..pattern.len() - 3];
+            if let Some(prefix) = pattern.strip_suffix("/**") {
                 return value.starts_with(prefix);
             }
             // Simple glob matching (single *)

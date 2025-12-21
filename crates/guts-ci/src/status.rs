@@ -1,9 +1,9 @@
 //! Status checks for commits, integrated with branch protection.
 
 use crate::run::Conclusion;
+use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use parking_lot::RwLock;
 
 /// A unique identifier for a status check.
 pub type StatusCheckId = String;
@@ -75,12 +75,7 @@ impl From<Conclusion> for CheckState {
 
 impl StatusCheck {
     /// Create a new status check.
-    pub fn new(
-        repo_key: String,
-        sha: String,
-        context: String,
-        state: CheckState,
-    ) -> Self {
+    pub fn new(repo_key: String, sha: String, context: String, state: CheckState) -> Self {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
@@ -393,24 +388,63 @@ mod tests {
     fn test_combined_status_calculation() {
         // All success
         let statuses = vec![
-            StatusCheck::new("r".to_string(), "s".to_string(), "a".to_string(), CheckState::Success),
-            StatusCheck::new("r".to_string(), "s".to_string(), "b".to_string(), CheckState::Success),
+            StatusCheck::new(
+                "r".to_string(),
+                "s".to_string(),
+                "a".to_string(),
+                CheckState::Success,
+            ),
+            StatusCheck::new(
+                "r".to_string(),
+                "s".to_string(),
+                "b".to_string(),
+                CheckState::Success,
+            ),
         ];
-        assert_eq!(CombinedStatus::calculate_state(&statuses), CheckState::Success);
+        assert_eq!(
+            CombinedStatus::calculate_state(&statuses),
+            CheckState::Success
+        );
 
         // One pending
         let statuses = vec![
-            StatusCheck::new("r".to_string(), "s".to_string(), "a".to_string(), CheckState::Success),
-            StatusCheck::new("r".to_string(), "s".to_string(), "b".to_string(), CheckState::Pending),
+            StatusCheck::new(
+                "r".to_string(),
+                "s".to_string(),
+                "a".to_string(),
+                CheckState::Success,
+            ),
+            StatusCheck::new(
+                "r".to_string(),
+                "s".to_string(),
+                "b".to_string(),
+                CheckState::Pending,
+            ),
         ];
-        assert_eq!(CombinedStatus::calculate_state(&statuses), CheckState::Pending);
+        assert_eq!(
+            CombinedStatus::calculate_state(&statuses),
+            CheckState::Pending
+        );
 
         // One failure
         let statuses = vec![
-            StatusCheck::new("r".to_string(), "s".to_string(), "a".to_string(), CheckState::Success),
-            StatusCheck::new("r".to_string(), "s".to_string(), "b".to_string(), CheckState::Failure),
+            StatusCheck::new(
+                "r".to_string(),
+                "s".to_string(),
+                "a".to_string(),
+                CheckState::Success,
+            ),
+            StatusCheck::new(
+                "r".to_string(),
+                "s".to_string(),
+                "b".to_string(),
+                CheckState::Failure,
+            ),
         ];
-        assert_eq!(CombinedStatus::calculate_state(&statuses), CheckState::Failure);
+        assert_eq!(
+            CombinedStatus::calculate_state(&statuses),
+            CheckState::Failure
+        );
 
         // Empty = success
         assert_eq!(CombinedStatus::calculate_state(&[]), CheckState::Success);
@@ -484,7 +518,11 @@ mod tests {
             CheckState::Failure,
         ));
 
-        let required = vec!["CI / Build".to_string(), "CI / Test".to_string(), "CI / Lint".to_string()];
+        let required = vec![
+            "CI / Build".to_string(),
+            "CI / Test".to_string(),
+            "CI / Lint".to_string(),
+        ];
         let (passed, issues) = check_required_statuses(&store, "alice/repo", "abc123", &required);
 
         assert!(!passed);

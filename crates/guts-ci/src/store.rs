@@ -52,7 +52,12 @@ impl WorkflowStore {
     }
 
     /// Get workflows that match a push event.
-    pub fn get_matching_push(&self, repo_key: &str, branch: &str, changed_paths: &[String]) -> Vec<Workflow> {
+    pub fn get_matching_push(
+        &self,
+        repo_key: &str,
+        branch: &str,
+        changed_paths: &[String],
+    ) -> Vec<Workflow> {
         let workflows = self.workflows.read();
         workflows
             .values()
@@ -72,7 +77,10 @@ impl WorkflowStore {
         let workflows = self.workflows.read();
         workflows
             .values()
-            .filter(|w| w.repo_key == repo_key && w.matches_pull_request(target_branch, event_type, changed_paths))
+            .filter(|w| {
+                w.repo_key == repo_key
+                    && w.matches_pull_request(target_branch, event_type, changed_paths)
+            })
             .cloned()
             .collect()
     }
@@ -122,7 +130,10 @@ impl RunStore {
         }
         {
             let mut by_workflow = self.by_workflow.write();
-            by_workflow.entry(workflow_key).or_default().push(id.clone());
+            by_workflow
+                .entry(workflow_key)
+                .or_default()
+                .push(id.clone());
         }
         {
             let mut by_repo = self.by_repo.write();
@@ -138,7 +149,8 @@ impl RunStore {
 
     /// Get a run by ID, returning a Result.
     pub fn get_or_err(&self, run_id: &str) -> Result<WorkflowRun> {
-        self.get(run_id).ok_or_else(|| CiError::RunNotFound(run_id.to_string()))
+        self.get(run_id)
+            .ok_or_else(|| CiError::RunNotFound(run_id.to_string()))
     }
 
     /// Update a run.
@@ -250,7 +262,11 @@ impl RunStore {
 
     /// Get active run count.
     pub fn active_count(&self) -> usize {
-        self.runs.read().values().filter(|r| r.status.is_active()).count()
+        self.runs
+            .read()
+            .values()
+            .filter(|r| r.status.is_active())
+            .count()
     }
 }
 

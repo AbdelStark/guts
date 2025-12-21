@@ -255,6 +255,9 @@ jobs:
     #[test]
     fn test_make_check_context() {
         assert_eq!(make_check_context("CI", "Build"), "CI / Build");
-        assert_eq!(make_check_context("Deploy", "Production"), "Deploy / Production");
+        assert_eq!(
+            make_check_context("Deploy", "Production"),
+            "Deploy / Production"
+        );
     }
 }

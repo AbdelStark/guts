@@ -33,8 +33,7 @@ use axum::{
     Json, Router,
 };
 use guts_ci::{
-    Artifact, CheckState, CiStore, StatusCheck, TriggerContext, TriggerType, Workflow,
-    WorkflowRun,
+    Artifact, CheckState, CiStore, StatusCheck, TriggerContext, TriggerType, Workflow, WorkflowRun,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -347,7 +346,7 @@ async fn get_workflow(
         .ci
         .workflows
         .get(&repo_key, &workflow_id)
-        .ok_or_else(|| CiApiError::WorkflowNotFound(workflow_id))?;
+        .ok_or(CiApiError::WorkflowNotFound(workflow_id))?;
 
     Ok(Json(WorkflowResponse::from(&workflow)))
 }
@@ -363,7 +362,7 @@ async fn delete_workflow(
         .ci
         .workflows
         .delete(&repo_key, &workflow_id)
-        .ok_or_else(|| CiApiError::WorkflowNotFound(workflow_id))?;
+        .ok_or(CiApiError::WorkflowNotFound(workflow_id))?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -443,7 +442,7 @@ async fn get_run(
         .ci
         .runs
         .get(&run_id)
-        .ok_or_else(|| CiApiError::RunNotFound(run_id))?;
+        .ok_or(CiApiError::RunNotFound(run_id))?;
 
     Ok(Json(RunResponse::from(&run)))
 }
@@ -478,7 +477,7 @@ async fn list_jobs(
         .ci
         .runs
         .get(&run_id)
-        .ok_or_else(|| CiApiError::RunNotFound(run_id))?;
+        .ok_or(CiApiError::RunNotFound(run_id))?;
 
     let jobs: Vec<JobResponse> = run
         .jobs
@@ -515,7 +514,7 @@ async fn get_job_logs(
         .ci
         .runs
         .get(&run_id)
-        .ok_or_else(|| CiApiError::RunNotFound(run_id))?;
+        .ok_or(CiApiError::RunNotFound(run_id))?;
 
     let job = run
         .jobs
@@ -550,10 +549,11 @@ async fn upload_artifact(
     // Extract artifact name from Content-Disposition header or generate one
     let artifact_name = format!("artifact-{}.bin", uuid::Uuid::new_v4());
 
-    let artifact = state
-        .ci
-        .artifacts
-        .upload(run_id, repo_key, artifact_name, body.to_vec(), Some(30))?;
+    let artifact =
+        state
+            .ci
+            .artifacts
+            .upload(run_id, repo_key, artifact_name, body.to_vec(), Some(30))?;
 
     Ok((StatusCode::CREATED, Json(ArtifactResponse::from(&artifact))))
 }
@@ -643,7 +643,12 @@ async fn create_status(
         "success" => CheckState::Success,
         "failure" => CheckState::Failure,
         "error" => CheckState::Error,
-        _ => return Err(CiApiError::BadRequest(format!("Invalid state: {}", req.state))),
+        _ => {
+            return Err(CiApiError::BadRequest(format!(
+                "Invalid state: {}",
+                req.state
+            )))
+        }
     };
 
     let mut check = StatusCheck::new(repo_key, sha, req.context, check_state);

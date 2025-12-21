@@ -67,7 +67,10 @@ pub enum RunStatus {
 impl RunStatus {
     /// Check if this status represents an active run.
     pub fn is_active(&self) -> bool {
-        matches!(self, RunStatus::Queued | RunStatus::Waiting | RunStatus::InProgress)
+        matches!(
+            self,
+            RunStatus::Queued | RunStatus::Waiting | RunStatus::InProgress
+        )
     }
 
     /// Check if this status represents a terminal state.
@@ -101,17 +104,24 @@ pub enum Conclusion {
 impl Conclusion {
     /// Check if this is a successful conclusion.
     pub fn is_success(&self) -> bool {
-        matches!(self, Conclusion::Success | Conclusion::Neutral | Conclusion::Skipped)
+        matches!(
+            self,
+            Conclusion::Success | Conclusion::Neutral | Conclusion::Skipped
+        )
     }
 
     /// Check if this is a failure conclusion.
     pub fn is_failure(&self) -> bool {
-        matches!(self, Conclusion::Failure | Conclusion::TimedOut | Conclusion::Error)
+        matches!(
+            self,
+            Conclusion::Failure | Conclusion::TimedOut | Conclusion::Error
+        )
     }
 }
 
 impl WorkflowRun {
     /// Create a new workflow run.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: RunId,
         workflow_id: WorkflowId,
@@ -451,7 +461,12 @@ mod tests {
 
     #[test]
     fn test_job_run_lifecycle() {
-        let mut job = JobRun::new("job-1".to_string(), "build".to_string(), "Build".to_string(), 2);
+        let mut job = JobRun::new(
+            "job-1".to_string(),
+            "build".to_string(),
+            "Build".to_string(),
+            2,
+        );
 
         assert_eq!(job.status, RunStatus::Queued);
         assert_eq!(job.steps.len(), 2);
@@ -501,7 +516,12 @@ mod tests {
         assert_eq!(run.calculate_conclusion(), Conclusion::Success);
 
         // Add a successful job
-        let mut job1 = JobRun::new("j1".to_string(), "build".to_string(), "Build".to_string(), 1);
+        let mut job1 = JobRun::new(
+            "j1".to_string(),
+            "build".to_string(),
+            "Build".to_string(),
+            1,
+        );
         job1.complete(Conclusion::Success);
         run.jobs.insert("build".to_string(), job1);
         assert_eq!(run.calculate_conclusion(), Conclusion::Success);
