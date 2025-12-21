@@ -687,4 +687,291 @@ mod tests {
         let new_pr = store.create_pull_request(new_pr).unwrap();
         assert_eq!(new_pr.number, 51);
     }
+
+    // ==================== Additional Tests ====================
+
+    #[test]
+    fn test_multiple_repositories_isolation() {
+        let store = CollaborationStore::new();
+
+        // Create issues in different repos
+        let issue1 = Issue::new(0, "alice/repo1", 0, "Issue 1", "Desc", "alice");
+        let issue2 = Issue::new(0, "alice/repo2", 0, "Issue 2", "Desc", "alice");
+
+        store.create_issue(issue1).unwrap();
+        store.create_issue(issue2).unwrap();
+
+        // Each repo should have its own issue #1
+        let issues_repo1 = store.list_issues("alice/repo1", None);
+        let issues_repo2 = store.list_issues("alice/repo2", None);
+
+        assert_eq!(issues_repo1.len(), 1);
+        assert_eq!(issues_repo2.len(), 1);
+        assert_eq!(issues_repo1[0].title, "Issue 1");
+        assert_eq!(issues_repo2[0].title, "Issue 2");
+    }
+
+    #[test]
+    fn test_issue_comments() {
+        let (store, issue) = create_store_with_issue();
+
+        let comment = Comment::new(
+            0,
+            CommentTarget::issue("alice/repo", issue.number),
+            "bob",
+            "I can reproduce this!",
+        );
+        store.create_comment(comment).unwrap();
+
+        let comments = store.list_issue_comments("alice/repo", issue.number);
+        assert_eq!(comments.len(), 1);
+        assert_eq!(comments[0].body, "I can reproduce this!");
+    }
+
+    #[test]
+    fn test_comment_on_nonexistent_issue() {
+        let store = CollaborationStore::new();
+        let comment = Comment::new(0, CommentTarget::issue("alice/repo", 999), "bob", "Hello");
+        let result = store.create_comment(comment);
+        assert!(matches!(
+            result,
+            Err(CollaborationError::IssueNotFound { .. })
+        ));
+    }
+
+    #[test]
+    fn test_review_on_nonexistent_pr() {
+        let store = CollaborationStore::new();
+        let review = Review::new(0, "alice/repo", 999, "bob", ReviewState::Approved, "abc123");
+        let result = store.create_review(review);
+        assert!(matches!(
+            result,
+            Err(CollaborationError::PullRequestNotFound { .. })
+        ));
+    }
+
+    #[test]
+    fn test_get_comment_not_found() {
+        let store = CollaborationStore::new();
+        let result = store.get_comment(999);
+        assert!(matches!(
+            result,
+            Err(CollaborationError::CommentNotFound { id: 999 })
+        ));
+    }
+
+    #[test]
+    fn test_get_review_not_found() {
+        let store = CollaborationStore::new();
+        let result = store.get_review(999);
+        assert!(matches!(
+            result,
+            Err(CollaborationError::ReviewNotFound { id: 999 })
+        ));
+    }
+
+    #[test]
+    fn test_update_comment_not_found() {
+        let store = CollaborationStore::new();
+        let result = store.update_comment(999, "new body");
+        assert!(matches!(
+            result,
+            Err(CollaborationError::CommentNotFound { id: 999 })
+        ));
+    }
+
+    #[test]
+    fn test_delete_comment_not_found() {
+        let store = CollaborationStore::new();
+        let result = store.delete_comment(999);
+        assert!(matches!(
+            result,
+            Err(CollaborationError::CommentNotFound { id: 999 })
+        ));
+    }
+
+    #[test]
+    fn test_dismiss_review_not_found() {
+        let store = CollaborationStore::new();
+        let result = store.dismiss_review(999);
+        assert!(matches!(
+            result,
+            Err(CollaborationError::ReviewNotFound { id: 999 })
+        ));
+    }
+
+    #[test]
+    fn test_bulk_operations() {
+        let store = CollaborationStore::new();
+
+        // Create multiple PRs
+        for i in 0..3 {
+            let pr = PullRequest::new(
+                0,
+                "alice/repo",
+                0,
+                format!("PR {}", i),
+                "Desc",
+                "alice",
+                format!("feature-{}", i),
+                "main",
+                ObjectId::from_bytes([i as u8; 20]),
+                ObjectId::from_bytes([0u8; 20]),
+            );
+            store.create_pull_request(pr).unwrap();
+        }
+
+        // Create multiple issues
+        for i in 0..2 {
+            let issue = Issue::new(0, "alice/repo", 0, format!("Issue {}", i), "Desc", "alice");
+            store.create_issue(issue).unwrap();
+        }
+
+        // Test bulk getters
+        assert_eq!(store.all_pull_requests().len(), 3);
+        assert_eq!(store.all_issues().len(), 2);
+        assert!(store.all_comments().is_empty());
+        assert!(store.all_reviews().is_empty());
+    }
+
+    #[test]
+    fn test_import_issue() {
+        let store = CollaborationStore::new();
+
+        let mut issue = Issue::new(0, "alice/repo", 0, "Imported Issue", "Desc", "alice");
+        issue.id = 200;
+        issue.number = 100;
+
+        store.import_issue(issue).unwrap();
+
+        let imported = store.get_issue("alice/repo", 100).unwrap();
+        assert_eq!(imported.id, 200);
+        assert_eq!(imported.title, "Imported Issue");
+
+        // New issue should get number 101
+        let new_issue = Issue::new(0, "alice/repo", 0, "New Issue", "Desc", "bob");
+        let new_issue = store.create_issue(new_issue).unwrap();
+        assert_eq!(new_issue.number, 101);
+    }
+
+    #[test]
+    fn test_import_comment() {
+        let (store, pr) = create_store_with_pr();
+
+        let mut comment = Comment::new(
+            0,
+            CommentTarget::pull_request("alice/repo", pr.number),
+            "bob",
+            "Imported comment",
+        );
+        comment.id = 500;
+
+        store.import_comment(comment).unwrap();
+
+        let imported = store.get_comment(500).unwrap();
+        assert_eq!(imported.body, "Imported comment");
+    }
+
+    #[test]
+    fn test_import_review() {
+        let (store, pr) = create_store_with_pr();
+
+        let mut review = Review::new(
+            0,
+            "alice/repo",
+            pr.number,
+            "bob",
+            ReviewState::Approved,
+            "abc123",
+        );
+        review.id = 600;
+
+        store.import_review(review).unwrap();
+
+        let imported = store.get_review(600).unwrap();
+        assert!(imported.is_approved());
+    }
+
+    #[test]
+    fn test_list_issues_by_state() {
+        let store = CollaborationStore::new();
+
+        // Create issues
+        for i in 0..3 {
+            let issue = Issue::new(0, "alice/repo", 0, format!("Issue {}", i), "Desc", "alice");
+            store.create_issue(issue).unwrap();
+        }
+
+        // Close one
+        store.close_issue("alice/repo", 1, "bob").unwrap();
+
+        // Check filtering
+        let open = store.list_issues("alice/repo", Some(IssueState::Open));
+        assert_eq!(open.len(), 2);
+
+        let closed = store.list_issues("alice/repo", Some(IssueState::Closed));
+        assert_eq!(closed.len(), 1);
+
+        let all = store.list_issues("alice/repo", None);
+        assert_eq!(all.len(), 3);
+    }
+
+    #[test]
+    fn test_concurrent_id_generation() {
+        use std::sync::Arc;
+        use std::thread;
+
+        let store = Arc::new(CollaborationStore::new());
+        let mut handles = vec![];
+
+        for _ in 0..10 {
+            let store = Arc::clone(&store);
+            handles.push(thread::spawn(move || {
+                let issue = Issue::new(0, "alice/repo", 0, "Concurrent issue", "Desc", "alice");
+                store.create_issue(issue).unwrap()
+            }));
+        }
+
+        let mut ids: Vec<u64> = handles.into_iter().map(|h| h.join().unwrap().id).collect();
+        ids.sort();
+
+        // All IDs should be unique
+        let unique_ids: std::collections::HashSet<_> = ids.iter().cloned().collect();
+        assert_eq!(unique_ids.len(), 10);
+    }
+
+    #[test]
+    fn test_store_default() {
+        let store: CollaborationStore = Default::default();
+        assert!(store.all_pull_requests().is_empty());
+        assert!(store.all_issues().is_empty());
+    }
+
+    #[test]
+    fn test_pr_update_function() {
+        let (store, _) = create_store_with_pr();
+
+        let pr = store
+            .update_pull_request("alice/repo", 1, |pr| {
+                pr.title = "Updated title".to_string();
+                Ok(())
+            })
+            .unwrap();
+
+        assert_eq!(pr.title, "Updated title");
+    }
+
+    #[test]
+    fn test_issue_update_function() {
+        let (store, _) = create_store_with_issue();
+
+        let issue = store
+            .update_issue("alice/repo", 1, |issue| {
+                issue.title = "Updated title".to_string();
+                Ok(())
+            })
+            .unwrap();
+
+        assert_eq!(issue.title, "Updated title");
+    }
 }
