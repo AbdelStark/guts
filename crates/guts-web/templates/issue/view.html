@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}#{{ number }} {{ title }} - {{ owner }}/{{ name }} - Guts{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center space-x-2 text-sm text-gray-400">
+        <a href="/{{ owner }}" class="text-green-400 hover:underline">{{ owner }}</a>
+        <span>/</span>
+        <a href="/{{ owner }}/{{ name }}" class="text-green-400 hover:underline">{{ name }}</a>
+        <span>/</span>
+        <a href="/{{ owner }}/{{ name }}/issues" class="text-green-400 hover:underline">Issues</a>
+    </div>
+</div>
+
+<!-- Issue Header -->
+<div class="mb-6">
+    <h1 class="text-2xl font-bold mb-2">
+        {{ title }}
+        <span class="text-gray-500 font-normal">#{{ number }}</span>
+    </h1>
+    <div class="flex items-center space-x-4">
+        {% if state == "Open" %}
+        <span class="flex items-center space-x-1 px-3 py-1 rounded-full bg-green-900 text-green-400 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <span>Open</span>
+        </span>
+        {% else %}
+        <span class="flex items-center space-x-1 px-3 py-1 rounded-full bg-purple-900 text-purple-400 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            <span>Closed</span>
+        </span>
+        {% endif %}
+        <span class="text-sm text-gray-400">
+            <span class="font-medium text-gray-300">{{ author }}</span>
+            opened this issue
+        </span>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <!-- Main content -->
+    <div class="lg:col-span-3">
+        <!-- Description -->
+        <div class="bg-gray-800 rounded-lg border border-gray-700 mb-6">
+            <div class="p-4 border-b border-gray-700 flex items-center space-x-2">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <span class="font-medium text-gray-300">{{ author }}</span>
+                <span class="text-gray-500">opened this issue</span>
+            </div>
+            <div class="p-4 markdown-body">
+                {% if description_html.is_empty() %}
+                <p class="text-gray-500 italic">No description provided.</p>
+                {% else %}
+                {{ description_html }}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Comments -->
+        <div class="mb-6">
+            <h3 class="text-lg font-medium mb-4">Comments</h3>
+            {% if comments.is_empty() %}
+            <div class="bg-gray-800 rounded-lg border border-gray-700 p-8 text-center text-gray-500">
+                <svg class="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                </svg>
+                <p>No comments yet</p>
+            </div>
+            {% else %}
+            {% for comment in comments %}
+            <div class="bg-gray-800 rounded-lg border border-gray-700 mb-4">
+                <div class="p-4 border-b border-gray-700 flex items-center space-x-2">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    <span class="font-medium text-gray-300">{{ comment.author }}</span>
+                    <span class="text-gray-500">commented</span>
+                </div>
+                <div class="p-4 markdown-body">
+                    {{ comment.body_html }}
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+
+        {% if closed_by.is_some() %}
+        <div class="bg-purple-900/30 border border-purple-700 rounded-lg p-4 flex items-center space-x-2">
+            <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            <span class="text-purple-300">
+                <span class="font-medium">{{ closed_by.as_ref().unwrap() }}</span> closed this issue
+            </span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="lg:col-span-1">
+        <div class="bg-gray-800 rounded-lg border border-gray-700 p-4 sticky top-4">
+            <h3 class="font-medium mb-4 text-gray-300">Details</h3>
+
+            <div class="space-y-4 text-sm">
+                <div>
+                    <span class="text-gray-500">Author</span>
+                    <p class="text-gray-300">{{ author }}</p>
+                </div>
+
+                {% if !labels.is_empty() %}
+                <div>
+                    <span class="text-gray-500">Labels</span>
+                    <div class="flex flex-wrap gap-2 mt-1">
+                        {% for label in labels %}
+                        <span class="px-2 py-0.5 rounded-full text-xs bg-blue-900 text-blue-400">{{ label }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if closed_by.is_some() %}
+                <div>
+                    <span class="text-gray-500">Closed by</span>
+                    <p class="text-gray-300">{{ closed_by.as_ref().unwrap() }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

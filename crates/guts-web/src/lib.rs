@@ -7,13 +7,11 @@
 //! - Syntax-highlighted code viewing
 
 pub mod error;
+pub mod markdown;
 pub mod routes;
 pub mod templates;
 
-// Markdown module is available but not currently used in routes
-#[allow(dead_code)]
-pub mod markdown;
-
 pub use error::WebError;
+pub use markdown::render_markdown;
 pub use routes::{web_routes, WebState};
 pub use templates::*;

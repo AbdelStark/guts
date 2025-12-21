@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}{{ short_sha }} - {{ owner }}/{{ name }} - Guts{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center space-x-2 text-xl">
+        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <a href="/{{ owner }}" class="text-green-400 hover:underline">{{ owner }}</a>
+        <span class="text-gray-500">/</span>
+        <a href="/{{ owner }}/{{ name }}" class="text-green-400 hover:underline">{{ name }}</a>
+    </div>
+</div>
+
+<!-- Commit header -->
+<div class="bg-gray-800 rounded-lg border border-gray-700 mb-6">
+    <div class="p-4 border-b border-gray-700">
+        <h1 class="text-xl font-medium mb-2">{{ message }}</h1>
+        <div class="flex items-center space-x-4 text-sm text-gray-400">
+            <div class="flex items-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <span class="font-medium text-gray-300">{{ author }}</span>
+            </div>
+            <span>committed {{ date }}</span>
+        </div>
+    </div>
+    <div class="p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <span class="font-mono text-sm bg-gray-700 px-2 py-1 rounded">{{ sha }}</span>
+        </div>
+        <div class="flex items-center space-x-2">
+            <a href="/{{ owner }}/{{ name }}/tree/{{ sha }}"
+               class="flex items-center space-x-1 text-gray-400 hover:text-white px-3 py-1 rounded-md hover:bg-gray-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                </svg>
+                <span>Browse files</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if parent_sha.is_some() %}
+<div class="mb-6 text-sm text-gray-400">
+    Parent: <a href="/{{ owner }}/{{ name }}/commit/{{ parent_sha.as_ref().unwrap() }}" class="text-blue-400 hover:underline font-mono">{{ parent_sha.as_ref().unwrap() }}</a>
+</div>
+{% endif %}
+
+<!-- File changes summary -->
+<div class="bg-gray-800 rounded-lg border border-gray-700 mb-6">
+    <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+        <span class="font-medium">Showing {{ files_changed.len() }} changed files</span>
+        <div class="flex items-center space-x-4 text-sm">
+            <span class="text-green-400">+{{ additions }} additions</span>
+            <span class="text-red-400">-{{ deletions }} deletions</span>
+        </div>
+    </div>
+
+    {% if files_changed.is_empty() %}
+    <div class="p-8 text-center text-gray-500">
+        <p>No file changes to display</p>
+    </div>
+    {% else %}
+    <div class="divide-y divide-gray-700">
+        {% for file in files_changed %}
+        <div class="p-4">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center space-x-2">
+                    {% if file.status == "added" %}
+                    <span class="text-xs px-2 py-0.5 rounded bg-green-900 text-green-400">Added</span>
+                    {% else if file.status == "deleted" %}
+                    <span class="text-xs px-2 py-0.5 rounded bg-red-900 text-red-400">Deleted</span>
+                    {% else if file.status == "modified" %}
+                    <span class="text-xs px-2 py-0.5 rounded bg-yellow-900 text-yellow-400">Modified</span>
+                    {% endif %}
+                    <span class="font-mono text-sm">{{ file.path }}</span>
+                </div>
+                <div class="flex items-center space-x-2 text-sm">
+                    <span class="text-green-400">+{{ file.additions }}</span>
+                    <span class="text-red-400">-{{ file.deletions }}</span>
+                </div>
+            </div>
+            {% if file.diff.is_some() %}
+            <div class="mt-2 overflow-x-auto">
+                <pre class="text-xs bg-gray-900 rounded p-2"><code class="language-diff">{{ file.diff.as_ref().unwrap() }}</code></pre>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
