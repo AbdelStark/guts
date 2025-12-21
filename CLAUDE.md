@@ -25,6 +25,11 @@
 | [Milestone 7](docs/MILESTONE-7.md) | CI/CD integration spec |
 | [Milestone 8](docs/MILESTONE-8.md) | Git/GitHub compatibility spec |
 | [Milestone 9](docs/MILESTONE-9.md) | Production quality spec |
+| [Milestone 10](docs/MILESTONE-10.md) | Security hardening spec |
+| [Milestone 11](docs/MILESTONE-11.md) | Performance & scalability spec |
+| [Milestone 12](docs/MILESTONE-12.md) | True decentralization spec |
+| [Milestone 13](docs/MILESTONE-13.md) | Operator experience spec |
+| [Milestone 14](docs/MILESTONE-14.md) | User adoption spec |
 | [Contributing](CONTRIBUTING.md) | Contribution guidelines |
 
 ## Quick Start
@@ -93,17 +98,29 @@ guts/
 
 ## Current Status
 
+### Completed Milestones (MVP Phase)
+
 | Milestone | Status | Description |
 |-----------|--------|-------------|
-| Milestone 1 | Complete | Foundation (Git storage, protocol, node API) |
-| Milestone 2 | Complete | Multi-node P2P replication with commonware |
-| Milestone 3 | Complete | Collaboration (PRs, Issues, Comments, Reviews) |
-| Milestone 4 | Complete | Governance (Organizations, Teams, Permissions, Webhooks) |
-| Milestone 5 | Complete | Web Gateway (Search, API Documentation, Full UI) |
-| Milestone 6 | Complete | Real-time Updates (WebSocket, Notifications) |
-| Milestone 7 | Complete | CI/CD Integration (Workflows, Runs, Artifacts, Status Checks) |
-| Milestone 8 | Complete | Git/GitHub Compatibility (Users, Tokens, Releases, Contents) |
-| Milestone 9 | Complete | Production Quality (Observability, Testing, Resilience) |
+| Milestone 1 | ✅ Complete | Foundation (Git storage, protocol, node API) |
+| Milestone 2 | ✅ Complete | Multi-node P2P replication with commonware |
+| Milestone 3 | ✅ Complete | Collaboration (PRs, Issues, Comments, Reviews) |
+| Milestone 4 | ✅ Complete | Governance (Organizations, Teams, Permissions, Webhooks) |
+| Milestone 5 | ✅ Complete | Web Gateway (Search, API Documentation, Full UI) |
+| Milestone 6 | ✅ Complete | Real-time Updates (WebSocket, Notifications) |
+| Milestone 7 | ✅ Complete | CI/CD Integration (Workflows, Runs, Artifacts, Status Checks) |
+| Milestone 8 | ✅ Complete | Git/GitHub Compatibility (Users, Tokens, Releases, Contents) |
+| Milestone 9 | ✅ Complete | Production Quality (Observability, Testing, Resilience) |
+
+### Planned Milestones (Production Readiness)
+
+| Milestone | Status | Description | Priority |
+|-----------|--------|-------------|----------|
+| Milestone 10 | 📋 Planned | Security Hardening & Audit Preparation | Critical |
+| Milestone 11 | 📋 Planned | Performance & Scalability Validation | Critical |
+| Milestone 12 | 📋 Planned | True Decentralization (DHT, Governance) | Critical |
+| Milestone 13 | 📋 Planned | Operator Experience & Documentation | High |
+| Milestone 14 | 📋 Planned | User Adoption & Ecosystem | High |
 
 ### Test Coverage
 
