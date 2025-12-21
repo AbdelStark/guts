@@ -38,6 +38,7 @@ guts/
 │   ├── guts-git/               # Git protocol (pack files, smart HTTP)
 │   ├── guts-p2p/               # P2P networking and replication
 │   ├── guts-collaboration/     # PRs, Issues, Comments, Reviews
+│   ├── guts-auth/              # Organizations, Teams, Permissions, Webhooks
 │   ├── guts-node/              # Full node binary & HTTP API
 │   └── guts-cli/               # CLI client binary
 ├── infra/                      # Infrastructure as code
@@ -74,6 +75,7 @@ Completed milestones:
 - **Milestone 1**: Foundation (git storage, protocol, node API)
 - **Milestone 2**: Multi-node P2P replication with commonware
 - **Milestone 3**: Collaboration features (PRs, Issues, Comments, Reviews)
+- **Milestone 4**: Governance (Organizations, Teams, Permissions, Webhooks)
 
 ## Development Guidelines
 
@@ -86,7 +88,7 @@ Completed milestones:
 
 ### Testing
 
-The project has comprehensive test coverage (205+ tests):
+The project has comprehensive test coverage (250+ tests):
 
 ```bash
 # Run all tests

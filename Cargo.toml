@@ -5,6 +5,7 @@ members = [
     "crates/guts-git",
     "crates/guts-p2p",
     "crates/guts-collaboration",
+    "crates/guts-auth",
     "crates/guts-node",
     "crates/guts-cli",
 ]
@@ -25,6 +26,7 @@ guts-storage = { version = "0.1.0", path = "crates/guts-storage" }
 guts-git = { version = "0.1.0", path = "crates/guts-git" }
 guts-p2p = { version = "0.1.0", path = "crates/guts-p2p" }
 guts-collaboration = { version = "0.1.0", path = "crates/guts-collaboration" }
+guts-auth = { version = "0.1.0", path = "crates/guts-auth" }
 
 # Commonware dependencies (matching Alto's versions)
 commonware-broadcast = "0.0.63"

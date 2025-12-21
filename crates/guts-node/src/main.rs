@@ -3,6 +3,7 @@
 //! This is the main entry point for running a Guts validator node.
 
 use clap::Parser;
+use guts_auth::AuthStore;
 use guts_collaboration::CollaborationStore;
 use guts_node::api::{create_router, AppState, RepoStore};
 use std::net::SocketAddr;
@@ -71,6 +72,7 @@ async fn main() -> anyhow::Result<()> {
         repos: Arc::new(RepoStore::new()),
         p2p: None, // P2P is optional, enabled via configuration
         collaboration: Arc::new(CollaborationStore::new()),
+        auth: Arc::new(AuthStore::new()),
     };
 
     // Create router

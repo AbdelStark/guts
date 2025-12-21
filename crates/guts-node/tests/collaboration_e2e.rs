@@ -1,6 +1,7 @@
 //! End-to-end tests for collaboration features (PRs, Issues, Comments, Reviews).
 
 use axum::{body::Body, http::Request};
+use guts_auth::AuthStore;
 use guts_collaboration::CollaborationStore;
 use guts_node::api::{create_router, AppState, RepoStore};
 use serde_json::{json, Value};
@@ -12,6 +13,7 @@ fn create_test_app() -> axum::Router {
         repos: Arc::new(RepoStore::new()),
         p2p: None,
         collaboration: Arc::new(CollaborationStore::new()),
+        auth: Arc::new(AuthStore::new()),
     };
     create_router(state)
 }
