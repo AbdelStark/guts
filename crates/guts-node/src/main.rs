@@ -3,16 +3,12 @@
 //! This is the main entry point for running a Guts validator node.
 
 use clap::Parser;
+use guts_collaboration::CollaborationStore;
+use guts_node::api::{create_router, AppState, RepoStore};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-
-mod api;
-mod config;
-mod p2p;
-
-use api::{create_router, AppState, RepoStore};
 
 /// Guts Node - Decentralized code collaboration infrastructure
 #[derive(Parser, Debug)]
@@ -74,6 +70,7 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState {
         repos: Arc::new(RepoStore::new()),
         p2p: None, // P2P is optional, enabled via configuration
+        collaboration: Arc::new(CollaborationStore::new()),
     };
 
     // Create router

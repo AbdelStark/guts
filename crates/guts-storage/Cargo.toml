@@ -16,6 +16,9 @@ sha1 = { workspace = true }
 # Compression
 flate2 = { workspace = true }
 
+# Serialization
+serde = { workspace = true }
+
 # Utilities
 bytes = { workspace = true }
 hex = { workspace = true }

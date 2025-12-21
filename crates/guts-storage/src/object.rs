@@ -2,12 +2,32 @@
 
 use crate::{Result, StorageError};
 use bytes::Bytes;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use sha1::{Digest, Sha1};
 use std::fmt;
 
 /// A 20-byte SHA-1 object identifier.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ObjectId([u8; 20]);
+
+impl Serialize for ObjectId {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.to_hex())
+    }
+}
+
+impl<'de> Deserialize<'de> for ObjectId {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        ObjectId::from_hex(&s).map_err(serde::de::Error::custom)
+    }
+}
 
 impl ObjectId {
     /// Creates an ObjectId from raw bytes.
