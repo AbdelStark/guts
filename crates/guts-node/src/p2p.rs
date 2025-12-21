@@ -253,8 +253,7 @@ impl MultiNodeTestEnv {
 mod tests {
     use super::*;
     use commonware_cryptography::{PrivateKeyExt, Signer};
-    use commonware_runtime::{Runner, Spawner};
-    use guts_storage::GitObject;
+    use commonware_runtime::Runner;
 
     #[test]
     fn test_p2p_manager_creation() {

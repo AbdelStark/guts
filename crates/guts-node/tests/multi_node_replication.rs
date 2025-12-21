@@ -520,9 +520,9 @@ fn test_concurrent_push_replication() {
             .collect();
 
         let repo_key = "shared/concurrent-repo";
-        for i in 0..3 {
+        for protocol in &protocols {
             let repo = Arc::new(Repository::new("concurrent-repo", "shared"));
-            protocols[i].register_repo(repo_key.to_string(), repo);
+            protocol.register_repo(repo_key.to_string(), repo);
         }
 
         // Node 1 and Node 3 simultaneously create objects
