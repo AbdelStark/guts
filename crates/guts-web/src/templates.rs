@@ -399,3 +399,79 @@ pub struct SearchTemplate {
 pub struct ApiDocsTemplate {
     pub openapi_spec: String,
 }
+
+// ==================== CI/CD Actions Templates ====================
+
+/// Workflow summary for lists.
+#[derive(Debug, Clone, Serialize)]
+pub struct WorkflowSummary {
+    pub id: String,
+    pub name: String,
+    pub path: String,
+}
+
+/// Run summary for lists.
+#[derive(Debug, Clone, Serialize)]
+pub struct RunSummary {
+    pub id: String,
+    pub workflow_name: String,
+    pub number: u32,
+    pub status: String,
+    pub conclusion: Option<String>,
+    pub head_sha: String,
+    pub head_branch: Option<String>,
+    pub trigger_type: String,
+}
+
+/// Run detail view.
+#[derive(Debug, Clone, Serialize)]
+pub struct RunDetailView {
+    pub id: String,
+    pub workflow_name: String,
+    pub number: u32,
+    pub status: String,
+    pub conclusion: Option<String>,
+    pub head_sha: String,
+    pub head_branch: Option<String>,
+    pub trigger_type: String,
+    pub actor: String,
+}
+
+/// Job view for run details.
+#[derive(Debug, Clone, Serialize)]
+pub struct JobView {
+    pub id: String,
+    pub name: String,
+    pub status: String,
+    pub conclusion: Option<String>,
+    pub steps: Vec<StepView>,
+}
+
+/// Step view for job details.
+#[derive(Debug, Clone, Serialize)]
+pub struct StepView {
+    pub number: u32,
+    pub name: String,
+    pub status: String,
+    pub conclusion: Option<String>,
+}
+
+/// Actions list page (workflows and runs).
+#[derive(Template)]
+#[template(path = "actions/list.html")]
+pub struct ActionsListTemplate {
+    pub owner: String,
+    pub repo: String,
+    pub workflows: Vec<WorkflowSummary>,
+    pub runs: Vec<RunSummary>,
+}
+
+/// Actions run detail page.
+#[derive(Template)]
+#[template(path = "actions/run.html")]
+pub struct ActionsRunTemplate {
+    pub owner: String,
+    pub repo: String,
+    pub run: RunDetailView,
+    pub jobs: Vec<JobView>,
+}

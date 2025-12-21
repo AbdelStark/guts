@@ -80,9 +80,11 @@ use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 
 use crate::auth_api::auth_routes;
+use crate::ci_api::ci_routes;
 use crate::collaboration_api::collaboration_routes;
 use crate::p2p::P2PManager;
 use crate::realtime_api::realtime_routes;
+use guts_ci::CiStore;
 
 /// Re-export RepoStore for external use.
 pub use guts_storage::RepoStore;
@@ -100,6 +102,8 @@ pub struct AppState {
     pub auth: Arc<AuthStore>,
     /// Real-time event hub for WebSocket connections.
     pub realtime: Arc<EventHub>,
+    /// CI/CD store for workflows, runs, artifacts, and status checks.
+    pub ci: Arc<CiStore>,
 }
 
 impl axum::extract::FromRef<AppState> for guts_web::WebState {
@@ -108,6 +112,7 @@ impl axum::extract::FromRef<AppState> for guts_web::WebState {
             repos: app_state.repos.clone(),
             collaboration: app_state.collaboration.clone(),
             auth: app_state.auth.clone(),
+            ci: app_state.ci.clone(),
         }
     }
 }
@@ -190,6 +195,8 @@ pub fn create_router(state: AppState) -> Router {
         .merge(collaboration_routes())
         // Authorization API (Organizations, Teams, Permissions, Webhooks)
         .merge(auth_routes())
+        // CI/CD API (Workflows, Runs, Artifacts, Status Checks)
+        .merge(ci_routes())
         // Real-time WebSocket API
         .merge(realtime_routes())
         // Web UI routes

@@ -57,6 +57,18 @@ enum Commands {
         command: IssueCommands,
     },
 
+    /// Manage workflows (CI/CD)
+    Workflow {
+        #[command(subcommand)]
+        command: WorkflowCommands,
+    },
+
+    /// Manage workflow runs (CI/CD)
+    Run {
+        #[command(subcommand)]
+        command: RunCommands,
+    },
+
     /// Show status
     Status,
 
@@ -219,6 +231,117 @@ enum IssueCommands {
     },
 }
 
+#[derive(Subcommand, Debug)]
+enum WorkflowCommands {
+    /// List workflows
+    List {
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+    },
+
+    /// Show workflow details
+    Show {
+        /// Workflow ID
+        id: String,
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+    },
+
+    /// Register a workflow from YAML file
+    Register {
+        /// Path to workflow YAML file
+        #[arg(short, long)]
+        file: String,
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum RunCommands {
+    /// List workflow runs
+    List {
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+        /// Filter by workflow ID
+        #[arg(short, long)]
+        workflow: Option<String>,
+    },
+
+    /// Show run details
+    Show {
+        /// Run ID
+        id: String,
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+    },
+
+    /// Trigger a workflow run
+    Trigger {
+        /// Workflow ID
+        workflow_id: String,
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+        /// Git reference (branch or tag)
+        #[arg(long, default_value = "main")]
+        ref_name: String,
+        /// Commit SHA
+        #[arg(long)]
+        sha: Option<String>,
+    },
+
+    /// Cancel a workflow run
+    Cancel {
+        /// Run ID
+        id: String,
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+    },
+
+    /// Show run logs
+    Logs {
+        /// Run ID
+        id: String,
+        /// Job name (optional)
+        #[arg(short, long)]
+        job: Option<String>,
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+    },
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -284,6 +407,35 @@ fn main() {
             IssueCommands::Reopen { number, node, repo } => {
                 commands::issue_reopen(&node, &repo, number)
             }
+        },
+        Commands::Workflow { command } => match command {
+            WorkflowCommands::List { node, repo } => commands::workflow_list(&node, &repo),
+            WorkflowCommands::Show { id, node, repo } => commands::workflow_show(&node, &repo, &id),
+            WorkflowCommands::Register { file, node, repo } => {
+                commands::workflow_register(&node, &repo, &file)
+            }
+        },
+        Commands::Run { command } => match command {
+            RunCommands::List {
+                node,
+                repo,
+                workflow,
+            } => commands::run_list(&node, &repo, workflow.as_deref()),
+            RunCommands::Show { id, node, repo } => commands::run_show(&node, &repo, &id),
+            RunCommands::Trigger {
+                workflow_id,
+                node,
+                repo,
+                ref_name,
+                sha,
+            } => commands::run_trigger(&node, &repo, &workflow_id, &ref_name, sha.as_deref()),
+            RunCommands::Cancel { id, node, repo } => commands::run_cancel(&node, &repo, &id),
+            RunCommands::Logs {
+                id,
+                job,
+                node,
+                repo,
+            } => commands::run_logs(&node, &repo, &id, job.as_deref()),
         },
         Commands::Status => commands::status(),
         Commands::Version => {

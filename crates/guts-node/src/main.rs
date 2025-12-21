@@ -4,6 +4,7 @@
 
 use clap::Parser;
 use guts_auth::AuthStore;
+use guts_ci::CiStore;
 use guts_collaboration::CollaborationStore;
 use guts_node::api::{create_router, AppState};
 use guts_realtime::EventHub;
@@ -76,6 +77,7 @@ async fn main() -> anyhow::Result<()> {
         collaboration: Arc::new(CollaborationStore::new()),
         auth: Arc::new(AuthStore::new()),
         realtime: Arc::new(EventHub::new()),
+        ci: Arc::new(CiStore::new()),
     };
 
     // Create router

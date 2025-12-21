@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}{{ run.workflow_name }} #{{ run.number }} - {{ owner }}/{{ repo }} - Guts{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Repository header -->
+    <div class="flex items-center space-x-2 text-gray-400">
+        <a href="/{{ owner }}" class="hover:text-blue-400">{{ owner }}</a>
+        <span>/</span>
+        <a href="/{{ owner }}/{{ repo }}" class="hover:text-blue-400 font-semibold text-white">{{ repo }}</a>
+        <span>/</span>
+        <a href="/{{ owner }}/{{ repo }}/actions" class="hover:text-blue-400">Actions</a>
+    </div>
+
+    <!-- Run header -->
+    <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <!-- Status icon -->
+                {% if run.conclusion.as_deref() == Some("success") %}
+                    <div class="flex items-center justify-center w-12 h-12 rounded-full bg-green-500/20">
+                        <svg class="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                {% else if run.conclusion.as_deref() == Some("failure") %}
+                    <div class="flex items-center justify-center w-12 h-12 rounded-full bg-red-500/20">
+                        <svg class="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                {% else if run.status == "in_progress" %}
+                    <div class="flex items-center justify-center w-12 h-12 rounded-full bg-yellow-500/20">
+                        <svg class="w-6 h-6 text-yellow-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                {% else %}
+                    <div class="flex items-center justify-center w-12 h-12 rounded-full bg-gray-500/20">
+                        <svg class="w-6 h-6 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                {% endif %}
+
+                <div>
+                    <h1 class="text-2xl font-bold text-white">{{ run.workflow_name }}</h1>
+                    <p class="text-gray-400">
+                        Run #{{ run.number }}
+                        {% if let Some(branch) = run.head_branch.as_ref() %}
+                            on <span class="text-blue-400">{{ branch }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <div class="text-right">
+                <div class="text-sm text-gray-500">
+                    Commit: <code class="text-blue-400">{{ run.head_sha|truncate(7) }}</code>
+                </div>
+                <div class="text-sm text-gray-500">
+                    Status:
+                    {% if run.conclusion.as_deref() == Some("success") %}
+                        <span class="text-green-400">success</span>
+                    {% else if run.conclusion.as_deref() == Some("failure") %}
+                        <span class="text-red-400">failure</span>
+                    {% else if run.conclusion.is_some() %}
+                        <span class="text-gray-400">{{ run.conclusion.as_ref().unwrap() }}</span>
+                    {% else %}
+                        <span class="text-yellow-400">{{ run.status }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Jobs -->
+    <div class="grid grid-cols-4 gap-6">
+        <!-- Job list -->
+        <div class="col-span-1">
+            <h3 class="text-lg font-semibold mb-4">Jobs</h3>
+            {% if jobs.is_empty() %}
+                <p class="text-gray-500 text-sm">No jobs in this run</p>
+            {% else %}
+                <ul class="space-y-2">
+                {% for job in jobs %}
+                    <li class="bg-gray-800 rounded-lg p-3 border border-gray-700">
+                        <div class="flex items-center space-x-2">
+                            {% if job.conclusion.as_deref() == Some("success") %}
+                                <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                            {% else if job.conclusion.as_deref() == Some("failure") %}
+                                <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                            {% else if job.status == "in_progress" %}
+                                <svg class="w-4 h-4 text-yellow-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            {% else %}
+                                <svg class="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                </svg>
+                            {% endif %}
+                            <span class="font-medium text-white text-sm">{{ job.name }}</span>
+                        </div>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+
+        <!-- Job details / logs -->
+        <div class="col-span-3">
+            <h3 class="text-lg font-semibold mb-4">Workflow Summary</h3>
+            <div class="bg-gray-800 rounded-lg border border-gray-700">
+                <div class="p-4 border-b border-gray-700">
+                    <h4 class="font-medium text-white">Trigger Information</h4>
+                    <dl class="mt-2 grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <dt class="text-gray-500">Event</dt>
+                            <dd class="text-white">{{ run.trigger_type }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-gray-500">Actor</dt>
+                            <dd class="text-white">{{ run.actor }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-gray-500">Commit</dt>
+                            <dd class="text-blue-400 font-mono">{{ run.head_sha }}</dd>
+                        </div>
+                        {% if let Some(branch) = run.head_branch.as_ref() %}
+                        <div>
+                            <dt class="text-gray-500">Branch</dt>
+                            <dd class="text-white">{{ branch }}</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+
+                {% if !jobs.is_empty() %}
+                <div class="p-4">
+                    <h4 class="font-medium text-white mb-4">Steps</h4>
+                    {% for job in jobs %}
+                    <div class="mb-4">
+                        <h5 class="text-sm font-medium text-gray-400 mb-2">{{ job.name }}</h5>
+                        <ul class="space-y-1">
+                        {% for step in job.steps %}
+                            <li class="flex items-center space-x-2 text-sm py-1 px-2 rounded {% if step.conclusion.as_deref() == Some("success") %}bg-green-900/20{% else if step.conclusion.as_deref() == Some("failure") %}bg-red-900/20{% else %}bg-gray-700/50{% endif %}">
+                                {% if step.conclusion.as_deref() == Some("success") %}
+                                    <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                {% else if step.conclusion.as_deref() == Some("failure") %}
+                                    <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                    </svg>
+                                {% else %}
+                                    <svg class="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                    </svg>
+                                {% endif %}
+                                <span class="text-white">{{ step.name }}</span>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -11,6 +11,7 @@ guts-types.workspace = true
 guts-storage.workspace = true
 guts-collaboration.workspace = true
 guts-auth.workspace = true
+guts-ci.workspace = true
 
 axum.workspace = true
 askama.workspace = true

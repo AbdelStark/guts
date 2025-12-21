@@ -67,6 +67,7 @@
 //! use guts_collaboration::CollaborationStore;
 //! use guts_auth::AuthStore;
 //! use guts_realtime::EventHub;
+//! use guts_ci::CiStore;
 //! use guts_node::api::AppState;
 //!
 //! // Create stores
@@ -74,6 +75,7 @@
 //! let collaboration = Arc::new(CollaborationStore::new());
 //! let auth = Arc::new(AuthStore::new());
 //! let realtime = Arc::new(EventHub::new());
+//! let ci = Arc::new(CiStore::new());
 //!
 //! // Create application state
 //! let state = AppState {
@@ -82,11 +84,13 @@
 //!     collaboration,
 //!     auth,
 //!     realtime,
+//!     ci,
 //! };
 //! ```
 
 pub mod api;
 pub mod auth_api;
+pub mod ci_api;
 pub mod collaboration_api;
 pub mod config;
 pub mod p2p;
