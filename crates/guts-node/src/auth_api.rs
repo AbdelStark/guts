@@ -1,4 +1,92 @@
-//! Authorization API endpoints for Organizations, Teams, Collaborators, Branch Protection, and Webhooks.
+//! # Authorization API
+//!
+//! This module provides HTTP endpoints for governance and access control:
+//!
+//! - **Organizations**: Multi-user groups with role-based membership
+//! - **Teams**: Sub-groups within organizations for repository access
+//! - **Collaborators**: Direct repository access grants
+//! - **Branch Protection**: Rules enforcing code review workflows
+//! - **Webhooks**: Event notifications to external systems
+//!
+//! ## Organization Endpoints
+//!
+//! | Method | Path | Description |
+//! |--------|------|-------------|
+//! | GET | `/api/orgs` | List all organizations |
+//! | POST | `/api/orgs` | Create an organization |
+//! | GET | `/api/orgs/{org}` | Get organization details |
+//! | PATCH | `/api/orgs/{org}` | Update organization |
+//! | DELETE | `/api/orgs/{org}` | Delete organization |
+//! | GET | `/api/orgs/{org}/members` | List members |
+//! | POST | `/api/orgs/{org}/members` | Add a member |
+//! | PUT | `/api/orgs/{org}/members/{user}` | Update member role |
+//! | DELETE | `/api/orgs/{org}/members/{user}` | Remove member |
+//!
+//! ## Team Endpoints
+//!
+//! | Method | Path | Description |
+//! |--------|------|-------------|
+//! | GET | `/api/orgs/{org}/teams` | List teams in org |
+//! | POST | `/api/orgs/{org}/teams` | Create a team |
+//! | GET | `/api/orgs/{org}/teams/{team}` | Get team details |
+//! | PATCH | `/api/orgs/{org}/teams/{team}` | Update team |
+//! | DELETE | `/api/orgs/{org}/teams/{team}` | Delete team |
+//! | PUT | `/api/orgs/{org}/teams/{team}/repos/{owner}/{name}` | Grant team access to repo |
+//!
+//! ## Collaborator Endpoints
+//!
+//! | Method | Path | Description |
+//! |--------|------|-------------|
+//! | GET | `/api/repos/{owner}/{name}/collaborators` | List collaborators |
+//! | PUT | `/api/repos/{owner}/{name}/collaborators/{user}` | Add/update collaborator |
+//! | DELETE | `/api/repos/{owner}/{name}/collaborators/{user}` | Remove collaborator |
+//!
+//! ## Branch Protection Endpoints
+//!
+//! | Method | Path | Description |
+//! |--------|------|-------------|
+//! | GET | `/api/repos/{owner}/{name}/branches/{branch}/protection` | Get protection rules |
+//! | PUT | `/api/repos/{owner}/{name}/branches/{branch}/protection` | Set protection rules |
+//! | DELETE | `/api/repos/{owner}/{name}/branches/{branch}/protection` | Remove protection |
+//!
+//! ## Webhook Endpoints
+//!
+//! | Method | Path | Description |
+//! |--------|------|-------------|
+//! | GET | `/api/repos/{owner}/{name}/hooks` | List webhooks |
+//! | POST | `/api/repos/{owner}/{name}/hooks` | Create webhook |
+//! | GET | `/api/repos/{owner}/{name}/hooks/{id}` | Get webhook details |
+//! | PATCH | `/api/repos/{owner}/{name}/hooks/{id}` | Update webhook |
+//! | DELETE | `/api/repos/{owner}/{name}/hooks/{id}` | Delete webhook |
+//! | POST | `/api/repos/{owner}/{name}/hooks/{id}/ping` | Test webhook |
+//!
+//! ## Permission Resolution
+//!
+//! | Method | Path | Description |
+//! |--------|------|-------------|
+//! | GET | `/api/repos/{owner}/{name}/permission/{user}` | Check user permission |
+//!
+//! ## Permission Levels
+//!
+//! Access is controlled through hierarchical permission levels:
+//!
+//! - **Admin**: Full control (settings, access management)
+//! - **Write**: Push access (create branches, push commits)
+//! - **Read**: Clone and view access
+//!
+//! Permission resolution priority:
+//! 1. Repository owner (always Admin)
+//! 2. Direct collaborator grant
+//! 3. Team membership
+//! 4. Organization membership
+//!
+//! ## Example: Creating an Organization
+//!
+//! ```bash
+//! curl -X POST http://localhost:8080/api/orgs \
+//!   -H "Content-Type: application/json" \
+//!   -d '{"name": "acme", "display_name": "Acme Corp", "creator": "alice"}'
+//! ```
 
 use axum::{
     extract::{Path, State},

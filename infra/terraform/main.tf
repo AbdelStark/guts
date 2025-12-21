@@ -64,6 +64,18 @@ variable "instance_type" {
   default     = "t3.medium"
 }
 
+variable "docker_image" {
+  description = "Docker image for Guts node"
+  type        = string
+  default     = "ghcr.io/abdelstark/guts-node:latest"
+}
+
+variable "ssh_key_name" {
+  description = "Name of the SSH key pair for EC2 instances"
+  type        = string
+  default     = ""
+}
+
 # ============================================================================
 # Data Sources
 # ============================================================================
@@ -165,22 +177,13 @@ resource "aws_instance" "guts_node" {
     volume_type = "gp3"
   }
 
-  user_data = <<-EOF
-    #!/bin/bash
-    set -e
-
-    # Update system
-    apt-get update && apt-get upgrade -y
-
-    # Install Docker
-    curl -fsSL https://get.docker.com | sh
-
-    # Install Guts (placeholder - would use actual release)
-    # docker pull ghcr.io/abdelstark/guts-node:latest
-    # docker run -d --name guts-node -p 8080:8080 -p 9000:9000 guts-node
-
-    echo "Guts node ${count.index} initialized"
-  EOF
+  user_data = base64encode(templatefile("${path.module}/templates/user_data.sh.tftpl", {
+    node_index      = count.index
+    node_count      = var.node_count
+    environment     = var.environment
+    docker_image    = var.docker_image
+    bootstrap_nodes = count.index == 0 ? "" : join(",", [for i in range(count.index) : "guts-node-${var.environment}-${i}:9000"])
+  }))
 
   tags = {
     Name = "guts-node-${var.environment}-${count.index}"
