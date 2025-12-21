@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}{{ display_name }} - Guts{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <div class="flex items-center space-x-4 mb-4">
+        <div class="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center">
+            <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+        </div>
+        <div>
+            <h1 class="text-3xl font-bold">{{ display_name }}</h1>
+            <span class="text-gray-500">@{{ name }}</span>
+        </div>
+    </div>
+    {% if let Some(desc) = description %}
+    <p class="text-gray-400 mb-4">{{ desc }}</p>
+    {% endif %}
+    <div class="flex items-center text-sm text-gray-500 space-x-6">
+        <span class="flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+            {{ member_count }} members
+        </span>
+        <span class="flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <a href="/orgs/{{ name }}/teams" class="text-green-400 hover:underline">{{ team_count }} teams</a>
+        </span>
+        <span class="flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+            </svg>
+            {{ repo_count }} repositories
+        </span>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Main content: Repositories -->
+    <div class="lg:col-span-2">
+        <h2 class="text-xl font-semibold mb-4">Repositories</h2>
+        {% if repos.is_empty() %}
+        <div class="bg-gray-800 rounded-lg border border-gray-700 p-8 text-center text-gray-500">
+            <p>No repositories yet</p>
+        </div>
+        {% else %}
+        <div class="space-y-4">
+            {% for repo in repos %}
+            <a href="/{{ repo.owner }}/{{ repo.name }}" class="block bg-gray-800 rounded-lg p-4 hover:bg-gray-750 border border-gray-700 hover:border-green-500 transition-colors">
+                <div class="flex items-center space-x-2 mb-2">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                    </svg>
+                    <span class="font-medium text-green-400">{{ repo.name }}</span>
+                </div>
+                {% if !repo.description.is_empty() %}
+                <p class="text-gray-400 text-sm">{{ repo.description }}</p>
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Teams section -->
+        <h2 class="text-xl font-semibold mb-4 mt-8">Teams</h2>
+        {% if teams.is_empty() %}
+        <div class="bg-gray-800 rounded-lg border border-gray-700 p-8 text-center text-gray-500">
+            <p>No teams yet</p>
+        </div>
+        {% else %}
+        <div class="space-y-4">
+            {% for team in teams %}
+            <a href="/orgs/{{ name }}/teams/{{ team.name }}" class="block bg-gray-800 rounded-lg p-4 hover:bg-gray-750 border border-gray-700 hover:border-green-500 transition-colors">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        <span class="font-medium text-white">{{ team.name }}</span>
+                    </div>
+                    <span class="text-xs px-2 py-1 rounded-full bg-gray-700 text-gray-300">{{ team.permission }}</span>
+                </div>
+                {% if let Some(desc) = team.description %}
+                <p class="text-gray-400 text-sm mb-2">{{ desc }}</p>
+                {% endif %}
+                <div class="flex items-center text-sm text-gray-500 space-x-4">
+                    <span>{{ team.member_count }} members</span>
+                    <span>{{ team.repo_count }} repos</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar: Members -->
+    <div>
+        <h2 class="text-xl font-semibold mb-4">Members</h2>
+        <div class="bg-gray-800 rounded-lg border border-gray-700 p-4">
+            {% if members.is_empty() %}
+            <p class="text-gray-500 text-center py-4">No members</p>
+            {% else %}
+            <div class="space-y-3">
+                {% for member in members %}
+                <a href="/users/{{ member.username }}" class="flex items-center justify-between p-2 rounded hover:bg-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-sm font-medium">
+                            {{ member.username.chars().next().unwrap_or('?') }}
+                        </div>
+                        <span class="text-gray-300">{{ member.username }}</span>
+                    </div>
+                    <span class="text-xs px-2 py-1 rounded-full {% if member.role == "owner" %}bg-yellow-500/20 text-yellow-400{% else if member.role == "admin" %}bg-blue-500/20 text-blue-400{% else %}bg-gray-700 text-gray-400{% endif %}">
+                        {{ member.role }}
+                    </span>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

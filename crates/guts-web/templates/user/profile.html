@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}{{ username }} - Guts{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <div class="flex items-center space-x-4 mb-4">
+        <div class="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center text-3xl font-bold">
+            {{ username.chars().next().unwrap_or('?') }}
+        </div>
+        <div>
+            <h1 class="text-3xl font-bold">{{ username }}</h1>
+            <div class="flex items-center text-sm text-gray-500 space-x-4 mt-2">
+                <span class="flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                    </svg>
+                    {{ repo_count }} repositories
+                </span>
+                <span class="flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    {{ org_count }} organizations
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Main content: Repositories -->
+    <div class="lg:col-span-2">
+        <h2 class="text-xl font-semibold mb-4">Repositories</h2>
+        {% if repos.is_empty() %}
+        <div class="bg-gray-800 rounded-lg border border-gray-700 p-8 text-center text-gray-500">
+            <svg class="w-12 h-12 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+            </svg>
+            <p>No repositories yet</p>
+        </div>
+        {% else %}
+        <div class="space-y-4">
+            {% for repo in repos %}
+            <a href="/{{ repo.owner }}/{{ repo.name }}" class="block bg-gray-800 rounded-lg p-4 hover:bg-gray-750 border border-gray-700 hover:border-green-500 transition-colors">
+                <div class="flex items-center space-x-2 mb-2">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                    </svg>
+                    <span class="font-medium text-green-400">{{ repo.name }}</span>
+                </div>
+                {% if !repo.description.is_empty() %}
+                <p class="text-gray-400 text-sm">{{ repo.description }}</p>
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-6">
+        <!-- Organizations -->
+        <div>
+            <h2 class="text-xl font-semibold mb-4">Organizations</h2>
+            <div class="bg-gray-800 rounded-lg border border-gray-700 p-4">
+                {% if orgs.is_empty() %}
+                <p class="text-gray-500 text-center py-4">Not a member of any organizations</p>
+                {% else %}
+                <div class="space-y-3">
+                    {% for org in orgs %}
+                    <a href="/orgs/{{ org.name }}" class="flex items-center p-2 rounded hover:bg-gray-700">
+                        <div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-sm font-medium mr-3">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <span class="text-gray-300 block">{{ org.display_name }}</span>
+                            <span class="text-gray-500 text-sm">@{{ org.name }}</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Teams -->
+        <div>
+            <h2 class="text-xl font-semibold mb-4">Teams</h2>
+            <div class="bg-gray-800 rounded-lg border border-gray-700 p-4">
+                {% if teams.is_empty() %}
+                <p class="text-gray-500 text-center py-4">Not a member of any teams</p>
+                {% else %}
+                <div class="space-y-3">
+                    {% for team in teams %}
+                    <a href="/orgs/{{ team.org_name }}/teams/{{ team.team_name }}" class="flex items-center justify-between p-2 rounded hover:bg-gray-700">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-gray-600 rounded-lg flex items-center justify-center text-sm font-medium mr-3">
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <span class="text-gray-300 block">{{ team.team_name }}</span>
+                                <span class="text-gray-500 text-sm">@{{ team.org_name }}</span>
+                            </div>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded-full bg-gray-700 text-gray-400">{{ team.permission }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

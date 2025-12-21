@@ -176,11 +176,14 @@ Browser Request
 4. [x] Issue detail page (`/{owner}/{repo}/issues/{num}`)
 5. [x] Comment rendering with markdown
 
-### Phase 4: Organization Views (Planned)
+### Phase 4: Organization Views (Completed)
 
-1. User profile page
-2. Organization page
-3. Team list page
+1. [x] User profile page (`/users/{username}`)
+2. [x] Organization list page (`/orgs`)
+3. [x] Organization detail page (`/orgs/{org}`)
+4. [x] Team list page (`/orgs/{org}/teams`)
+5. [x] Team detail page (`/orgs/{org}/teams/{team}`)
+6. [x] Navigation bar with Organizations link
 
 ### Phase 5: Search & Discovery
 
