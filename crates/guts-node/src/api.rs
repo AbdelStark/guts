@@ -42,6 +42,7 @@
 //! - `collaboration`: Pull requests, issues, comments storage
 //! - `auth`: Organizations, teams, permissions storage
 //! - `p2p`: Optional P2P manager for network replication
+//! - `realtime`: Event hub for WebSocket real-time updates
 //!
 //! ## Error Handling
 //!
@@ -70,6 +71,7 @@ use axum::{
 use guts_auth::AuthStore;
 use guts_collaboration::CollaborationStore;
 use guts_git::{advertise_refs, receive_pack, upload_pack};
+use guts_realtime::{EventHub, EventKind};
 use guts_storage::{Reference, StorageError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -80,6 +82,7 @@ use tower_http::trace::TraceLayer;
 use crate::auth_api::auth_routes;
 use crate::collaboration_api::collaboration_routes;
 use crate::p2p::P2PManager;
+use crate::realtime_api::realtime_routes;
 
 /// Re-export RepoStore for external use.
 pub use guts_storage::RepoStore;
@@ -95,6 +98,8 @@ pub struct AppState {
     pub collaboration: Arc<CollaborationStore>,
     /// Authorization store for permissions, organizations, etc.
     pub auth: Arc<AuthStore>,
+    /// Real-time event hub for WebSocket connections.
+    pub realtime: Arc<EventHub>,
 }
 
 impl axum::extract::FromRef<AppState> for guts_web::WebState {
@@ -185,6 +190,8 @@ pub fn create_router(state: AppState) -> Router {
         .merge(collaboration_routes())
         // Authorization API (Organizations, Teams, Permissions, Webhooks)
         .merge(auth_routes())
+        // Real-time WebSocket API
+        .merge(realtime_routes())
         // Web UI routes
         .merge(guts_web::web_routes())
         .layer(TraceLayer::new_for_http())
@@ -335,14 +342,34 @@ async fn git_receive_pack(
         "Push completed"
     );
 
+    let repo_key = format!("{}/{}", owner, name);
+
     // Notify P2P network about the update
     if let Some(p2p) = &state.p2p {
-        let repo_key = format!("{}/{}", owner, name);
-        p2p.notify_update(&repo_key, new_objects, refs);
+        p2p.notify_update(&repo_key, new_objects.clone(), refs.clone());
 
         // Also register this repo with the P2P manager
-        p2p.register_repo(repo_key, repo.clone());
+        p2p.register_repo(repo_key.clone(), repo.clone());
     }
+
+    // Emit real-time event for WebSocket clients
+    let channel = format!("repo:{}", repo_key);
+    state.realtime.emit_event(
+        channel,
+        EventKind::Push,
+        serde_json::json!({
+            "repository": repo_key,
+            "owner": owner,
+            "name": name,
+            "commit_count": new_objects.len(),
+            "refs": refs.iter().map(|(name, oid)| {
+                serde_json::json!({
+                    "name": name,
+                    "sha": format!("{:?}", oid)
+                })
+            }).collect::<Vec<_>>()
+        }),
+    );
 
     Ok(Response::builder()
         .status(StatusCode::OK)

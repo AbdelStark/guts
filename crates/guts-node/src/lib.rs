@@ -55,6 +55,7 @@
 //! - [`api`] - Core HTTP API and Git Smart HTTP protocol
 //! - [`auth_api`] - Authorization endpoints (Organizations, Teams, Permissions)
 //! - [`collaboration_api`] - Collaboration endpoints (PRs, Issues, Comments)
+//! - [`realtime_api`] - Real-time WebSocket API for live updates
 //! - [`config`] - Node configuration management
 //! - [`p2p`] - Peer-to-peer networking and replication
 //!
@@ -65,12 +66,14 @@
 //! use guts_storage::RepoStore;
 //! use guts_collaboration::CollaborationStore;
 //! use guts_auth::AuthStore;
+//! use guts_realtime::EventHub;
 //! use guts_node::api::AppState;
 //!
 //! // Create stores
 //! let repos = Arc::new(RepoStore::new());
 //! let collaboration = Arc::new(CollaborationStore::new());
 //! let auth = Arc::new(AuthStore::new());
+//! let realtime = Arc::new(EventHub::new());
 //!
 //! // Create application state
 //! let state = AppState {
@@ -78,6 +81,7 @@
 //!     p2p: None, // Optional P2P manager
 //!     collaboration,
 //!     auth,
+//!     realtime,
 //! };
 //! ```
 
@@ -86,3 +90,4 @@ pub mod auth_api;
 pub mod collaboration_api;
 pub mod config;
 pub mod p2p;
+pub mod realtime_api;
