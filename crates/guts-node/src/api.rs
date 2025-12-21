@@ -11,7 +11,7 @@ use axum::{
     Json, Router,
 };
 use guts_git::{advertise_refs, receive_pack, upload_pack};
-use guts_storage::Repository;
+use guts_storage::{Reference, Repository};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -19,11 +19,15 @@ use std::io::Cursor;
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 
+use crate::p2p::P2PManager;
+
 /// Application state shared across handlers.
 #[derive(Clone)]
 pub struct AppState {
     /// Repository store.
     pub repos: Arc<RepoStore>,
+    /// Optional P2P manager for replication.
+    pub p2p: Option<Arc<P2PManager>>,
 }
 
 /// In-memory repository store.
@@ -233,10 +237,19 @@ async fn git_receive_pack(
     Path((owner, name)): Path<(String, String)>,
     body: axum::body::Bytes,
 ) -> Result<Response, ApiError> {
+    // Track objects before push
+    let objects_before: std::collections::HashSet<_>;
+
     // Auto-create repository if it doesn't exist (for initial push)
     let repo = match state.repos.get(&owner, &name) {
-        Ok(repo) => repo,
-        Err(ApiError::RepoNotFound(_)) => state.repos.create(&owner, &name)?,
+        Ok(repo) => {
+            objects_before = repo.objects.list_objects().into_iter().collect();
+            repo
+        }
+        Err(ApiError::RepoNotFound(_)) => {
+            objects_before = std::collections::HashSet::new();
+            state.repos.create(&owner, &name)?
+        }
         Err(e) => return Err(e),
     };
 
@@ -245,12 +258,38 @@ async fn git_receive_pack(
 
     receive_pack(&mut input, &mut output, &repo)?;
 
+    // Calculate new objects
+    let objects_after: std::collections::HashSet<_> =
+        repo.objects.list_objects().into_iter().collect();
+    let new_objects: Vec<_> = objects_after.difference(&objects_before).copied().collect();
+
+    // Get current refs
+    let refs: Vec<_> = repo
+        .refs
+        .list_all()
+        .into_iter()
+        .filter_map(|(name, reference)| match reference {
+            Reference::Direct(oid) => Some((name, oid)),
+            Reference::Symbolic(_) => None,
+        })
+        .collect();
+
     tracing::info!(
         owner = %owner,
         name = %name,
         objects = repo.objects.len(),
+        new_objects = new_objects.len(),
         "Push completed"
     );
+
+    // Notify P2P network about the update
+    if let Some(p2p) = &state.p2p {
+        let repo_key = format!("{}/{}", owner, name);
+        p2p.notify_update(&repo_key, new_objects, refs);
+
+        // Also register this repo with the P2P manager
+        p2p.register_repo(repo_key, repo.clone());
+    }
 
     Ok(Response::builder()
         .status(StatusCode::OK)
