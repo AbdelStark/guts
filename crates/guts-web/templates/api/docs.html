@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guts API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+    <style>
+        html {
+            box-sizing: border-box;
+            overflow: -moz-scrollbars-vertical;
+            overflow-y: scroll;
+        }
+        *,
+        *:before,
+        *:after {
+            box-sizing: inherit;
+        }
+        body {
+            margin: 0;
+            background: #1a1a2e;
+        }
+        .swagger-ui {
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .swagger-ui .topbar {
+            background-color: #1f2937;
+            padding: 10px 0;
+        }
+        .swagger-ui .topbar .topbar-wrapper {
+            display: flex;
+            align-items: center;
+            max-width: 1460px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        .swagger-ui .topbar .topbar-wrapper .link {
+            display: flex;
+            align-items: center;
+        }
+        .swagger-ui .topbar .topbar-wrapper .link img {
+            display: none;
+        }
+        .swagger-ui .topbar .topbar-wrapper .link::before {
+            content: 'Guts API';
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #22c55e;
+        }
+        .swagger-ui .info .title {
+            color: #e5e7eb;
+        }
+        .swagger-ui .info {
+            margin: 30px 0;
+        }
+        .swagger-ui .info .description p {
+            color: #9ca3af;
+        }
+        .swagger-ui .opblock-tag {
+            border-bottom: 1px solid #374151;
+        }
+        .swagger-ui .scheme-container {
+            background: #1f2937;
+            box-shadow: none;
+        }
+        .swagger-ui .btn {
+            border-radius: 4px;
+        }
+        .swagger-ui .btn.execute {
+            background-color: #22c55e;
+            border-color: #22c55e;
+        }
+        .swagger-ui .btn.execute:hover {
+            background-color: #16a34a;
+        }
+        /* Dark theme adjustments */
+        .swagger-ui, .swagger-ui .wrapper {
+            background: #111827;
+        }
+        .swagger-ui .opblock .opblock-summary-method {
+            font-weight: 600;
+        }
+        .swagger-ui .opblock.opblock-get {
+            background: rgba(97, 175, 254, 0.1);
+            border-color: #61affe;
+        }
+        .swagger-ui .opblock.opblock-post {
+            background: rgba(73, 204, 144, 0.1);
+            border-color: #49cc90;
+        }
+        .swagger-ui .opblock.opblock-put {
+            background: rgba(252, 161, 48, 0.1);
+            border-color: #fca130;
+        }
+        .swagger-ui .opblock.opblock-delete {
+            background: rgba(249, 62, 62, 0.1);
+            border-color: #f93e3e;
+        }
+        .swagger-ui .opblock.opblock-patch {
+            background: rgba(80, 227, 194, 0.1);
+            border-color: #50e3c2;
+        }
+        .swagger-ui section.models {
+            border: 1px solid #374151;
+            border-radius: 4px;
+        }
+        .swagger-ui section.models.is-open h4 {
+            border-bottom: 1px solid #374151;
+        }
+        .swagger-ui .model-box {
+            background: #1f2937;
+        }
+        .swagger-ui .opblock-description-wrapper p,
+        .swagger-ui .opblock-external-docs-wrapper p,
+        .swagger-ui .opblock-title_normal p {
+            color: #9ca3af;
+        }
+        .swagger-ui table thead tr td,
+        .swagger-ui table thead tr th {
+            color: #e5e7eb;
+            border-bottom: 1px solid #374151;
+        }
+        .swagger-ui .parameter__name,
+        .swagger-ui .parameter__type,
+        .swagger-ui .parameter__deprecated,
+        .swagger-ui .parameter__in {
+            color: #d1d5db;
+        }
+        .swagger-ui .opblock-summary-description {
+            color: #9ca3af;
+        }
+        .swagger-ui .opblock .opblock-section-header {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .swagger-ui .opblock .opblock-section-header h4 {
+            color: #e5e7eb;
+        }
+        .swagger-ui .responses-inner h4,
+        .swagger-ui .responses-inner h5 {
+            color: #e5e7eb;
+        }
+        .swagger-ui .response-col_status {
+            color: #e5e7eb;
+        }
+        .swagger-ui .response-col_description {
+            color: #9ca3af;
+        }
+        .swagger-ui .model {
+            color: #9ca3af;
+        }
+        .swagger-ui .model .property.primitive {
+            color: #d1d5db;
+        }
+        /* Back to Guts link */
+        .back-link {
+            position: fixed;
+            top: 15px;
+            right: 20px;
+            color: #9ca3af;
+            text-decoration: none;
+            font-size: 14px;
+            z-index: 1000;
+        }
+        .back-link:hover {
+            color: #22c55e;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-link">Back to Guts</a>
+    <div id="swagger-ui"></div>
+
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            const spec = {{ openapi_spec|safe }};
+
+            window.ui = SwaggerUIBundle({
+                spec: spec,
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout",
+                defaultModelsExpandDepth: 1,
+                defaultModelExpandDepth: 2,
+                docExpansion: "list",
+                filter: true,
+                showExtensions: true,
+                showCommonExtensions: true,
+                tryItOutEnabled: true
+            });
+        };
+    </script>
+</body>
+</html>

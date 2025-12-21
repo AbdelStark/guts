@@ -1,7 +1,8 @@
 # Milestone 5: Ecosystem - Web Gateway
 
-> **Status:** In Progress
+> **Status:** Complete
 > **Started:** 2025-12-21
+> **Completed:** 2025-12-21
 
 ## Overview
 
@@ -185,18 +186,18 @@ Browser Request
 5. [x] Team detail page (`/orgs/{org}/teams/{team}`)
 6. [x] Navigation bar with Organizations link
 
-### Phase 5: Search & Discovery
+### Phase 5: Search & Discovery (Completed)
 
-1. Repository search
-2. Code search
-3. Issue/PR search
-4. Advanced filters
+1. [x] Repository search (`/search?q=&type=repositories`)
+2. [x] Code search (`/search?q=&type=code`)
+3. [x] Issue/PR search (`/search?q=&type=issues`, `/search?q=&type=pullrequests`)
+4. [x] Advanced filters (filter by result type, case-insensitive matching)
 
-### Phase 6: API Documentation
+### Phase 6: API Documentation (Completed)
 
-1. OpenAPI spec generation
-2. Swagger UI integration
-3. Interactive API explorer
+1. [x] OpenAPI 3.1 spec generation (comprehensive coverage of all 50+ endpoints)
+2. [x] Swagger UI integration (`/api/docs`)
+3. [x] Interactive API explorer with try-it-out functionality
 
 ## API Integration
 
@@ -225,14 +226,15 @@ async fn repo_home(
 
 ## Success Criteria
 
-- [ ] Landing page with repository explorer
-- [ ] Repository file browser with syntax highlighting
-- [ ] Commit history and diff viewer
-- [ ] Pull request and issue views
-- [ ] Organization and team pages
-- [ ] Code search functionality
-- [ ] Responsive design (mobile-friendly)
-- [ ] No JavaScript required for core functionality
+- [x] Landing page with repository explorer
+- [x] Repository file browser with syntax highlighting
+- [x] Commit history and diff viewer
+- [x] Pull request and issue views
+- [x] Organization and team pages
+- [x] Code search functionality
+- [x] Responsive design (mobile-friendly via Tailwind CSS)
+- [x] No JavaScript required for core functionality (JS used only for syntax highlighting and Swagger UI)
+- [x] Interactive API documentation with Swagger UI
 
 ## Dependencies
 

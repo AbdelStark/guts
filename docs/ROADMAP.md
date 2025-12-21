@@ -35,7 +35,7 @@ All running on a 3-node Guts network with consensus.
 | Milestone 2 | ✅ Complete | Multi-node P2P Replication |
 | Milestone 3 | ✅ Complete | Collaboration (PRs, Issues, Comments, Reviews) |
 | Milestone 4 | ✅ Complete | Governance (Orgs, Teams, Permissions, Webhooks) |
-| Milestone 5 | 🔜 Next | Ecosystem (Web Gateway, CI/CD, Package Registry) |
+| Milestone 5 | ✅ Complete | Web Gateway (Search, API Docs) |
 
 ## Phase 1: Core Infrastructure ✅
 
@@ -186,16 +186,27 @@ All running on a 3-node Guts network with consensus.
 - [x] Organizations and teams manage access
 - [x] Branch protection enforces policies
 
-## Next Steps: Ecosystem (Milestone 5)
+## Completed: Milestone 5 (Web Gateway)
 
-The following features are planned for the next milestone:
+The following features have been implemented:
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Web Gateway | Browser access to repositories | ✅ Complete |
+| Repository Browsing | File tree, commits, branches | ✅ Complete |
+| Collaboration UI | PRs, Issues, Comments, Reviews | ✅ Complete |
+| Organization Views | Orgs, Teams, Members | ✅ Complete |
+| Search & Discovery | Repository, Code, Issue/PR search | ✅ Complete |
+| API Documentation | OpenAPI 3.1 with Swagger UI | ✅ Complete |
+
+## Future Milestones
 
 | Feature | Description | Priority |
 |---------|-------------|----------|
-| Web Gateway | Browser access to repositories | P3 |
 | CI/CD Integration | Decentralized build pipelines | P3 |
 | Package Registry | Decentralized package hosting | P3 |
 | Federation | Inter-network repository bridging | P3 |
+| Real-time Updates | WebSocket for live notifications | P3 |
 
 ## Test Coverage
 

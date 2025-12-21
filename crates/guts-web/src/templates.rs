@@ -326,3 +326,76 @@ pub struct UserProfileTemplate {
     pub orgs: Vec<OrgSummary>,
     pub teams: Vec<UserTeamView>,
 }
+
+// ==================== Search Templates ====================
+
+/// Search result types.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub enum SearchResultType {
+    Repository,
+    Code,
+    Issue,
+    PullRequest,
+}
+
+impl std::fmt::Display for SearchResultType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SearchResultType::Repository => write!(f, "repository"),
+            SearchResultType::Code => write!(f, "code"),
+            SearchResultType::Issue => write!(f, "issue"),
+            SearchResultType::PullRequest => write!(f, "pull_request"),
+        }
+    }
+}
+
+/// Code search result.
+#[derive(Debug, Clone, Serialize)]
+pub struct CodeSearchResult {
+    pub repo_owner: String,
+    pub repo_name: String,
+    pub file_path: String,
+    pub line_number: usize,
+    pub line_content: String,
+    pub context_before: Vec<String>,
+    pub context_after: Vec<String>,
+    pub language: String,
+}
+
+/// Issue/PR search result.
+#[derive(Debug, Clone, Serialize)]
+pub struct IssueSearchResult {
+    pub repo_owner: String,
+    pub repo_name: String,
+    pub number: u32,
+    pub title: String,
+    pub author: String,
+    pub state: String,
+    pub labels: Vec<String>,
+    pub is_pull_request: bool,
+}
+
+/// Search page template.
+#[derive(Template)]
+#[template(path = "search.html")]
+pub struct SearchTemplate {
+    pub query: String,
+    pub result_type: String,
+    pub total_count: usize,
+    pub repo_results: Vec<RepoSummary>,
+    pub code_results: Vec<CodeSearchResult>,
+    pub issue_results: Vec<IssueSearchResult>,
+    pub repo_count: usize,
+    pub code_count: usize,
+    pub issue_count: usize,
+    pub pr_count: usize,
+}
+
+// ==================== API Documentation Templates ====================
+
+/// API Documentation page.
+#[derive(Template)]
+#[template(path = "api/docs.html")]
+pub struct ApiDocsTemplate {
+    pub openapi_spec: String,
+}
