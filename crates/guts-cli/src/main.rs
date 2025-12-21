@@ -44,6 +44,19 @@ enum Commands {
         command: IdentityCommands,
     },
 
+    /// Manage pull requests
+    #[command(name = "pr")]
+    PullRequest {
+        #[command(subcommand)]
+        command: PullRequestCommands,
+    },
+
+    /// Manage issues
+    Issue {
+        #[command(subcommand)]
+        command: IssueCommands,
+    },
+
     /// Show status
     Status,
 
@@ -62,6 +75,148 @@ enum IdentityCommands {
 
     /// Show current identity
     Show,
+}
+
+#[derive(Subcommand, Debug)]
+enum PullRequestCommands {
+    /// List pull requests
+    List {
+        /// Filter by state (open, closed, merged, all)
+        #[arg(short, long, default_value = "open")]
+        state: String,
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+    },
+
+    /// Create a new pull request
+    Create {
+        /// Pull request title
+        #[arg(short, long)]
+        title: String,
+        /// Pull request description
+        #[arg(short, long, default_value = "")]
+        body: String,
+        /// Source branch
+        #[arg(long)]
+        source: String,
+        /// Target branch
+        #[arg(long, default_value = "main")]
+        target: String,
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+    },
+
+    /// Show pull request details
+    Show {
+        /// Pull request number
+        number: u32,
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+    },
+
+    /// Merge a pull request
+    Merge {
+        /// Pull request number
+        number: u32,
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+    },
+
+    /// Close a pull request
+    Close {
+        /// Pull request number
+        number: u32,
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum IssueCommands {
+    /// List issues
+    List {
+        /// Filter by state (open, closed, all)
+        #[arg(short, long, default_value = "open")]
+        state: String,
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+    },
+
+    /// Create a new issue
+    Create {
+        /// Issue title
+        #[arg(short, long)]
+        title: String,
+        /// Issue description
+        #[arg(short, long, default_value = "")]
+        body: String,
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+    },
+
+    /// Show issue details
+    Show {
+        /// Issue number
+        number: u32,
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+    },
+
+    /// Close an issue
+    Close {
+        /// Issue number
+        number: u32,
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+    },
+
+    /// Reopen an issue
+    Reopen {
+        /// Issue number
+        number: u32,
+        /// Node API URL
+        #[arg(long, default_value = "http://127.0.0.1:8080")]
+        node: String,
+        /// Repository (owner/name)
+        #[arg(short, long)]
+        repo: String,
+    },
 }
 
 fn main() {
@@ -89,6 +244,48 @@ fn main() {
         Commands::Identity { command } => match command {
             IdentityCommands::Generate { output } => commands::identity_generate(output.as_deref()),
             IdentityCommands::Show => commands::identity_show(),
+        },
+        Commands::PullRequest { command } => match command {
+            PullRequestCommands::List { state, node, repo } => {
+                commands::pr_list(&node, &repo, &state)
+            }
+            PullRequestCommands::Create {
+                title,
+                body,
+                source,
+                target,
+                node,
+                repo,
+            } => commands::pr_create(&node, &repo, &title, &body, &source, &target),
+            PullRequestCommands::Show { number, node, repo } => {
+                commands::pr_show(&node, &repo, number)
+            }
+            PullRequestCommands::Merge { number, node, repo } => {
+                commands::pr_merge(&node, &repo, number)
+            }
+            PullRequestCommands::Close { number, node, repo } => {
+                commands::pr_close(&node, &repo, number)
+            }
+        },
+        Commands::Issue { command } => match command {
+            IssueCommands::List { state, node, repo } => {
+                commands::issue_list(&node, &repo, &state)
+            }
+            IssueCommands::Create {
+                title,
+                body,
+                node,
+                repo,
+            } => commands::issue_create(&node, &repo, &title, &body),
+            IssueCommands::Show { number, node, repo } => {
+                commands::issue_show(&node, &repo, number)
+            }
+            IssueCommands::Close { number, node, repo } => {
+                commands::issue_close(&node, &repo, number)
+            }
+            IssueCommands::Reopen { number, node, repo } => {
+                commands::issue_reopen(&node, &repo, number)
+            }
         },
         Commands::Status => commands::status(),
         Commands::Version => {

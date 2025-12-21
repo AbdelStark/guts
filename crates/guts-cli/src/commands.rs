@@ -85,6 +85,163 @@ pub fn status() -> Result<()> {
     Ok(())
 }
 
+// ==================== Pull Request Commands ====================
+
+/// List pull requests.
+pub fn pr_list(node: &str, repo: &str, state: &str) -> Result<()> {
+    println!("Listing pull requests for {} (state: {})", repo, state);
+    println!("API endpoint: {}/api/repos/{}/pulls?state={}", node, repo, state);
+    println!();
+    println!("Note: HTTP client not yet implemented. Use curl:");
+    println!(
+        "  curl {}/api/repos/{}/pulls?state={}",
+        node, repo, state
+    );
+    Ok(())
+}
+
+/// Create a pull request.
+pub fn pr_create(
+    node: &str,
+    repo: &str,
+    title: &str,
+    body: &str,
+    source: &str,
+    target: &str,
+) -> Result<()> {
+    println!("Creating pull request in {}", repo);
+    println!("  Title:  {}", title);
+    println!("  Body:   {}", if body.is_empty() { "(empty)" } else { body });
+    println!("  Source: {}", source);
+    println!("  Target: {}", target);
+    println!();
+    println!("Note: HTTP client not yet implemented. Use curl:");
+    println!(
+        r#"  curl -X POST {}/api/repos/{}/pulls \
+    -H "Content-Type: application/json" \
+    -d '{{"title":"{}","description":"{}","author":"anonymous","source_branch":"{}","target_branch":"{}","source_commit":"{}","target_commit":"{}"}}'
+"#,
+        node,
+        repo,
+        title,
+        body,
+        source,
+        target,
+        "0".repeat(40),
+        "0".repeat(40)
+    );
+    Ok(())
+}
+
+/// Show a pull request.
+pub fn pr_show(node: &str, repo: &str, number: u32) -> Result<()> {
+    println!("Showing pull request #{} for {}", number, repo);
+    println!();
+    println!("Note: HTTP client not yet implemented. Use curl:");
+    println!("  curl {}/api/repos/{}/pulls/{}", node, repo, number);
+    Ok(())
+}
+
+/// Merge a pull request.
+pub fn pr_merge(node: &str, repo: &str, number: u32) -> Result<()> {
+    println!("Merging pull request #{} for {}", number, repo);
+    println!();
+    println!("Note: HTTP client not yet implemented. Use curl:");
+    println!(
+        r#"  curl -X POST {}/api/repos/{}/pulls/{}/merge \
+    -H "Content-Type: application/json" \
+    -d '{{"merged_by":"anonymous"}}'
+"#,
+        node, repo, number
+    );
+    Ok(())
+}
+
+/// Close a pull request.
+pub fn pr_close(node: &str, repo: &str, number: u32) -> Result<()> {
+    println!("Closing pull request #{} for {}", number, repo);
+    println!();
+    println!("Note: HTTP client not yet implemented. Use curl:");
+    println!(
+        r#"  curl -X PATCH {}/api/repos/{}/pulls/{} \
+    -H "Content-Type: application/json" \
+    -d '{{"state":"closed"}}'
+"#,
+        node, repo, number
+    );
+    Ok(())
+}
+
+// ==================== Issue Commands ====================
+
+/// List issues.
+pub fn issue_list(node: &str, repo: &str, state: &str) -> Result<()> {
+    println!("Listing issues for {} (state: {})", repo, state);
+    println!();
+    println!("Note: HTTP client not yet implemented. Use curl:");
+    println!(
+        "  curl {}/api/repos/{}/issues?state={}",
+        node, repo, state
+    );
+    Ok(())
+}
+
+/// Create an issue.
+pub fn issue_create(node: &str, repo: &str, title: &str, body: &str) -> Result<()> {
+    println!("Creating issue in {}", repo);
+    println!("  Title: {}", title);
+    println!("  Body:  {}", if body.is_empty() { "(empty)" } else { body });
+    println!();
+    println!("Note: HTTP client not yet implemented. Use curl:");
+    println!(
+        r#"  curl -X POST {}/api/repos/{}/issues \
+    -H "Content-Type: application/json" \
+    -d '{{"title":"{}","description":"{}","author":"anonymous"}}'
+"#,
+        node, repo, title, body
+    );
+    Ok(())
+}
+
+/// Show an issue.
+pub fn issue_show(node: &str, repo: &str, number: u32) -> Result<()> {
+    println!("Showing issue #{} for {}", number, repo);
+    println!();
+    println!("Note: HTTP client not yet implemented. Use curl:");
+    println!("  curl {}/api/repos/{}/issues/{}", node, repo, number);
+    Ok(())
+}
+
+/// Close an issue.
+pub fn issue_close(node: &str, repo: &str, number: u32) -> Result<()> {
+    println!("Closing issue #{} for {}", number, repo);
+    println!();
+    println!("Note: HTTP client not yet implemented. Use curl:");
+    println!(
+        r#"  curl -X PATCH {}/api/repos/{}/issues/{} \
+    -H "Content-Type: application/json" \
+    -d '{{"state":"closed","closed_by":"anonymous"}}'
+"#,
+        node, repo, number
+    );
+    Ok(())
+}
+
+/// Reopen an issue.
+pub fn issue_reopen(node: &str, repo: &str, number: u32) -> Result<()> {
+    println!("Reopening issue #{} for {}", number, repo);
+    println!();
+    println!("Note: HTTP client not yet implemented. Use curl:");
+    println!(
+        r#"  curl -X PATCH {}/api/repos/{}/issues/{} \
+    -H "Content-Type: application/json" \
+    -d '{{"state":"open"}}'
+"#,
+        node, repo, number
+    );
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

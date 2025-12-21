@@ -10,6 +10,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use guts_collaboration::CollaborationStore;
 use guts_git::{advertise_refs, receive_pack, upload_pack};
 use guts_storage::{Reference, Repository};
 use parking_lot::RwLock;
@@ -19,6 +20,7 @@ use std::io::Cursor;
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 
+use crate::collaboration_api::collaboration_routes;
 use crate::p2p::P2PManager;
 
 /// Application state shared across handlers.
@@ -28,6 +30,8 @@ pub struct AppState {
     pub repos: Arc<RepoStore>,
     /// Optional P2P manager for replication.
     pub p2p: Option<Arc<P2PManager>>,
+    /// Collaboration store for PRs, Issues, etc.
+    pub collaboration: Arc<CollaborationStore>,
 }
 
 /// In-memory repository store.
@@ -136,13 +140,15 @@ pub fn create_router(state: AppState) -> Router {
         // Repository management
         .route("/api/repos", get(list_repos).post(create_repo))
         .route("/api/repos/{owner}/{name}", get(get_repo))
-        // Git smart HTTP protocol
-        .route("/{owner}/{name}.git/info/refs", get(git_info_refs))
-        .route("/{owner}/{name}.git/git-upload-pack", post(git_upload_pack))
+        // Git smart HTTP protocol (using /git/ prefix to avoid axum path parameter limitations)
+        .route("/git/{owner}/{name}/info/refs", get(git_info_refs))
+        .route("/git/{owner}/{name}/git-upload-pack", post(git_upload_pack))
         .route(
-            "/{owner}/{name}.git/git-receive-pack",
+            "/git/{owner}/{name}/git-receive-pack",
             post(git_receive_pack),
         )
+        // Collaboration API (PRs, Issues, Comments, Reviews)
+        .merge(collaboration_routes())
         .layer(TraceLayer::new_for_http())
         .with_state(state)
 }
