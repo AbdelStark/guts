@@ -82,9 +82,11 @@ use tower_http::trace::TraceLayer;
 use crate::auth_api::auth_routes;
 use crate::ci_api::ci_routes;
 use crate::collaboration_api::collaboration_routes;
+use crate::compat_api::compat_routes;
 use crate::p2p::P2PManager;
 use crate::realtime_api::realtime_routes;
 use guts_ci::CiStore;
+use guts_compat::CompatStore;
 
 /// Re-export RepoStore for external use.
 pub use guts_storage::RepoStore;
@@ -104,6 +106,8 @@ pub struct AppState {
     pub realtime: Arc<EventHub>,
     /// CI/CD store for workflows, runs, artifacts, and status checks.
     pub ci: Arc<CiStore>,
+    /// Compatibility store for users, tokens, SSH keys, releases.
+    pub compat: Arc<CompatStore>,
 }
 
 impl axum::extract::FromRef<AppState> for guts_web::WebState {
@@ -197,6 +201,8 @@ pub fn create_router(state: AppState) -> Router {
         .merge(auth_routes())
         // CI/CD API (Workflows, Runs, Artifacts, Status Checks)
         .merge(ci_routes())
+        // Compatibility API (Users, Tokens, SSH Keys, Releases, Contents, Archives)
+        .merge(compat_routes())
         // Real-time WebSocket API
         .merge(realtime_routes())
         // Web UI routes

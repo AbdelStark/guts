@@ -37,6 +37,8 @@ All running on a 3-node Guts network with consensus.
 | Milestone 4 | ✅ Complete | Governance (Orgs, Teams, Permissions, Webhooks) |
 | Milestone 5 | ✅ Complete | Web Gateway (Search, API Docs) |
 | Milestone 6 | ✅ Complete | Real-time Updates (WebSocket, Notifications) |
+| Milestone 7 | ✅ Complete | CI/CD Integration (Workflows, Runs, Artifacts) |
+| Milestone 8 | ✅ Complete | Git/GitHub Compatibility (Tokens, Users, Contents) |
 
 ## Phase 1: Core Infrastructure ✅
 
@@ -213,19 +215,49 @@ The following features have been implemented:
 | Connection Management | Automatic reconnection with backoff | ✅ Complete |
 | Stats API | Real-time connection statistics endpoint | ✅ Complete |
 
+## Completed: Milestone 7 (CI/CD Integration)
+
+The following features have been implemented:
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Workflow Configuration | YAML-based pipeline definitions | ✅ Complete |
+| Job Execution | Isolated step-by-step job processing | ✅ Complete |
+| Status Checks | Integration with branch protection | ✅ Complete |
+| Artifact Management | Store and retrieve build artifacts | ✅ Complete |
+| Real-time Logs | Stream build logs via WebSocket | ✅ Complete |
+| CLI Commands | Workflow and run management | ✅ Complete |
+
+## Completed: Milestone 8 (Git/GitHub Compatibility)
+
+The following features have been implemented:
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| User Accounts | User registration and profiles | ✅ Complete |
+| Personal Access Tokens | Token-based API authentication | ✅ Complete |
+| SSH Key Management | SSH key storage and fingerprinting | ✅ Complete |
+| Rate Limiting | GitHub-compatible rate limit headers | ✅ Complete |
+| Pagination | Link header-based pagination | ✅ Complete |
+| Repository Contents API | File browsing without cloning | ✅ Complete |
+| Releases & Assets | Release management with assets | ✅ Complete |
+| Archive Downloads | Tarball and zipball generation | ✅ Complete |
+
 ## Future Milestones
 
 | Feature | Description | Priority |
 |---------|-------------|----------|
-| CI/CD Integration | Decentralized build pipelines | P3 |
+| SSH Protocol | Git over SSH support | P2 |
 | Package Registry | Decentralized package hosting | P3 |
 | Federation | Inter-network repository bridging | P3 |
 | Push Notifications | Mobile/desktop push via service workers | P4 |
 
 ## Test Coverage
 
-The project currently has **254+ tests** covering:
+The project currently has **385+ tests** covering:
 - Unit tests for all crates
 - E2E tests for HTTP API
 - Integration tests for P2P replication
 - Collaboration and governance scenarios
+- CI/CD workflow and run tests
+- Compatibility layer tests (users, tokens, releases)

@@ -17,6 +17,7 @@ guts-auth = { workspace = true }
 guts-web = { workspace = true }
 guts-realtime = { workspace = true }
 guts-ci = { workspace = true }
+guts-compat = { workspace = true }
 
 # Commonware
 commonware-broadcast = { workspace = true }

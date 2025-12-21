@@ -23,6 +23,7 @@
 | [Milestone 5](docs/MILESTONE-5.md) | Web gateway spec |
 | [Milestone 6](docs/MILESTONE-6.md) | Real-time updates spec |
 | [Milestone 7](docs/MILESTONE-7.md) | CI/CD integration spec |
+| [Milestone 8](docs/MILESTONE-8.md) | Git/GitHub compatibility spec |
 | [Contributing](CONTRIBUTING.md) | Contribution guidelines |
 
 ## Quick Start
@@ -48,7 +49,7 @@ cd infra/docker && docker compose -f docker-compose.devnet.yml up
 
 ```
 guts/
-├── crates/                     # Rust workspace crates (11 crates)
+├── crates/                     # Rust workspace crates (12 crates)
 │   ├── guts-types/             # Core types and primitives
 │   ├── guts-storage/           # Git object storage (content-addressed)
 │   ├── guts-git/               # Git protocol (pack files, smart HTTP)
@@ -58,6 +59,7 @@ guts/
 │   ├── guts-web/               # Web gateway (HTML views, Markdown rendering)
 │   ├── guts-realtime/          # WebSocket real-time updates and notifications
 │   ├── guts-ci/                # CI/CD pipelines, workflows, runs, artifacts
+│   ├── guts-compat/            # Git/GitHub compatibility (tokens, users, releases)
 │   ├── guts-node/              # Full node binary & HTTP API
 │   └── guts-cli/               # CLI client binary
 ├── infra/                      # Infrastructure as code
@@ -99,10 +101,11 @@ guts/
 | Milestone 5 | Complete | Web Gateway (Search, API Documentation, Full UI) |
 | Milestone 6 | Complete | Real-time Updates (WebSocket, Notifications) |
 | Milestone 7 | Complete | CI/CD Integration (Workflows, Runs, Artifacts, Status Checks) |
+| Milestone 8 | Complete | Git/GitHub Compatibility (Users, Tokens, Releases, Contents) |
 
 ### Test Coverage
 
-- **350+ tests** across all crates
+- **385+ tests** across all crates
 - Unit tests, E2E tests, integration tests
 - Multi-node P2P replication tests
 - Collaboration and governance scenario tests
@@ -143,6 +146,26 @@ Key architectural decisions are documented in `docs/adr/`:
 - All public items must have documentation
 - Use `thiserror` for library errors
 - Prefer explicit over implicit
+
+### Pre-Commit Validation (REQUIRED)
+
+**IMPORTANT: Always run these checks before committing and pushing:**
+
+```bash
+# 1. Format code
+cargo fmt --all
+
+# 2. Run linter (fix all warnings)
+cargo clippy --workspace --all-targets
+
+# 3. Run tests
+cargo test --workspace
+```
+
+All three checks MUST pass before any commit. This ensures:
+- Consistent code formatting across the codebase
+- No clippy warnings or errors
+- All tests remain passing
 
 ### Testing
 

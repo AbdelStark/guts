@@ -9,6 +9,7 @@ members = [
     "crates/guts-web",
     "crates/guts-realtime",
     "crates/guts-ci",
+    "crates/guts-compat",
     "crates/guts-node",
     "crates/guts-cli",
 ]
@@ -33,6 +34,7 @@ guts-auth = { version = "0.1.0", path = "crates/guts-auth" }
 guts-web = { version = "0.1.0", path = "crates/guts-web" }
 guts-realtime = { version = "0.1.0", path = "crates/guts-realtime" }
 guts-ci = { version = "0.1.0", path = "crates/guts-ci" }
+guts-compat = { version = "0.1.0", path = "crates/guts-compat" }
 
 # Commonware dependencies (matching Alto's versions)
 commonware-broadcast = "0.0.63"
@@ -98,6 +100,12 @@ mime_guess = "2.0"
 # Testing
 proptest = "1.5"
 tempfile = "3.14"
+
+# Authentication & Compatibility
+argon2 = "0.5"
+base64 = "0.22"
+tar = "0.4"
+zip = { version = "2.2", default-features = false, features = ["deflate"] }
 
 [profile.bench]
 overflow-checks = true
