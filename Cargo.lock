@@ -1344,6 +1344,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "guts-ci"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "guts-storage",
+ "guts-types",
+ "hex",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 2.0.17",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "guts-cli"
 version = "0.1.0"
 dependencies = [
@@ -1410,6 +1430,7 @@ dependencies = [
  "futures-util",
  "governor",
  "guts-auth",
+ "guts-ci",
  "guts-collaboration",
  "guts-git",
  "guts-p2p",
@@ -1509,6 +1530,7 @@ dependencies = [
  "askama_axum",
  "axum",
  "guts-auth",
+ "guts-ci",
  "guts-collaboration",
  "guts-storage",
  "guts-types",

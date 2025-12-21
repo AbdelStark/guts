@@ -21,6 +21,7 @@ pub struct WebState {
     pub repos: Arc<guts_storage::RepoStore>,
     pub collaboration: Arc<guts_collaboration::CollaborationStore>,
     pub auth: Arc<guts_auth::AuthStore>,
+    pub ci: Arc<guts_ci::CiStore>,
 }
 
 /// Create the web router.
@@ -58,6 +59,9 @@ where
         // Issues
         .route("/{owner}/{repo}/issues", get(issue_list))
         .route("/{owner}/{repo}/issues/{number}", get(issue_view))
+        // Actions (CI/CD)
+        .route("/{owner}/{repo}/actions", get(actions_list))
+        .route("/{owner}/{repo}/actions/runs/{run_id}", get(actions_run))
 }
 
 /// Query parameters for list endpoints.
@@ -545,6 +549,127 @@ async fn issue_view(
         labels: issue.labels.iter().map(|l| l.name.clone()).collect(),
         closed_by: issue.closed_by.clone(),
         comments,
+    };
+
+    Ok(Html(template.render()?))
+}
+
+// ==================== CI/CD Actions ====================
+
+/// Actions list page (workflows and runs).
+async fn actions_list(
+    State(state): State<WebState>,
+    Path((owner, repo)): Path<(String, String)>,
+) -> Result<impl IntoResponse, WebError> {
+    let repo_key = format!("{}/{}", owner, repo);
+
+    // Verify repository exists
+    let _ = state
+        .repos
+        .get(&owner, &repo)
+        .map_err(|_| WebError::NotFound(format!("Repository '{}' not found", repo_key)))?;
+
+    // Get workflows
+    let workflows: Vec<WorkflowSummary> = state
+        .ci
+        .workflows
+        .list(&repo_key)
+        .into_iter()
+        .map(|w| WorkflowSummary {
+            id: w.id.clone(),
+            name: w.name.clone(),
+            path: w.path.clone(),
+        })
+        .collect();
+
+    // Get recent runs
+    let runs: Vec<RunSummary> = state
+        .ci
+        .runs
+        .list_by_repo(&repo_key, Some(20))
+        .into_iter()
+        .map(|r| RunSummary {
+            id: r.id.clone(),
+            workflow_name: r.workflow_name.clone(),
+            number: r.number,
+            status: format!("{:?}", r.status).to_lowercase(),
+            conclusion: r.conclusion.map(|c| format!("{:?}", c).to_lowercase()),
+            head_sha: r.head_sha.clone(),
+            head_branch: r.head_branch.clone(),
+            trigger_type: format!("{:?}", r.trigger.trigger_type),
+        })
+        .collect();
+
+    let template = ActionsListTemplate {
+        owner,
+        repo,
+        workflows,
+        runs,
+    };
+
+    Ok(Html(template.render()?))
+}
+
+/// Action run detail page.
+async fn actions_run(
+    State(state): State<WebState>,
+    Path((owner, repo, run_id)): Path<(String, String, String)>,
+) -> Result<impl IntoResponse, WebError> {
+    let repo_key = format!("{}/{}", owner, repo);
+
+    // Verify repository exists
+    let _ = state
+        .repos
+        .get(&owner, &repo)
+        .map_err(|_| WebError::NotFound(format!("Repository '{}' not found", repo_key)))?;
+
+    // Get the run
+    let run = state
+        .ci
+        .runs
+        .get(&run_id)
+        .ok_or_else(|| WebError::NotFound(format!("Run '{}' not found", run_id)))?;
+
+    // Convert run to view model
+    let run_view = RunDetailView {
+        id: run.id.clone(),
+        workflow_name: run.workflow_name.clone(),
+        number: run.number,
+        status: format!("{:?}", run.status).to_lowercase(),
+        conclusion: run.conclusion.map(|c| format!("{:?}", c).to_lowercase()),
+        head_sha: run.head_sha.clone(),
+        head_branch: run.head_branch.clone(),
+        trigger_type: format!("{:?}", run.trigger.trigger_type),
+        actor: run.trigger.actor.clone(),
+    };
+
+    // Get jobs
+    let jobs: Vec<JobView> = run
+        .jobs
+        .values()
+        .map(|j| JobView {
+            id: j.id.clone(),
+            name: j.name.clone(),
+            status: format!("{:?}", j.status).to_lowercase(),
+            conclusion: j.conclusion.map(|c| format!("{:?}", c).to_lowercase()),
+            steps: j
+                .steps
+                .iter()
+                .map(|s| StepView {
+                    number: s.number,
+                    name: s.name.clone(),
+                    status: format!("{:?}", s.status).to_lowercase(),
+                    conclusion: s.conclusion.map(|c| format!("{:?}", c).to_lowercase()),
+                })
+                .collect(),
+        })
+        .collect();
+
+    let template = ActionsRunTemplate {
+        owner,
+        repo,
+        run: run_view,
+        jobs,
     };
 
     Ok(Html(template.render()?))

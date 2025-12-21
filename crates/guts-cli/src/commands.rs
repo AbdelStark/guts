@@ -245,6 +245,139 @@ pub fn issue_reopen(node: &str, repo: &str, number: u32) -> Result<()> {
     Ok(())
 }
 
+// ==================== Workflow Commands ====================
+
+/// List workflows.
+pub fn workflow_list(node: &str, repo: &str) -> Result<()> {
+    println!("Listing workflows for {}", repo);
+    println!();
+    println!("Note: HTTP client not yet implemented. Use curl:");
+    println!("  curl {}/api/repos/{}/workflows", node, repo);
+    Ok(())
+}
+
+/// Show workflow details.
+pub fn workflow_show(node: &str, repo: &str, id: &str) -> Result<()> {
+    println!("Showing workflow {} for {}", id, repo);
+    println!();
+    println!("Note: HTTP client not yet implemented. Use curl:");
+    println!("  curl {}/api/repos/{}/workflows/{}", node, repo, id);
+    Ok(())
+}
+
+/// Register a workflow from YAML file.
+pub fn workflow_register(node: &str, repo: &str, file: &str) -> Result<()> {
+    // Read the workflow file
+    let yaml_content = std::fs::read_to_string(file)?;
+
+    println!("Registering workflow from {} for {}", file, repo);
+    println!();
+    println!("Workflow content:");
+    for (i, line) in yaml_content.lines().take(10).enumerate() {
+        println!("  {}: {}", i + 1, line);
+    }
+    if yaml_content.lines().count() > 10 {
+        println!("  ... ({} more lines)", yaml_content.lines().count() - 10);
+    }
+    println!();
+    println!("Note: HTTP client not yet implemented. Use curl:");
+    println!(
+        r#"  curl -X POST {}/api/repos/{}/workflows \
+    -H "Content-Type: application/json" \
+    -d '{{"path":"{}","content":"<base64-encoded-yaml>"}}'
+"#,
+        node, repo, file
+    );
+    Ok(())
+}
+
+// ==================== Run Commands ====================
+
+/// List workflow runs.
+pub fn run_list(node: &str, repo: &str, workflow: Option<&str>) -> Result<()> {
+    if let Some(wf) = workflow {
+        println!("Listing runs for workflow {} in {}", wf, repo);
+        println!();
+        println!("Note: HTTP client not yet implemented. Use curl:");
+        println!(
+            "  curl {}/api/repos/{}/runs?workflow_id={}",
+            node, repo, wf
+        );
+    } else {
+        println!("Listing all workflow runs for {}", repo);
+        println!();
+        println!("Note: HTTP client not yet implemented. Use curl:");
+        println!("  curl {}/api/repos/{}/runs", node, repo);
+    }
+    Ok(())
+}
+
+/// Show run details.
+pub fn run_show(node: &str, repo: &str, id: &str) -> Result<()> {
+    println!("Showing run {} for {}", id, repo);
+    println!();
+    println!("Note: HTTP client not yet implemented. Use curl:");
+    println!("  curl {}/api/repos/{}/runs/{}", node, repo, id);
+    Ok(())
+}
+
+/// Trigger a workflow run.
+pub fn run_trigger(
+    node: &str,
+    repo: &str,
+    workflow_id: &str,
+    ref_name: &str,
+    sha: Option<&str>,
+) -> Result<()> {
+    println!("Triggering workflow {} for {}", workflow_id, repo);
+    println!("  Ref:    {}", ref_name);
+    if let Some(s) = sha {
+        println!("  Commit: {}", s);
+    }
+    println!();
+    println!("Note: HTTP client not yet implemented. Use curl:");
+    let sha_value = sha.unwrap_or("HEAD");
+    println!(
+        r#"  curl -X POST {}/api/repos/{}/runs \
+    -H "Content-Type: application/json" \
+    -d '{{"workflow_id":"{}","ref":"{}","sha":"{}","actor":"cli-user"}}'
+"#,
+        node, repo, workflow_id, ref_name, sha_value
+    );
+    Ok(())
+}
+
+/// Cancel a workflow run.
+pub fn run_cancel(node: &str, repo: &str, id: &str) -> Result<()> {
+    println!("Cancelling run {} for {}", id, repo);
+    println!();
+    println!("Note: HTTP client not yet implemented. Use curl:");
+    println!(
+        "  curl -X POST {}/api/repos/{}/runs/{}/cancel",
+        node, repo, id
+    );
+    Ok(())
+}
+
+/// Show run logs.
+pub fn run_logs(node: &str, repo: &str, id: &str, job: Option<&str>) -> Result<()> {
+    if let Some(j) = job {
+        println!("Showing logs for job {} in run {} ({})", j, id, repo);
+        println!();
+        println!("Note: HTTP client not yet implemented. Use curl:");
+        println!(
+            "  curl {}/api/repos/{}/runs/{}/jobs/{}/logs",
+            node, repo, id, j
+        );
+    } else {
+        println!("Showing all logs for run {} ({})", id, repo);
+        println!();
+        println!("Note: HTTP client not yet implemented. Use curl:");
+        println!("  curl {}/api/repos/{}/runs/{}/jobs", node, repo, id);
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

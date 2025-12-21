@@ -1,0 +1,37 @@
+[package]
+name = "guts-ci"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "CI/CD pipeline support for Guts code collaboration platform."
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+guts-types = { workspace = true }
+guts-storage = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true, features = ["sync", "time", "process", "io-util"] }
+futures = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }
+parking_lot = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tempfile = { workspace = true }
