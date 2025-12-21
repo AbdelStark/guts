@@ -10,6 +10,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use guts_auth::AuthStore;
 use guts_collaboration::CollaborationStore;
 use guts_git::{advertise_refs, receive_pack, upload_pack};
 use guts_storage::{Reference, Repository};
@@ -20,6 +21,7 @@ use std::io::Cursor;
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 
+use crate::auth_api::auth_routes;
 use crate::collaboration_api::collaboration_routes;
 use crate::p2p::P2PManager;
 
@@ -32,6 +34,8 @@ pub struct AppState {
     pub p2p: Option<Arc<P2PManager>>,
     /// Collaboration store for PRs, Issues, etc.
     pub collaboration: Arc<CollaborationStore>,
+    /// Authorization store for permissions, organizations, etc.
+    pub auth: Arc<AuthStore>,
 }
 
 /// In-memory repository store.
@@ -149,6 +153,8 @@ pub fn create_router(state: AppState) -> Router {
         )
         // Collaboration API (PRs, Issues, Comments, Reviews)
         .merge(collaboration_routes())
+        // Authorization API (Organizations, Teams, Permissions, Webhooks)
+        .merge(auth_routes())
         .layer(TraceLayer::new_for_http())
         .with_state(state)
 }

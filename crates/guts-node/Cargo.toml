@@ -13,6 +13,7 @@ guts-storage = { workspace = true }
 guts-git = { workspace = true }
 guts-p2p = { workspace = true }
 guts-collaboration = { workspace = true }
+guts-auth = { workspace = true }
 
 # Commonware
 commonware-broadcast = { workspace = true }

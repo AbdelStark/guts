@@ -1,0 +1,20 @@
+[package]
+name = "guts-auth"
+description = "Authorization and governance for Guts: Permissions, Organizations, Teams, Webhooks"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+
+[dependencies]
+guts-types.workspace = true
+
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+parking_lot.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
