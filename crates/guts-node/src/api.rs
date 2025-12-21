@@ -1,6 +1,63 @@
-//! HTTP API for the Guts node.
+//! # Core HTTP API
 //!
-//! Implements git smart HTTP protocol endpoints for push/pull operations.
+//! This module provides the main HTTP API for the Guts node, including:
+//!
+//! - **Git Smart HTTP Protocol**: Standard Git endpoints for clone, push, and pull
+//! - **Repository Management**: CRUD operations for repositories
+//! - **Health Checks**: Node status and version information
+//!
+//! ## Endpoint Overview
+//!
+//! | Method | Path | Description |
+//! |--------|------|-------------|
+//! | GET | `/health` | Health check with version info |
+//! | GET | `/api/repos` | List all repositories |
+//! | POST | `/api/repos` | Create a new repository |
+//! | GET | `/api/repos/{owner}/{name}` | Get repository details |
+//! | GET | `/git/{owner}/{name}/info/refs` | Git reference advertisement |
+//! | POST | `/git/{owner}/{name}/git-upload-pack` | Git fetch/clone |
+//! | POST | `/git/{owner}/{name}/git-receive-pack` | Git push |
+//!
+//! ## Git Smart HTTP Protocol
+//!
+//! The node implements Git's Smart HTTP protocol, enabling standard Git clients
+//! to interact with repositories:
+//!
+//! ```bash
+//! # Clone a repository
+//! git clone http://localhost:8080/git/alice/myrepo
+//!
+//! # Push changes
+//! git push origin main
+//!
+//! # Fetch updates
+//! git fetch origin
+//! ```
+//!
+//! ## Application State
+//!
+//! All handlers share an [`AppState`] containing:
+//!
+//! - `repos`: Repository storage (Git objects and refs)
+//! - `collaboration`: Pull requests, issues, comments storage
+//! - `auth`: Organizations, teams, permissions storage
+//! - `p2p`: Optional P2P manager for network replication
+//!
+//! ## Error Handling
+//!
+//! Errors are returned as JSON with appropriate HTTP status codes:
+//!
+//! ```json
+//! {
+//!   "error": "repository not found: alice/myrepo"
+//! }
+//! ```
+//!
+//! | Status | Meaning |
+//! |--------|---------|
+//! | 404 | Repository not found |
+//! | 409 | Repository already exists |
+//! | 500 | Internal server error |
 
 use axum::{
     body::Body,

@@ -1,4 +1,100 @@
-//! Collaboration API endpoints for Pull Requests, Issues, Comments, and Reviews.
+//! # Collaboration API
+//!
+//! This module provides HTTP endpoints for code collaboration features:
+//!
+//! - **Pull Requests**: Merge proposals with code review workflow
+//! - **Issues**: Bug reports, feature requests, and task tracking
+//! - **Comments**: Threaded discussions on PRs and Issues
+//! - **Reviews**: Code reviews with approval/rejection states
+//!
+//! ## Pull Request Endpoints
+//!
+//! | Method | Path | Description |
+//! |--------|------|-------------|
+//! | GET | `/api/repos/{owner}/{name}/pulls` | List pull requests |
+//! | POST | `/api/repos/{owner}/{name}/pulls` | Create a pull request |
+//! | GET | `/api/repos/{owner}/{name}/pulls/{number}` | Get PR details |
+//! | PATCH | `/api/repos/{owner}/{name}/pulls/{number}` | Update PR (title, state) |
+//! | POST | `/api/repos/{owner}/{name}/pulls/{number}/merge` | Merge the PR |
+//! | GET | `/api/repos/{owner}/{name}/pulls/{number}/comments` | List PR comments |
+//! | POST | `/api/repos/{owner}/{name}/pulls/{number}/comments` | Add a comment |
+//! | GET | `/api/repos/{owner}/{name}/pulls/{number}/reviews` | List reviews |
+//! | POST | `/api/repos/{owner}/{name}/pulls/{number}/reviews` | Submit a review |
+//!
+//! ## Issue Endpoints
+//!
+//! | Method | Path | Description |
+//! |--------|------|-------------|
+//! | GET | `/api/repos/{owner}/{name}/issues` | List issues |
+//! | POST | `/api/repos/{owner}/{name}/issues` | Create an issue |
+//! | GET | `/api/repos/{owner}/{name}/issues/{number}` | Get issue details |
+//! | PATCH | `/api/repos/{owner}/{name}/issues/{number}` | Update issue |
+//! | GET | `/api/repos/{owner}/{name}/issues/{number}/comments` | List comments |
+//! | POST | `/api/repos/{owner}/{name}/issues/{number}/comments` | Add a comment |
+//!
+//! ## State Transitions
+//!
+//! ### Pull Request States
+//!
+//! ```text
+//! Open ──┬──> Closed ──> Open (reopen)
+//!        └──> Merged (terminal)
+//! ```
+//!
+//! ### Issue States
+//!
+//! ```text
+//! Open <──> Closed
+//! ```
+//!
+//! ### Review States
+//!
+//! - `Pending`: Review in progress
+//! - `Commented`: Feedback without explicit approval
+//! - `Approved`: Code approved
+//! - `ChangesRequested`: Changes needed before merge
+//! - `Dismissed`: Review dismissed by maintainer
+//!
+//! ## Query Parameters
+//!
+//! List endpoints support filtering:
+//!
+//! ```bash
+//! # List open PRs only
+//! GET /api/repos/alice/myrepo/pulls?state=open
+//!
+//! # List closed issues
+//! GET /api/repos/alice/myrepo/issues?state=closed
+//! ```
+//!
+//! ## Example: Creating a Pull Request
+//!
+//! ```bash
+//! curl -X POST http://localhost:8080/api/repos/alice/myrepo/pulls \
+//!   -H "Content-Type: application/json" \
+//!   -d '{
+//!     "title": "Add new feature",
+//!     "description": "Implements the requested feature",
+//!     "author": "bob",
+//!     "source_branch": "feature/new-feature",
+//!     "target_branch": "main",
+//!     "source_commit": "abc123",
+//!     "target_commit": "def456"
+//!   }'
+//! ```
+//!
+//! ## Example: Submitting a Review
+//!
+//! ```bash
+//! curl -X POST http://localhost:8080/api/repos/alice/myrepo/pulls/1/reviews \
+//!   -H "Content-Type: application/json" \
+//!   -d '{
+//!     "author": "alice",
+//!     "state": "approved",
+//!     "body": "LGTM!",
+//!     "commit_id": "abc123"
+//!   }'
+//! ```
 
 use axum::{
     extract::{Path, Query, State},
