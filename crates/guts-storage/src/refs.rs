@@ -158,4 +158,216 @@ mod tests {
         let tags = store.list("refs/tags/");
         assert_eq!(tags.len(), 1);
     }
+
+    #[test]
+    fn test_ref_store_get_not_found() {
+        let store = RefStore::new();
+        let result = store.get("refs/heads/nonexistent");
+        assert!(matches!(result, Err(StorageError::RefNotFound(_))));
+    }
+
+    #[test]
+    fn test_ref_store_delete() {
+        let store = RefStore::new();
+        let id = ObjectId::from_bytes([1u8; 20]);
+
+        store.set("refs/heads/feature", id);
+        assert!(store.get("refs/heads/feature").is_ok());
+
+        store.delete("refs/heads/feature").unwrap();
+        assert!(store.get("refs/heads/feature").is_err());
+    }
+
+    #[test]
+    fn test_ref_store_delete_not_found() {
+        let store = RefStore::new();
+        let result = store.delete("refs/heads/nonexistent");
+        assert!(matches!(result, Err(StorageError::RefNotFound(_))));
+    }
+
+    #[test]
+    fn test_ref_store_list_all() {
+        let store = RefStore::new();
+        let id = ObjectId::from_bytes([1u8; 20]);
+
+        store.set("refs/heads/main", id);
+        store.set("refs/heads/feature", id);
+        store.set("refs/tags/v1.0", id);
+        store.set_symbolic("HEAD", "refs/heads/main");
+
+        let all = store.list_all();
+        assert_eq!(all.len(), 4);
+    }
+
+    #[test]
+    fn test_reference_direct() {
+        let id = ObjectId::from_bytes([1u8; 20]);
+        let reference = Reference::Direct(id);
+
+        assert_eq!(reference.as_direct(), Some(id));
+    }
+
+    #[test]
+    fn test_reference_symbolic() {
+        let reference = Reference::Symbolic("refs/heads/main".to_string());
+
+        assert!(reference.as_direct().is_none());
+    }
+
+    #[test]
+    fn test_reference_resolve_direct() {
+        let store = RefStore::new();
+        let id = ObjectId::from_bytes([1u8; 20]);
+
+        let reference = Reference::Direct(id);
+        let resolved = reference.resolve(&store).unwrap();
+
+        assert_eq!(resolved, id);
+    }
+
+    #[test]
+    fn test_reference_resolve_symbolic() {
+        let store = RefStore::new();
+        let id = ObjectId::from_bytes([1u8; 20]);
+
+        store.set("refs/heads/main", id);
+
+        let reference = Reference::Symbolic("refs/heads/main".to_string());
+        let resolved = reference.resolve(&store).unwrap();
+
+        assert_eq!(resolved, id);
+    }
+
+    #[test]
+    fn test_resolve_head_direct() {
+        let store = RefStore::new();
+        let id = ObjectId::from_bytes([1u8; 20]);
+
+        store.set("HEAD", id);
+
+        let resolved = store.resolve_head().unwrap();
+        assert_eq!(resolved, id);
+    }
+
+    #[test]
+    fn test_resolve_head_symbolic() {
+        let store = RefStore::new();
+        let id = ObjectId::from_bytes([1u8; 20]);
+
+        store.set("refs/heads/main", id);
+        store.set_symbolic("HEAD", "refs/heads/main");
+
+        let resolved = store.resolve_head().unwrap();
+        assert_eq!(resolved, id);
+    }
+
+    #[test]
+    fn test_resolve_head_not_found() {
+        let store = RefStore::new();
+        let result = store.resolve_head();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_resolve_head_dangling_symbolic() {
+        let store = RefStore::new();
+        store.set_symbolic("HEAD", "refs/heads/nonexistent");
+
+        let result = store.resolve_head();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_current_branch_with_direct_head() {
+        let store = RefStore::new();
+        let id = ObjectId::from_bytes([1u8; 20]);
+
+        store.set("HEAD", id);
+
+        assert!(store.current_branch().is_none());
+    }
+
+    #[test]
+    fn test_current_branch_feature() {
+        let store = RefStore::new();
+        store.set_symbolic("HEAD", "refs/heads/feature-branch");
+
+        assert_eq!(store.current_branch(), Some("feature-branch".to_string()));
+    }
+
+    #[test]
+    fn test_ref_update() {
+        let store = RefStore::new();
+        let id1 = ObjectId::from_bytes([1u8; 20]);
+        let id2 = ObjectId::from_bytes([2u8; 20]);
+
+        store.set("refs/heads/main", id1);
+        assert_eq!(store.get("refs/heads/main").unwrap().as_direct(), Some(id1));
+
+        store.set("refs/heads/main", id2);
+        assert_eq!(store.get("refs/heads/main").unwrap().as_direct(), Some(id2));
+    }
+
+    #[test]
+    fn test_ref_list_empty_prefix() {
+        let store = RefStore::new();
+        let id = ObjectId::from_bytes([1u8; 20]);
+
+        store.set("refs/heads/main", id);
+        store.set("refs/tags/v1", id);
+
+        let all = store.list("");
+        assert_eq!(all.len(), 2);
+    }
+
+    #[test]
+    fn test_ref_list_no_matches() {
+        let store = RefStore::new();
+        let id = ObjectId::from_bytes([1u8; 20]);
+
+        store.set("refs/heads/main", id);
+
+        let remotes = store.list("refs/remotes/");
+        assert!(remotes.is_empty());
+    }
+
+    #[test]
+    fn test_reference_clone() {
+        let id = ObjectId::from_bytes([1u8; 20]);
+        let original = Reference::Direct(id);
+        let cloned = original.clone();
+
+        assert_eq!(original.as_direct(), cloned.as_direct());
+    }
+
+    #[test]
+    fn test_symbolic_reference_update() {
+        let store = RefStore::new();
+        let id = ObjectId::from_bytes([1u8; 20]);
+
+        store.set("refs/heads/main", id);
+        store.set("refs/heads/feature", id);
+        store.set_symbolic("HEAD", "refs/heads/main");
+
+        assert_eq!(store.current_branch(), Some("main".to_string()));
+
+        store.set_symbolic("HEAD", "refs/heads/feature");
+
+        assert_eq!(store.current_branch(), Some("feature".to_string()));
+    }
+
+    #[test]
+    fn test_ref_store_default() {
+        let store: RefStore = Default::default();
+        assert!(store.list_all().is_empty());
+    }
+
+    #[test]
+    fn test_current_branch_non_heads() {
+        let store = RefStore::new();
+        // HEAD pointing to something that's not under refs/heads/
+        store.set_symbolic("HEAD", "refs/remotes/origin/main");
+
+        assert!(store.current_branch().is_none());
+    }
 }

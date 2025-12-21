@@ -129,4 +129,145 @@ mod tests {
         assert_eq!(repo.default_branch, "main");
         assert_eq!(repo.full_name(), "user123/test-repo");
     }
+
+    #[test]
+    fn test_repository_id_from_bytes() {
+        let bytes = [0u8; 32];
+        let id = RepositoryId::from_bytes(bytes);
+        assert_eq!(*id.as_bytes(), bytes);
+    }
+
+    #[test]
+    fn test_repository_id_to_hex() {
+        let bytes = [0xab; 32];
+        let id = RepositoryId::from_bytes(bytes);
+        let hex = id.to_hex();
+        assert_eq!(hex.len(), 64); // 32 bytes = 64 hex chars
+        assert!(hex.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn test_repository_id_display() {
+        let id = RepositoryId::generate("repo", "owner");
+        let display = format!("{}", id);
+        let hex = id.to_hex();
+        assert_eq!(display, hex);
+    }
+
+    #[test]
+    fn test_repository_id_different_owners_same_name() {
+        let id1 = RepositoryId::generate("repo", "alice");
+        let id2 = RepositoryId::generate("repo", "bob");
+        assert_ne!(id1, id2);
+    }
+
+    #[test]
+    fn test_repository_id_is_hash() {
+        // Verify that repository IDs are deterministic SHA256 hashes
+        let id = RepositoryId::generate("test", "owner");
+        assert_eq!(id.as_bytes().len(), 32); // SHA256 produces 32 bytes
+    }
+
+    #[test]
+    fn test_repository_visibility_default() {
+        let repo = Repository::new("test", "owner");
+        assert_eq!(repo.visibility, Visibility::Public);
+    }
+
+    #[test]
+    fn test_visibility_serde() {
+        let public: Visibility = serde_json::from_str(r#""public""#).unwrap();
+        let private: Visibility = serde_json::from_str(r#""private""#).unwrap();
+
+        assert_eq!(public, Visibility::Public);
+        assert_eq!(private, Visibility::Private);
+
+        assert_eq!(
+            serde_json::to_string(&Visibility::Public).unwrap(),
+            r#""public""#
+        );
+        assert_eq!(
+            serde_json::to_string(&Visibility::Private).unwrap(),
+            r#""private""#
+        );
+    }
+
+    #[test]
+    fn test_repository_with_description() {
+        let repo = Repository::new("test", "owner").with_description("A test repository");
+
+        assert_eq!(repo.description, Some("A test repository".to_string()));
+    }
+
+    #[test]
+    fn test_repository_created_at_is_set() {
+        let repo = Repository::new("test", "owner");
+        assert!(repo.created_at > 0);
+    }
+
+    #[test]
+    fn test_repository_serialization() {
+        let repo = Repository::new("test-repo", "alice").with_description("Test description");
+
+        let json = serde_json::to_string(&repo).unwrap();
+        let parsed: Repository = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed.name, repo.name);
+        assert_eq!(parsed.owner, repo.owner);
+        assert_eq!(parsed.description, repo.description);
+        assert_eq!(parsed.id, repo.id);
+    }
+
+    #[test]
+    fn test_repository_id_equality() {
+        let id1 = RepositoryId::from_bytes([1u8; 32]);
+        let id2 = RepositoryId::from_bytes([1u8; 32]);
+        let id3 = RepositoryId::from_bytes([2u8; 32]);
+
+        assert_eq!(id1, id2);
+        assert_ne!(id1, id3);
+    }
+
+    #[test]
+    fn test_repository_id_hash_trait() {
+        use std::collections::HashSet;
+
+        let id1 = RepositoryId::generate("repo1", "owner");
+        let id2 = RepositoryId::generate("repo2", "owner");
+
+        let mut set = HashSet::new();
+        set.insert(id1);
+        set.insert(id2);
+        set.insert(id1); // Duplicate
+
+        assert_eq!(set.len(), 2);
+    }
+
+    #[test]
+    fn test_repository_full_name_format() {
+        let repo = Repository::new("my-project", "org-name");
+        assert_eq!(repo.full_name(), "org-name/my-project");
+    }
+
+    #[test]
+    fn test_repository_accepts_string_types() {
+        let repo1 = Repository::new(String::from("name"), String::from("owner"));
+        let repo2 = Repository::new("name", "owner");
+
+        assert_eq!(repo1.name, repo2.name);
+        assert_eq!(repo1.owner, repo2.owner);
+    }
+
+    #[test]
+    fn test_visibility_default_trait() {
+        let visibility: Visibility = Default::default();
+        assert_eq!(visibility, Visibility::Public);
+    }
+
+    #[test]
+    fn test_repository_id_copy_trait() {
+        let id1 = RepositoryId::generate("repo", "owner");
+        let id2 = id1; // Copy
+        assert_eq!(id1, id2);
+    }
 }

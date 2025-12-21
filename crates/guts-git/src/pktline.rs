@@ -215,4 +215,210 @@ mod tests {
         assert_eq!(reader.read().unwrap(), Some(packets[1].clone()));
         assert_eq!(reader.read().unwrap(), Some(PktLine::Flush));
     }
+
+    #[test]
+    fn test_pktline_response_end() {
+        assert_eq!(PktLine::ResponseEnd.encode(), b"0002");
+    }
+
+    #[test]
+    fn test_pktline_from_bytes() {
+        let pkt = PktLine::from_bytes(b"test data".to_vec());
+        assert_eq!(pkt.data(), Some(b"test data".as_slice()));
+    }
+
+    #[test]
+    fn test_pktline_is_flush() {
+        assert!(PktLine::Flush.is_flush());
+        assert!(!PktLine::from_string("test").is_flush());
+        assert!(!PktLine::Delimiter.is_flush());
+        assert!(!PktLine::ResponseEnd.is_flush());
+    }
+
+    #[test]
+    fn test_pktline_data() {
+        let pkt = PktLine::from_string("hello");
+        assert_eq!(pkt.data(), Some(b"hello".as_slice()));
+
+        assert!(PktLine::Flush.data().is_none());
+        assert!(PktLine::Delimiter.data().is_none());
+        assert!(PktLine::ResponseEnd.data().is_none());
+    }
+
+    #[test]
+    fn test_pktline_as_str() {
+        let pkt = PktLine::from_string("hello\n");
+        assert_eq!(pkt.as_str(), Some("hello"));
+
+        let pkt2 = PktLine::from_string("no newline");
+        assert_eq!(pkt2.as_str(), Some("no newline"));
+    }
+
+    #[test]
+    fn test_pktline_as_str_invalid_utf8() {
+        let pkt = PktLine::from_bytes(vec![0xff, 0xfe]);
+        assert!(pkt.as_str().is_none());
+    }
+
+    #[test]
+    fn test_pktline_reader_eof() {
+        let reader = PktLineReader::new(Cursor::new(Vec::<u8>::new()));
+        let result = reader.into_inner();
+        assert_eq!(result.position(), 0);
+    }
+
+    #[test]
+    fn test_pktline_read_until_flush() {
+        let mut buf = Vec::new();
+        {
+            let mut writer = PktLineWriter::new(&mut buf);
+            writer.write_line("line1").unwrap();
+            writer.write_line("line2").unwrap();
+            writer.flush_pkt().unwrap();
+            writer.write_line("line3").unwrap();
+        }
+
+        let mut reader = PktLineReader::new(Cursor::new(buf));
+        let packets = reader.read_until_flush().unwrap();
+        assert_eq!(packets.len(), 2);
+    }
+
+    #[test]
+    fn test_pktline_writer_write_line() {
+        let mut buf = Vec::new();
+        {
+            let mut writer = PktLineWriter::new(&mut buf);
+            writer.write_line("test").unwrap();
+        }
+        // "test\n" is 5 bytes, + 4 for length = 9, so hex "0009"
+        assert!(buf.starts_with(b"0009"));
+        assert!(buf.ends_with(b"test\n"));
+    }
+
+    #[test]
+    fn test_pktline_writer_write_line_with_newline() {
+        let mut buf = Vec::new();
+        {
+            let mut writer = PktLineWriter::new(&mut buf);
+            writer.write_line("test\n").unwrap();
+        }
+        // Should not double the newline
+        assert!(buf.ends_with(b"test\n"));
+        assert!(!buf.ends_with(b"test\n\n"));
+    }
+
+    #[test]
+    fn test_pktline_writer_write_data() {
+        let mut buf = Vec::new();
+        {
+            let mut writer = PktLineWriter::new(&mut buf);
+            writer.write_data(b"binary\x00data").unwrap();
+        }
+        assert!(buf.len() > 4); // At least the length prefix
+    }
+
+    #[test]
+    fn test_pktline_writer_flush() {
+        let mut buf = Vec::new();
+        {
+            let mut writer = PktLineWriter::new(&mut buf);
+            writer.write_line("test").unwrap();
+            writer.flush().unwrap();
+        }
+        // Should have been flushed to the buffer
+        assert!(!buf.is_empty());
+    }
+
+    #[test]
+    fn test_pktline_writer_into_inner() {
+        let buf = Vec::new();
+        let writer = PktLineWriter::new(buf);
+        let inner = writer.into_inner();
+        assert!(inner.is_empty());
+    }
+
+    #[test]
+    fn test_pktline_reader_inner_mut() {
+        let cursor = Cursor::new(Vec::<u8>::new());
+        let mut reader = PktLineReader::new(cursor);
+        let inner = reader.inner_mut();
+        assert_eq!(inner.position(), 0);
+    }
+
+    #[test]
+    fn test_pktline_read_delimiter() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"0001");
+
+        let mut reader = PktLineReader::new(Cursor::new(buf));
+        assert_eq!(reader.read().unwrap(), Some(PktLine::Delimiter));
+    }
+
+    #[test]
+    fn test_pktline_read_response_end() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"0002");
+
+        let mut reader = PktLineReader::new(Cursor::new(buf));
+        assert_eq!(reader.read().unwrap(), Some(PktLine::ResponseEnd));
+    }
+
+    #[test]
+    fn test_pktline_equality() {
+        assert_eq!(PktLine::Flush, PktLine::Flush);
+        assert_eq!(PktLine::Delimiter, PktLine::Delimiter);
+        assert_eq!(PktLine::ResponseEnd, PktLine::ResponseEnd);
+        assert_eq!(PktLine::from_string("test"), PktLine::from_string("test"));
+        assert_ne!(PktLine::Flush, PktLine::Delimiter);
+    }
+
+    #[test]
+    fn test_pktline_clone() {
+        let pkt = PktLine::from_string("test");
+        let cloned = pkt.clone();
+        assert_eq!(pkt, cloned);
+    }
+
+    #[test]
+    fn test_pktline_debug() {
+        let pkt = PktLine::Flush;
+        let debug = format!("{:?}", pkt);
+        assert!(debug.contains("Flush"));
+    }
+
+    #[test]
+    fn test_pktline_read_invalid_length() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"0003"); // Invalid: 3 is less than 4
+
+        let mut reader = PktLineReader::new(Cursor::new(buf));
+        let result = reader.read();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_pktline_large_packet() {
+        let data = "x".repeat(1000);
+        let pkt = PktLine::from_string(&data);
+        let encoded = pkt.encode();
+
+        // Verify we can read it back
+        let mut reader = PktLineReader::new(Cursor::new(encoded));
+        let read_pkt = reader.read().unwrap().unwrap();
+        assert_eq!(read_pkt.data().unwrap().len(), 1000);
+    }
+
+    #[test]
+    fn test_pktline_empty_data() {
+        let pkt = PktLine::from_bytes(Vec::new());
+        let encoded = pkt.encode();
+        assert_eq!(&encoded[..4], b"0004"); // Just the length prefix
+    }
+
+    #[test]
+    fn test_pktline_read_eof_on_empty() {
+        let mut reader = PktLineReader::new(Cursor::new(Vec::<u8>::new()));
+        let result = reader.read().unwrap();
+        assert!(result.is_none());
+    }
 }

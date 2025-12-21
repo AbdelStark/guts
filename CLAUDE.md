@@ -34,7 +34,11 @@ cargo run --bin guts -- --help
 guts/
 ├── crates/                     # Rust workspace crates
 │   ├── guts-types/             # Core types and primitives
-│   ├── guts-node/              # Full node binary
+│   ├── guts-storage/           # Git object storage (content-addressed)
+│   ├── guts-git/               # Git protocol (pack files, smart HTTP)
+│   ├── guts-p2p/               # P2P networking and replication
+│   ├── guts-collaboration/     # PRs, Issues, Comments, Reviews
+│   ├── guts-node/              # Full node binary & HTTP API
 │   └── guts-cli/               # CLI client binary
 ├── infra/                      # Infrastructure as code
 │   ├── terraform/              # Cloud provisioning
@@ -42,6 +46,8 @@ guts/
 │   └── k8s/                    # Kubernetes manifests
 ├── docs/                       # Documentation
 │   ├── PRD.md                  # Product requirements
+│   ├── MILESTONE-3.md          # Latest collaboration features
+│   ├── ROADMAP.md              # MVP roadmap
 │   └── adr/                    # Architecture decisions
 └── .claude/                    # AI agent configuration
     ├── skills/                 # Claude skills
@@ -53,12 +59,21 @@ guts/
 | Component | Technology |
 |-----------|------------|
 | Language | Rust (stable) |
-| Async Runtime | commonware::runtime |
+| Async Runtime | Tokio |
+| Web Framework | Axum + Tower |
 | Consensus | commonware::consensus |
 | Networking | commonware::p2p |
-| Cryptography | commonware::cryptography |
-| Serialization | commonware::codec |
+| Cryptography | commonware::cryptography (Ed25519) |
+| Git Protocol | Custom pack files + Smart HTTP |
+| Serialization | serde + serde_json |
 | CLI | clap |
+
+## Current Status
+
+Completed milestones:
+- **Milestone 1**: Foundation (git storage, protocol, node API)
+- **Milestone 2**: Multi-node P2P replication with commonware
+- **Milestone 3**: Collaboration features (PRs, Issues, Comments, Reviews)
 
 ## Development Guidelines
 
@@ -71,16 +86,34 @@ guts/
 
 ### Testing
 
-```bash
-# Unit tests
-cargo test --lib
+The project has comprehensive test coverage (205+ tests):
 
-# Integration tests
-cargo test --test '*'
+```bash
+# Run all tests
+cargo test --workspace
+
+# Unit tests only
+cargo test --lib --workspace
+
+# Integration/E2E tests
+cargo test --test '*' --workspace
+
+# Test a specific crate
+cargo test -p guts-collaboration
 
 # With coverage
 cargo llvm-cov --workspace --html
 ```
+
+**Test Categories:**
+- **Unit tests**: Core logic for types, storage, git protocol, collaboration
+- **E2E tests**: HTTP API tests for PRs, Issues, Comments, Reviews
+- **Integration tests**: Multi-node P2P replication, git push/pull simulation
+
+**Key test files:**
+- `guts-node/tests/collaboration_e2e.rs` - Collaboration API tests
+- `guts-node/tests/multi_node_replication.rs` - P2P consensus tests
+- `guts-collaboration/src/store.rs` - Store operations tests
 
 ### Commits
 
@@ -129,6 +162,49 @@ use guts_types::{Repository, RepositoryId};
 let repo = Repository::new("my-repo", owner_id, "A description");
 let repo_id = repo.id();
 ```
+
+### Collaboration Types
+
+```rust
+use guts_collaboration::{PullRequest, Issue, Comment, Review};
+
+// Pull Requests have states: Open, Closed, Merged
+let pr = PullRequest::new(id, repo_key, number, title, desc, author,
+    source_branch, target_branch, source_commit, target_commit);
+pr.close()?;
+pr.reopen()?;
+pr.merge(merged_by)?;
+
+// Issues have states: Open, Closed
+let issue = Issue::new(id, repo_key, number, title, description, author);
+
+// Comments can target PRs or Issues
+let comment = Comment::new(id, target, author, body);
+
+// Reviews: Pending, Commented, Approved, ChangesRequested, Dismissed
+let review = Review::new(id, repo_key, pr_number, author, state, commit_id);
+```
+
+## API Endpoints
+
+The node exposes a REST API at `/api`:
+
+**Pull Requests:**
+- `GET/POST /api/repos/{owner}/{repo}/pulls` - List/create PRs
+- `GET/PATCH /api/repos/{owner}/{repo}/pulls/{number}` - Get/update PR
+- `POST /api/repos/{owner}/{repo}/pulls/{number}/merge` - Merge PR
+- `GET/POST /api/repos/{owner}/{repo}/pulls/{number}/comments` - PR comments
+- `GET/POST /api/repos/{owner}/{repo}/pulls/{number}/reviews` - Code reviews
+
+**Issues:**
+- `GET/POST /api/repos/{owner}/{repo}/issues` - List/create issues
+- `GET/PATCH /api/repos/{owner}/{repo}/issues/{number}` - Get/update issue
+- `GET/POST /api/repos/{owner}/{repo}/issues/{number}/comments` - Issue comments
+
+**Git:**
+- `GET /api/repos/{owner}/{repo}/info/refs` - Reference advertisement
+- `POST /api/repos/{owner}/{repo}/git-upload-pack` - Clone/fetch
+- `POST /api/repos/{owner}/{repo}/git-receive-pack` - Push
 
 ## Error Handling
 

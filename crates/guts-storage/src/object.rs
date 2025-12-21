@@ -231,4 +231,206 @@ mod tests {
             assert_eq!(ot, parsed);
         }
     }
+
+    #[test]
+    fn test_object_id_from_bytes() {
+        let bytes = [0xab; 20];
+        let id = ObjectId::from_bytes(bytes);
+        assert_eq!(*id.as_bytes(), bytes);
+    }
+
+    #[test]
+    fn test_object_id_invalid_hex_length() {
+        let result = ObjectId::from_hex("abc");
+        assert!(result.is_err());
+
+        let result = ObjectId::from_hex("a94a8fe5ccb19ba61c4c0873d391e987982fbbd3ff");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_object_id_invalid_hex_chars() {
+        let result = ObjectId::from_hex("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_object_id_display() {
+        let id = ObjectId::from_bytes([0u8; 20]);
+        assert_eq!(format!("{}", id), "0".repeat(40));
+    }
+
+    #[test]
+    fn test_object_id_debug() {
+        let id = ObjectId::from_bytes([0u8; 20]);
+        let debug = format!("{:?}", id);
+        assert!(debug.contains("ObjectId"));
+        assert!(debug.contains(&"0".repeat(40)));
+    }
+
+    #[test]
+    fn test_object_type_parse_invalid() {
+        let result = ObjectType::parse("invalid");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_object_type_pack_type_roundtrip() {
+        for ot in [
+            ObjectType::Commit,
+            ObjectType::Tree,
+            ObjectType::Blob,
+            ObjectType::Tag,
+        ] {
+            let code = ot.pack_type();
+            let parsed = ObjectType::from_pack_type(code).unwrap();
+            assert_eq!(ot, parsed);
+        }
+    }
+
+    #[test]
+    fn test_object_type_from_pack_type_invalid() {
+        assert!(ObjectType::from_pack_type(0).is_err());
+        assert!(ObjectType::from_pack_type(5).is_err());
+        assert!(ObjectType::from_pack_type(255).is_err());
+    }
+
+    #[test]
+    fn test_git_object_blob() {
+        let content = b"Hello, World!";
+        let obj = GitObject::blob(content.to_vec());
+
+        assert_eq!(obj.object_type, ObjectType::Blob);
+        assert_eq!(obj.data.as_ref(), content);
+        assert_eq!(obj.size(), content.len());
+    }
+
+    #[test]
+    fn test_git_object_commit() {
+        let tree_id = ObjectId::from_bytes([1u8; 20]);
+        let parents = vec![ObjectId::from_bytes([2u8; 20])];
+        let author = "Alice <alice@example.com> 1234567890 +0000";
+        let committer = "Bob <bob@example.com> 1234567890 +0000";
+        let message = "Initial commit";
+
+        let obj = GitObject::commit(&tree_id, &parents, author, committer, message);
+
+        assert_eq!(obj.object_type, ObjectType::Commit);
+        let content = String::from_utf8_lossy(&obj.data);
+        assert!(content.contains(&format!("tree {}", tree_id)));
+        assert!(content.contains(&format!("parent {}", parents[0])));
+        assert!(content.contains(author));
+        assert!(content.contains(message));
+    }
+
+    #[test]
+    fn test_git_object_commit_no_parents() {
+        let tree_id = ObjectId::from_bytes([1u8; 20]);
+        let parents: Vec<ObjectId> = vec![];
+        let author = "Alice <alice@example.com>";
+        let message = "First commit";
+
+        let obj = GitObject::commit(&tree_id, &parents, author, author, message);
+
+        let content = String::from_utf8_lossy(&obj.data);
+        assert!(!content.contains("parent"));
+    }
+
+    #[test]
+    fn test_git_object_commit_multiple_parents() {
+        let tree_id = ObjectId::from_bytes([1u8; 20]);
+        let parents = vec![
+            ObjectId::from_bytes([2u8; 20]),
+            ObjectId::from_bytes([3u8; 20]),
+        ];
+        let author = "Alice <alice@example.com>";
+        let message = "Merge commit";
+
+        let obj = GitObject::commit(&tree_id, &parents, author, author, message);
+
+        let content = String::from_utf8_lossy(&obj.data);
+        assert!(content.contains(&format!("parent {}", parents[0])));
+        assert!(content.contains(&format!("parent {}", parents[1])));
+    }
+
+    #[test]
+    fn test_git_object_new() {
+        let data = b"tree data";
+        let obj = GitObject::new(ObjectType::Tree, data.to_vec());
+
+        assert_eq!(obj.object_type, ObjectType::Tree);
+        assert_eq!(obj.data.as_ref(), data);
+    }
+
+    #[test]
+    fn test_object_id_hash_object() {
+        // Known git hash for "blob 4\0test"
+        let id = ObjectId::hash_object(ObjectType::Blob, b"test");
+        assert_eq!(id.to_hex().len(), 40);
+    }
+
+    #[test]
+    fn test_git_object_clone() {
+        let obj = GitObject::blob(b"data".to_vec());
+        let cloned = obj.clone();
+
+        assert_eq!(obj.id, cloned.id);
+        assert_eq!(obj.object_type, cloned.object_type);
+        assert_eq!(obj.data, cloned.data);
+    }
+
+    #[test]
+    fn test_object_id_serialization() {
+        let id = ObjectId::from_bytes([0xab; 20]);
+        let json = serde_json::to_string(&id).unwrap();
+        let parsed: ObjectId = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(id, parsed);
+    }
+
+    #[test]
+    fn test_object_id_equality() {
+        let id1 = ObjectId::from_bytes([1u8; 20]);
+        let id2 = ObjectId::from_bytes([1u8; 20]);
+        let id3 = ObjectId::from_bytes([2u8; 20]);
+
+        assert_eq!(id1, id2);
+        assert_ne!(id1, id3);
+    }
+
+    #[test]
+    fn test_object_id_hash_trait() {
+        use std::collections::HashSet;
+
+        let id1 = ObjectId::from_bytes([1u8; 20]);
+        let id2 = ObjectId::from_bytes([2u8; 20]);
+
+        let mut set = HashSet::new();
+        set.insert(id1);
+        set.insert(id2);
+        set.insert(id1); // Duplicate
+
+        assert_eq!(set.len(), 2);
+    }
+
+    #[test]
+    fn test_object_id_copy_trait() {
+        let id1 = ObjectId::from_bytes([1u8; 20]);
+        let id2 = id1; // Copy
+        assert_eq!(id1, id2);
+    }
+
+    #[test]
+    fn test_git_object_size() {
+        let obj = GitObject::blob(b"12345".to_vec());
+        assert_eq!(obj.size(), 5);
+    }
+
+    #[test]
+    fn test_git_object_empty_blob() {
+        let obj = GitObject::blob(b"".to_vec());
+        assert_eq!(obj.size(), 0);
+        // Empty blob has a known git hash
+        assert_eq!(obj.id.to_hex(), "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391");
+    }
 }

@@ -75,4 +75,35 @@ mod tests {
         assert!(matches!(MessageKind::from_u8(2), Some(MessageKind::Issue)));
         assert!(MessageKind::from_u8(255).is_none());
     }
+
+    #[test]
+    fn test_message_kind_all_invalid_values() {
+        // Test all values from 3 to 255 are invalid
+        for i in 3..=255u8 {
+            assert!(
+                MessageKind::from_u8(i).is_none(),
+                "Expected None for value {}",
+                i
+            );
+        }
+    }
+
+    #[test]
+    fn test_message_kind_to_hex() {
+        assert_eq!(MessageKind::RepoUpdate.to_hex(), hex(&[0]));
+        assert_eq!(MessageKind::PullRequest.to_hex(), hex(&[1]));
+        assert_eq!(MessageKind::Issue.to_hex(), hex(&[2]));
+    }
+
+    #[test]
+    fn test_namespace_constant() {
+        assert_eq!(NAMESPACE, b"_GUTS");
+        assert_eq!(NAMESPACE.len(), 5);
+    }
+
+    #[test]
+    fn test_epoch_constants() {
+        assert_eq!(EPOCH, 0);
+        assert_eq!(EPOCH_LENGTH, u64::MAX);
+    }
 }
