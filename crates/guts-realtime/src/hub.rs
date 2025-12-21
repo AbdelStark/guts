@@ -52,7 +52,9 @@ impl EventHub {
         let client_id = uuid::Uuid::new_v4().to_string();
         let (client, receiver) = create_client(client_id.clone());
 
-        self.clients.write().insert(client_id.clone(), client.clone());
+        self.clients
+            .write()
+            .insert(client_id.clone(), client.clone());
         self.stats.write().total_connections += 1;
 
         info!(client_id = %client_id, "Client connected");
@@ -267,13 +269,14 @@ mod tests {
         .unwrap();
 
         // Then unsubscribe
-        let response = hub.handle_command(
-            &client,
-            ClientCommand::Unsubscribe {
-                channel: "repo:alice/myrepo".to_string(),
-            },
-        )
-        .unwrap();
+        let response = hub
+            .handle_command(
+                &client,
+                ClientCommand::Unsubscribe {
+                    channel: "repo:alice/myrepo".to_string(),
+                },
+            )
+            .unwrap();
 
         assert!(matches!(response, ServerMessage::Unsubscribed { .. }));
         assert_eq!(client.subscription_count(), 0);

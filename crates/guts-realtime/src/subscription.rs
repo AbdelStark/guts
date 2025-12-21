@@ -84,20 +84,6 @@ impl Channel {
         })
     }
 
-    /// Convert to channel string.
-    pub fn to_string(&self) -> String {
-        let prefix = match self.channel_type {
-            ChannelType::Repository => "repo",
-            ChannelType::User => "user",
-            ChannelType::Organization => "org",
-        };
-
-        match &self.filter {
-            Some(f) => format!("{}:{}/{}", prefix, self.identifier, f),
-            None => format!("{}:{}", prefix, self.identifier),
-        }
-    }
-
     /// Check if an event channel matches this subscription channel.
     pub fn matches(&self, event_channel: &str) -> bool {
         let event_chan = match Channel::parse(event_channel) {
@@ -120,6 +106,21 @@ impl Channel {
 
         // If subscription has a filter, event must match exactly
         self.filter == event_chan.filter
+    }
+}
+
+impl std::fmt::Display for Channel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let prefix = match self.channel_type {
+            ChannelType::Repository => "repo",
+            ChannelType::User => "user",
+            ChannelType::Organization => "org",
+        };
+
+        match &self.filter {
+            Some(filter) => write!(f, "{}:{}/{}", prefix, self.identifier, filter),
+            None => write!(f, "{}:{}", prefix, self.identifier),
+        }
     }
 }
 

@@ -114,7 +114,9 @@ pub use event::{
     RealtimeEvent, ReviewEventData,
 };
 pub use hub::{ClientCommand, EventHub, HubStats, ServerMessage};
-pub use notification::{Notification, NotificationMetadata, NotificationPreferences, NotificationType};
+pub use notification::{
+    Notification, NotificationMetadata, NotificationPreferences, NotificationType,
+};
 pub use subscription::{Channel, ChannelType, ClientSubscriptions, MAX_SUBSCRIPTIONS_PER_CLIENT};
 
 #[cfg(test)]
