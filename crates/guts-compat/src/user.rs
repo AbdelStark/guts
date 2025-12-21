@@ -321,6 +321,83 @@ mod tests {
     }
 
     #[test]
+    fn test_validate_username_reserved() {
+        // Test all reserved usernames
+        let reserved = [
+            "admin",
+            "api",
+            "git",
+            "guts",
+            "help",
+            "login",
+            "logout",
+            "new",
+            "organizations",
+            "repos",
+            "settings",
+            "signup",
+            "user",
+            "users",
+        ];
+        for name in reserved {
+            let result = User::validate_username(name);
+            assert!(result.is_err(), "Expected '{}' to be reserved", name);
+            assert!(
+                result.unwrap_err().contains("reserved"),
+                "Error should mention 'reserved'"
+            );
+        }
+    }
+
+    #[test]
+    fn test_validate_username_max_length() {
+        // 39 chars should be valid
+        let max_valid = "a".repeat(39);
+        assert!(User::validate_username(&max_valid).is_ok());
+
+        // 40 chars should be invalid
+        let too_long = "a".repeat(40);
+        assert!(User::validate_username(&too_long).is_err());
+    }
+
+    #[test]
+    fn test_validate_username_special_chars() {
+        // Invalid special characters
+        assert!(User::validate_username("user@name").is_err());
+        assert!(User::validate_username("user.name").is_err());
+        assert!(User::validate_username("user#name").is_err());
+        assert!(User::validate_username("user$name").is_err());
+        assert!(User::validate_username("user%name").is_err());
+        assert!(User::validate_username("user name").is_err());
+        assert!(User::validate_username("user\tname").is_err());
+        assert!(User::validate_username("user\nname").is_err());
+    }
+
+    #[test]
+    fn test_validate_username_unicode() {
+        // Unicode should be rejected
+        assert!(User::validate_username("αβγ").is_err());
+        assert!(User::validate_username("日本語").is_err());
+        assert!(User::validate_username("émoji").is_err());
+        assert!(User::validate_username("user🔥").is_err());
+    }
+
+    #[test]
+    fn test_validate_username_edge_cases() {
+        // Single character at boundaries
+        assert!(User::validate_username("0").is_ok()); // digit
+        assert!(User::validate_username("z").is_ok()); // letter
+
+        // Hyphen placement
+        assert!(User::validate_username("a-b").is_ok());
+        assert!(User::validate_username("a-b-c").is_ok());
+        assert!(User::validate_username("-a").is_err()); // starts with hyphen
+        assert!(User::validate_username("a-").is_err()); // ends with hyphen
+        assert!(User::validate_username("a--b").is_err()); // consecutive hyphens
+        assert!(User::validate_username("---").is_err()); // all hyphens
+    }
+
+    #[test]
     fn test_create_user() {
         let user = User::new(1, "alice".to_string(), "abc123".to_string());
         assert_eq!(user.id, 1);
@@ -346,9 +423,187 @@ mod tests {
     }
 
     #[test]
+    fn test_user_profile_private_email() {
+        let mut user = User::new(1, "alice".to_string(), "abc123".to_string());
+        user.email = Some("alice@example.com".to_string());
+        user.email_public = false;
+
+        let profile = user.to_profile(0, 0, 0);
+        assert!(profile.email.is_none());
+    }
+
+    #[test]
     fn test_format_timestamp() {
         // 2024-01-01 00:00:00 UTC = 1704067200
         let ts = format_timestamp(1704067200);
         assert_eq!(ts, "2024-01-01T00:00:00Z");
+    }
+
+    #[test]
+    fn test_format_timestamp_epoch() {
+        let ts = format_timestamp(0);
+        assert_eq!(ts, "1970-01-01T00:00:00Z");
+    }
+
+    #[test]
+    fn test_format_timestamp_leap_year() {
+        // Feb 29, 2024 12:00:00 UTC (2024 is a leap year)
+        let ts = format_timestamp(1709208000);
+        assert_eq!(ts, "2024-02-29T12:00:00Z");
+    }
+
+    #[test]
+    fn test_is_leap_year() {
+        assert!(is_leap_year(2000)); // divisible by 400
+        assert!(!is_leap_year(1900)); // divisible by 100 but not 400
+        assert!(is_leap_year(2024)); // divisible by 4 but not 100
+        assert!(!is_leap_year(2023)); // not divisible by 4
+    }
+}
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    /// Strategy for generating valid usernames
+    fn valid_username_strategy() -> impl Strategy<Value = String> {
+        // Generate usernames with pattern: alphanumeric, optionally with single hyphens
+        prop::collection::vec(
+            prop_oneof![
+                4 => prop::char::ranges(vec!['a'..='z', '0'..='9'].into_iter().collect()),
+                1 => Just('-'),
+            ],
+            1..=39,
+        )
+        .prop_filter_map("filter valid usernames", |chars| {
+            let s: String = chars.into_iter().collect();
+            // Must start and end with alphanumeric, no consecutive hyphens
+            if s.is_empty() {
+                return None;
+            }
+            let chars: Vec<char> = s.chars().collect();
+            if !chars[0].is_ascii_alphanumeric() {
+                return None;
+            }
+            if !chars.last().unwrap().is_ascii_alphanumeric() {
+                return None;
+            }
+            // Check for consecutive hyphens
+            for i in 1..chars.len() {
+                if chars[i] == '-' && chars[i - 1] == '-' {
+                    return None;
+                }
+            }
+            // Skip reserved names
+            let reserved = [
+                "admin",
+                "api",
+                "git",
+                "guts",
+                "help",
+                "login",
+                "logout",
+                "new",
+                "organizations",
+                "repos",
+                "settings",
+                "signup",
+                "user",
+                "users",
+            ];
+            if reserved.contains(&s.as_str()) {
+                return None;
+            }
+            Some(s)
+        })
+    }
+
+    proptest! {
+        /// Property: Valid usernames should always be accepted
+        #[test]
+        fn prop_valid_usernames_accepted(username in valid_username_strategy()) {
+            prop_assert!(
+                User::validate_username(&username).is_ok(),
+                "Username '{}' should be valid", username
+            );
+        }
+
+        /// Property: Empty strings are always rejected
+        #[test]
+        fn prop_empty_string_rejected(_seed in 0u32..1000) {
+            prop_assert!(User::validate_username("").is_err());
+        }
+
+        /// Property: Strings > 39 chars are always rejected
+        #[test]
+        fn prop_long_usernames_rejected(len in 40usize..200) {
+            let long_name: String = (0..len).map(|_| 'a').collect();
+            prop_assert!(
+                User::validate_username(&long_name).is_err(),
+                "Username of length {} should be rejected", len
+            );
+        }
+
+        /// Property: Uppercase letters are always rejected
+        #[test]
+        fn prop_uppercase_rejected(prefix in "[a-z]{0,5}", upper in "[A-Z]", suffix in "[a-z]{0,5}") {
+            let username = format!("{}{}{}", prefix, upper, suffix);
+            if !username.is_empty() && username.len() <= 39 {
+                prop_assert!(User::validate_username(&username).is_err());
+            }
+        }
+
+        /// Property: Starting with hyphen is rejected
+        #[test]
+        fn prop_hyphen_start_rejected(rest in "[a-z0-9-]{0,10}") {
+            let username = format!("-{}", rest);
+            prop_assert!(User::validate_username(&username).is_err());
+        }
+
+        /// Property: Ending with hyphen is rejected
+        #[test]
+        fn prop_hyphen_end_rejected(prefix in "[a-z0-9]{1,10}") {
+            let username = format!("{}-", prefix);
+            prop_assert!(User::validate_username(&username).is_err());
+        }
+
+        /// Property: Consecutive hyphens are rejected
+        #[test]
+        fn prop_consecutive_hyphens_rejected(prefix in "[a-z0-9]{1,5}", suffix in "[a-z0-9]{1,5}") {
+            let username = format!("{}--{}", prefix, suffix);
+            prop_assert!(User::validate_username(&username).is_err());
+        }
+
+        /// Property: Underscores are rejected
+        #[test]
+        fn prop_underscore_rejected(prefix in "[a-z]{1,5}", suffix in "[a-z]{1,5}") {
+            let username = format!("{}_{}", prefix, suffix);
+            prop_assert!(User::validate_username(&username).is_err());
+        }
+
+        /// Property: Spaces are rejected
+        #[test]
+        fn prop_space_rejected(prefix in "[a-z]{1,5}", suffix in "[a-z]{1,5}") {
+            let username = format!("{} {}", prefix, suffix);
+            prop_assert!(User::validate_username(&username).is_err());
+        }
+
+        /// Property: Arbitrary Unicode is rejected
+        #[test]
+        fn prop_unicode_rejected(s in "\\PC{1,10}") {
+            // If the string contains any non-ASCII characters, it should be rejected
+            if !s.is_ascii() {
+                prop_assert!(User::validate_username(&s).is_err());
+            }
+        }
+
+        /// Property: Validation is consistent (idempotent)
+        #[test]
+        fn prop_validation_consistent(s in ".*") {
+            let result1 = User::validate_username(&s);
+            let result2 = User::validate_username(&s);
+            prop_assert_eq!(result1.is_ok(), result2.is_ok());
+        }
     }
 }

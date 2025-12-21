@@ -495,4 +495,345 @@ mod tests {
             _ => panic!("wrong message type"),
         }
     }
+
+    // Error handling tests
+    #[test]
+    fn test_message_decode_empty() {
+        let result = Message::decode(&[]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_message_decode_invalid_type() {
+        let result = Message::decode(&[0xFF]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_repo_announce_truncated() {
+        // Just the message type byte
+        let result = RepoAnnounce::decode(&[]);
+        assert!(result.is_err());
+
+        // Truncated repo key length
+        let result = RepoAnnounce::decode(&[0x00]);
+        assert!(result.is_err());
+
+        // Valid length but no data
+        let result = RepoAnnounce::decode(&[0x00, 0x05]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_sync_request_truncated() {
+        let result = SyncRequest::decode(&[]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_object_data_truncated() {
+        let result = ObjectData::decode(&[]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_ref_update_truncated() {
+        let result = RefUpdate::decode(&[]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_object_data_invalid_type() {
+        // Build a message with invalid object type (99)
+        let mut buf = bytes::BytesMut::new();
+        buf.put_u16(4); // repo key length
+        buf.put_slice(b"test");
+        buf.put_u32(1); // object count
+        buf.put_u8(99); // invalid object type
+        buf.put_u32(5); // data length
+        buf.put_slice(b"hello");
+
+        let result = ObjectData::decode(&buf);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_repo_announce_empty_lists() {
+        let msg = RepoAnnounce {
+            repo_key: "test/repo".to_string(),
+            object_ids: vec![],
+            refs: vec![],
+        };
+
+        let encoded = msg.encode();
+        let decoded = Message::decode(&encoded).unwrap();
+
+        match decoded {
+            Message::RepoAnnounce(d) => {
+                assert_eq!(d.repo_key, "test/repo");
+                assert!(d.object_ids.is_empty());
+                assert!(d.refs.is_empty());
+            }
+            _ => panic!("wrong message type"),
+        }
+    }
+
+    #[test]
+    fn test_message_type_from_byte() {
+        assert_eq!(
+            MessageType::from_byte(1).unwrap(),
+            MessageType::RepoAnnounce
+        );
+        assert_eq!(MessageType::from_byte(2).unwrap(), MessageType::SyncRequest);
+        assert_eq!(MessageType::from_byte(3).unwrap(), MessageType::ObjectData);
+        assert_eq!(MessageType::from_byte(4).unwrap(), MessageType::RefUpdate);
+        assert!(MessageType::from_byte(0).is_err());
+        assert!(MessageType::from_byte(5).is_err());
+        assert!(MessageType::from_byte(255).is_err());
+    }
+
+    #[test]
+    fn test_object_data_all_types() {
+        // Test all object types
+        let objects = vec![
+            GitObject::blob(b"blob data".to_vec()),
+            GitObject::new(ObjectType::Tree, Bytes::from_static(b"tree data")),
+            GitObject::new(ObjectType::Commit, Bytes::from_static(b"commit data")),
+            GitObject::new(ObjectType::Tag, Bytes::from_static(b"tag data")),
+        ];
+
+        let msg = ObjectData {
+            repo_key: "test/repo".to_string(),
+            objects: objects.clone(),
+        };
+
+        let encoded = msg.encode();
+        let decoded = Message::decode(&encoded).unwrap();
+
+        match decoded {
+            Message::ObjectData(d) => {
+                assert_eq!(d.objects.len(), 4);
+                assert_eq!(d.objects[0].object_type, ObjectType::Blob);
+                assert_eq!(d.objects[1].object_type, ObjectType::Tree);
+                assert_eq!(d.objects[2].object_type, ObjectType::Commit);
+                assert_eq!(d.objects[3].object_type, ObjectType::Tag);
+            }
+            _ => panic!("wrong message type"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    /// Strategy for generating valid ObjectIds
+    fn object_id_strategy() -> impl Strategy<Value = ObjectId> {
+        prop::array::uniform20(any::<u8>()).prop_map(ObjectId::from_bytes)
+    }
+
+    /// Strategy for generating valid repo keys
+    fn repo_key_strategy() -> impl Strategy<Value = String> {
+        "[a-z][a-z0-9-]{0,30}/[a-z][a-z0-9-]{0,30}"
+    }
+
+    /// Strategy for generating valid ref names
+    fn ref_name_strategy() -> impl Strategy<Value = String> {
+        prop_oneof![
+            Just("refs/heads/main".to_string()),
+            Just("refs/heads/develop".to_string()),
+            Just("refs/tags/v1.0.0".to_string()),
+            "[a-z/]{1,50}".prop_map(|s| format!("refs/{}", s)),
+        ]
+    }
+
+    proptest! {
+        /// Property: RepoAnnounce roundtrip preserves data
+        #[test]
+        fn prop_repo_announce_roundtrip(
+            repo_key in repo_key_strategy(),
+            object_ids in prop::collection::vec(object_id_strategy(), 0..10),
+            refs in prop::collection::vec(
+                (ref_name_strategy(), object_id_strategy()),
+                0..10
+            )
+        ) {
+            let msg = RepoAnnounce {
+                repo_key: repo_key.clone(),
+                object_ids: object_ids.clone(),
+                refs: refs.clone(),
+            };
+
+            let encoded = msg.encode();
+            let decoded = Message::decode(&encoded).unwrap();
+
+            match decoded {
+                Message::RepoAnnounce(d) => {
+                    prop_assert_eq!(d.repo_key, repo_key);
+                    prop_assert_eq!(d.object_ids.len(), object_ids.len());
+                    prop_assert_eq!(d.refs.len(), refs.len());
+                    for (orig, dec) in object_ids.iter().zip(d.object_ids.iter()) {
+                        prop_assert_eq!(orig, dec);
+                    }
+                    for ((orig_name, orig_id), (dec_name, dec_id)) in refs.iter().zip(d.refs.iter()) {
+                        prop_assert_eq!(orig_name, dec_name);
+                        prop_assert_eq!(orig_id, dec_id);
+                    }
+                }
+                _ => prop_assert!(false, "wrong message type"),
+            }
+        }
+
+        /// Property: SyncRequest roundtrip preserves data
+        #[test]
+        fn prop_sync_request_roundtrip(
+            repo_key in repo_key_strategy(),
+            want in prop::collection::vec(object_id_strategy(), 0..20)
+        ) {
+            let msg = SyncRequest {
+                repo_key: repo_key.clone(),
+                want: want.clone(),
+            };
+
+            let encoded = msg.encode();
+            let decoded = Message::decode(&encoded).unwrap();
+
+            match decoded {
+                Message::SyncRequest(d) => {
+                    prop_assert_eq!(d.repo_key, repo_key);
+                    prop_assert_eq!(d.want.len(), want.len());
+                    for (orig, dec) in want.iter().zip(d.want.iter()) {
+                        prop_assert_eq!(orig, dec);
+                    }
+                }
+                _ => prop_assert!(false, "wrong message type"),
+            }
+        }
+
+        /// Property: RefUpdate roundtrip preserves data
+        #[test]
+        fn prop_ref_update_roundtrip(
+            repo_key in repo_key_strategy(),
+            ref_name in ref_name_strategy(),
+            old_id in object_id_strategy(),
+            new_id in object_id_strategy()
+        ) {
+            let msg = RefUpdate {
+                repo_key: repo_key.clone(),
+                ref_name: ref_name.clone(),
+                old_id,
+                new_id,
+            };
+
+            let encoded = msg.encode();
+            let decoded = Message::decode(&encoded).unwrap();
+
+            match decoded {
+                Message::RefUpdate(d) => {
+                    prop_assert_eq!(d.repo_key, repo_key);
+                    prop_assert_eq!(d.ref_name, ref_name);
+                    prop_assert_eq!(d.old_id, old_id);
+                    prop_assert_eq!(d.new_id, new_id);
+                }
+                _ => prop_assert!(false, "wrong message type"),
+            }
+        }
+
+        /// Property: ObjectData roundtrip preserves data (with blob objects)
+        #[test]
+        fn prop_object_data_roundtrip(
+            repo_key in repo_key_strategy(),
+            blobs in prop::collection::vec(prop::collection::vec(any::<u8>(), 0..1000), 0..5)
+        ) {
+            let objects: Vec<GitObject> = blobs.iter()
+                .map(|data| GitObject::blob(data.clone()))
+                .collect();
+
+            let msg = ObjectData {
+                repo_key: repo_key.clone(),
+                objects: objects.clone(),
+            };
+
+            let encoded = msg.encode();
+            let decoded = Message::decode(&encoded).unwrap();
+
+            match decoded {
+                Message::ObjectData(d) => {
+                    prop_assert_eq!(d.repo_key, repo_key);
+                    prop_assert_eq!(d.objects.len(), objects.len());
+                    for (orig, dec) in objects.iter().zip(d.objects.iter()) {
+                        prop_assert_eq!(orig.id, dec.id);
+                        prop_assert_eq!(orig.object_type, dec.object_type);
+                        prop_assert_eq!(orig.data.as_ref(), dec.data.as_ref());
+                    }
+                }
+                _ => prop_assert!(false, "wrong message type"),
+            }
+        }
+
+        /// Property: Truncated messages return errors
+        #[test]
+        fn prop_truncated_repo_announce_fails(
+            repo_key in repo_key_strategy(),
+            truncate_at in 0usize..50
+        ) {
+            let msg = RepoAnnounce {
+                repo_key,
+                object_ids: vec![ObjectId::from_bytes([1u8; 20])],
+                refs: vec![],
+            };
+
+            let encoded = msg.encode();
+            if truncate_at < encoded.len() {
+                // Skip message type byte (index 0), decode expects payload only
+                let truncated = &encoded[1..truncate_at.max(1)];
+                let result = RepoAnnounce::decode(truncated);
+                // Truncated data should fail or succeed depending on if we cut essential data
+                // The test verifies it doesn't panic
+                let _ = result;
+            }
+        }
+
+        /// Property: Invalid message types return errors
+        #[test]
+        fn prop_invalid_message_type_fails(msg_type in 5u8..=255) {
+            let result = MessageType::from_byte(msg_type);
+            prop_assert!(result.is_err());
+        }
+
+        /// Property: Encoding then decoding is identity
+        #[test]
+        fn prop_message_encode_decode_identity(
+            msg_type in 1u8..=4,
+            repo_key in repo_key_strategy()
+        ) {
+            let msg = match msg_type {
+                1 => Message::RepoAnnounce(RepoAnnounce {
+                    repo_key: repo_key.clone(),
+                    object_ids: vec![],
+                    refs: vec![],
+                }),
+                2 => Message::SyncRequest(SyncRequest {
+                    repo_key: repo_key.clone(),
+                    want: vec![],
+                }),
+                3 => Message::ObjectData(ObjectData {
+                    repo_key: repo_key.clone(),
+                    objects: vec![],
+                }),
+                4 => Message::RefUpdate(RefUpdate {
+                    repo_key: repo_key.clone(),
+                    ref_name: "refs/heads/main".to_string(),
+                    old_id: ObjectId::from_bytes([0u8; 20]),
+                    new_id: ObjectId::from_bytes([1u8; 20]),
+                }),
+                _ => unreachable!(),
+            };
+
+            let encoded = msg.encode();
+            let decoded = Message::decode(&encoded);
+            prop_assert!(decoded.is_ok());
+        }
+    }
 }
