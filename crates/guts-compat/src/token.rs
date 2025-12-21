@@ -1,0 +1,529 @@
+//! Personal Access Token types and authentication.
+
+use argon2::{
+    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Argon2,
+};
+use rand::Rng;
+use serde::{Deserialize, Serialize};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use crate::error::{CompatError, Result};
+use crate::user::UserId;
+
+/// Unique identifier for a token.
+pub type TokenId = u64;
+
+/// Token format: guts_<prefix>_<secret>
+/// Prefix: 8 lowercase alphanumeric characters
+/// Secret: 32 alphanumeric characters (mixed case)
+const TOKEN_PREFIX_LEN: usize = 8;
+const TOKEN_SECRET_LEN: usize = 32;
+
+/// A personal access token for authentication.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PersonalAccessToken {
+    /// Unique token ID.
+    pub id: TokenId,
+    /// User who owns this token.
+    pub user_id: UserId,
+    /// User-provided name/description.
+    pub name: String,
+    /// Argon2id hash of the full token (prefix + secret).
+    pub token_hash: String,
+    /// First 8 characters for quick lookup.
+    pub token_prefix: String,
+    /// Scopes granted to this token.
+    pub scopes: Vec<TokenScope>,
+    /// Optional expiration timestamp.
+    pub expires_at: Option<u64>,
+    /// Last time the token was used.
+    pub last_used_at: Option<u64>,
+    /// When the token was created.
+    pub created_at: u64,
+}
+
+impl PersonalAccessToken {
+    /// Generate a new token with a random value.
+    ///
+    /// Returns the token struct and the plaintext token value (only shown once).
+    pub fn generate(
+        id: TokenId,
+        user_id: UserId,
+        name: String,
+        scopes: Vec<TokenScope>,
+        expires_at: Option<u64>,
+    ) -> Result<(Self, String)> {
+        let token_value = TokenValue::generate();
+        let plaintext = token_value.to_string();
+
+        // Hash the secret part
+        let token_hash = hash_token_secret(&token_value.secret)?;
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        let token = Self {
+            id,
+            user_id,
+            name,
+            token_hash,
+            token_prefix: token_value.prefix,
+            scopes,
+            expires_at,
+            last_used_at: None,
+            created_at: now,
+        };
+
+        Ok((token, plaintext))
+    }
+
+    /// Verify a token secret against the stored hash.
+    pub fn verify(&self, secret: &str) -> Result<()> {
+        verify_token_secret(secret, &self.token_hash)
+    }
+
+    /// Check if the token is expired.
+    pub fn is_expired(&self) -> bool {
+        if let Some(expires_at) = self.expires_at {
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            now >= expires_at
+        } else {
+            false
+        }
+    }
+
+    /// Check if the token has a specific scope.
+    pub fn has_scope(&self, required: TokenScope) -> bool {
+        // Admin scope grants all permissions
+        if self.scopes.contains(&TokenScope::Admin) {
+            return true;
+        }
+
+        // Check for exact scope match
+        if self.scopes.contains(&required) {
+            return true;
+        }
+
+        // Check for parent scope (e.g., RepoWrite includes RepoRead)
+        match required {
+            TokenScope::RepoRead => self.scopes.contains(&TokenScope::RepoWrite)
+                || self.scopes.contains(&TokenScope::RepoAdmin),
+            TokenScope::RepoWrite => self.scopes.contains(&TokenScope::RepoAdmin),
+            TokenScope::UserRead => self.scopes.contains(&TokenScope::UserWrite),
+            TokenScope::OrgRead => self.scopes.contains(&TokenScope::OrgWrite)
+                || self.scopes.contains(&TokenScope::OrgAdmin),
+            TokenScope::OrgWrite => self.scopes.contains(&TokenScope::OrgAdmin),
+            TokenScope::SshKeyRead => self.scopes.contains(&TokenScope::SshKeyWrite),
+            TokenScope::WorkflowRead => self.scopes.contains(&TokenScope::WorkflowWrite),
+            TokenScope::WebhookRead => self.scopes.contains(&TokenScope::WebhookWrite),
+            _ => false,
+        }
+    }
+
+    /// Update the last_used_at timestamp.
+    pub fn touch(&mut self) {
+        self.last_used_at = Some(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        );
+    }
+
+    /// Convert to a response (without the hash).
+    pub fn to_response(&self, plaintext: Option<&str>) -> TokenResponse {
+        TokenResponse {
+            id: self.id,
+            name: self.name.clone(),
+            scopes: self.scopes.clone(),
+            token_prefix: self.token_prefix.clone(),
+            token: plaintext.map(|s| s.to_string()),
+            expires_at: self.expires_at.map(format_timestamp),
+            last_used_at: self.last_used_at.map(format_timestamp),
+            created_at: format_timestamp(self.created_at),
+        }
+    }
+}
+
+/// Token scopes for fine-grained permissions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TokenScope {
+    // Repository
+    /// Read access to repositories.
+    RepoRead,
+    /// Write (push) access to repositories.
+    RepoWrite,
+    /// Admin access to repositories (settings, collaborators).
+    RepoAdmin,
+    /// Delete repositories.
+    RepoDelete,
+
+    // User
+    /// Read user profile.
+    UserRead,
+    /// Update user profile.
+    UserWrite,
+    /// Access email addresses.
+    UserEmail,
+
+    // Organization
+    /// Read organization info.
+    OrgRead,
+    /// Manage organization (members, teams).
+    OrgWrite,
+    /// Admin organization operations.
+    OrgAdmin,
+
+    // SSH Keys
+    /// List SSH keys.
+    SshKeyRead,
+    /// Add/remove SSH keys.
+    SshKeyWrite,
+
+    // Workflow (CI/CD)
+    /// Read workflows and runs.
+    WorkflowRead,
+    /// Trigger and manage workflows.
+    WorkflowWrite,
+
+    // Webhooks
+    /// Read webhooks.
+    WebhookRead,
+    /// Manage webhooks.
+    WebhookWrite,
+
+    // Admin (superuser)
+    /// Full admin access (all permissions).
+    Admin,
+}
+
+impl TokenScope {
+    /// Get all available scopes.
+    pub fn all() -> Vec<Self> {
+        vec![
+            Self::RepoRead,
+            Self::RepoWrite,
+            Self::RepoAdmin,
+            Self::RepoDelete,
+            Self::UserRead,
+            Self::UserWrite,
+            Self::UserEmail,
+            Self::OrgRead,
+            Self::OrgWrite,
+            Self::OrgAdmin,
+            Self::SshKeyRead,
+            Self::SshKeyWrite,
+            Self::WorkflowRead,
+            Self::WorkflowWrite,
+            Self::WebhookRead,
+            Self::WebhookWrite,
+            Self::Admin,
+        ]
+    }
+
+    /// Get the display name for this scope.
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            Self::RepoRead => "repo:read",
+            Self::RepoWrite => "repo:write",
+            Self::RepoAdmin => "repo:admin",
+            Self::RepoDelete => "repo:delete",
+            Self::UserRead => "user:read",
+            Self::UserWrite => "user:write",
+            Self::UserEmail => "user:email",
+            Self::OrgRead => "org:read",
+            Self::OrgWrite => "org:write",
+            Self::OrgAdmin => "org:admin",
+            Self::SshKeyRead => "ssh_key:read",
+            Self::SshKeyWrite => "ssh_key:write",
+            Self::WorkflowRead => "workflow:read",
+            Self::WorkflowWrite => "workflow:write",
+            Self::WebhookRead => "webhook:read",
+            Self::WebhookWrite => "webhook:write",
+            Self::Admin => "admin",
+        }
+    }
+}
+
+/// The plaintext token value (prefix + secret).
+#[derive(Debug, Clone)]
+pub struct TokenValue {
+    /// First 8 characters for lookup.
+    pub prefix: String,
+    /// Secret part (32 characters).
+    pub secret: String,
+}
+
+impl TokenValue {
+    /// Generate a new random token value.
+    pub fn generate() -> Self {
+        let mut rng = rand::thread_rng();
+
+        // Generate prefix (lowercase alphanumeric)
+        let prefix: String = (0..TOKEN_PREFIX_LEN)
+            .map(|_| {
+                let idx = rng.gen_range(0..36);
+                if idx < 10 {
+                    (b'0' + idx) as char
+                } else {
+                    (b'a' + idx - 10) as char
+                }
+            })
+            .collect();
+
+        // Generate secret (mixed case alphanumeric)
+        let secret: String = (0..TOKEN_SECRET_LEN)
+            .map(|_| {
+                let idx = rng.gen_range(0..62);
+                if idx < 10 {
+                    (b'0' + idx) as char
+                } else if idx < 36 {
+                    (b'a' + idx - 10) as char
+                } else {
+                    (b'A' + idx - 36) as char
+                }
+            })
+            .collect();
+
+        Self { prefix, secret }
+    }
+
+    /// Parse a token string into prefix and secret.
+    pub fn parse(token: &str) -> Result<Self> {
+        // Format: guts_<prefix>_<secret>
+        let parts: Vec<&str> = token.split('_').collect();
+        if parts.len() != 3 || parts[0] != "guts" {
+            return Err(CompatError::InvalidTokenFormat);
+        }
+
+        let prefix = parts[1];
+        let secret = parts[2];
+
+        if prefix.len() != TOKEN_PREFIX_LEN || secret.len() != TOKEN_SECRET_LEN {
+            return Err(CompatError::InvalidTokenFormat);
+        }
+
+        Ok(Self {
+            prefix: prefix.to_string(),
+            secret: secret.to_string(),
+        })
+    }
+}
+
+impl std::fmt::Display for TokenValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "guts_{}_{}", self.prefix, self.secret)
+    }
+}
+
+/// Hash a token secret using Argon2id.
+fn hash_token_secret(secret: &str) -> Result<String> {
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+
+    argon2
+        .hash_password(secret.as_bytes(), &salt)
+        .map(|hash| hash.to_string())
+        .map_err(|e| CompatError::Crypto(e.to_string()))
+}
+
+/// Verify a token secret against a hash.
+fn verify_token_secret(secret: &str, hash: &str) -> Result<()> {
+    let parsed_hash =
+        PasswordHash::new(hash).map_err(|e| CompatError::Crypto(e.to_string()))?;
+
+    Argon2::default()
+        .verify_password(secret.as_bytes(), &parsed_hash)
+        .map_err(|_| CompatError::InvalidToken)
+}
+
+/// Token response for API.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TokenResponse {
+    /// Token ID.
+    pub id: TokenId,
+    /// User-provided name.
+    pub name: String,
+    /// Granted scopes.
+    pub scopes: Vec<TokenScope>,
+    /// Token prefix for identification.
+    pub token_prefix: String,
+    /// Full token (only included on creation).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token: Option<String>,
+    /// Expiration timestamp.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<String>,
+    /// Last used timestamp.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_used_at: Option<String>,
+    /// Creation timestamp.
+    pub created_at: String,
+}
+
+/// Request to create a new token.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateTokenRequest {
+    /// Name/description for the token.
+    pub name: String,
+    /// Scopes to grant.
+    pub scopes: Vec<TokenScope>,
+    /// Optional expiration in days.
+    #[serde(default)]
+    pub expires_in_days: Option<u32>,
+}
+
+/// Format a Unix timestamp as ISO 8601.
+fn format_timestamp(timestamp: u64) -> String {
+    let secs_per_day = 86400;
+    let secs_per_hour = 3600;
+    let secs_per_min = 60;
+
+    let mut days = timestamp / secs_per_day;
+    let remaining = timestamp % secs_per_day;
+    let hours = remaining / secs_per_hour;
+    let remaining = remaining % secs_per_hour;
+    let minutes = remaining / secs_per_min;
+    let seconds = remaining % secs_per_min;
+
+    let mut year = 1970;
+    loop {
+        let days_in_year = if is_leap_year(year) { 366 } else { 365 };
+        if days < days_in_year {
+            break;
+        }
+        days -= days_in_year;
+        year += 1;
+    }
+
+    let days_in_month = if is_leap_year(year) {
+        [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    } else {
+        [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    };
+
+    let mut month = 0;
+    for (i, &dim) in days_in_month.iter().enumerate() {
+        if days < dim as u64 {
+            month = i + 1;
+            break;
+        }
+        days -= dim as u64;
+    }
+    let day = days + 1;
+
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+        year, month, day, hours, minutes, seconds
+    )
+}
+
+fn is_leap_year(year: u64) -> bool {
+    (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_token_generation() {
+        let (token, plaintext) =
+            PersonalAccessToken::generate(1, 1, "test".into(), vec![TokenScope::RepoRead], None)
+                .unwrap();
+
+        assert_eq!(token.id, 1);
+        assert_eq!(token.user_id, 1);
+        assert_eq!(token.name, "test");
+        assert!(plaintext.starts_with("guts_"));
+
+        // Verify the token
+        let parsed = TokenValue::parse(&plaintext).unwrap();
+        assert!(token.verify(&parsed.secret).is_ok());
+    }
+
+    #[test]
+    fn test_token_value_format() {
+        let token = TokenValue::generate();
+        let s = token.to_string();
+
+        assert!(s.starts_with("guts_"));
+        let parts: Vec<&str> = s.split('_').collect();
+        assert_eq!(parts.len(), 3);
+        assert_eq!(parts[0], "guts");
+        assert_eq!(parts[1].len(), 8);
+        assert_eq!(parts[2].len(), 32);
+    }
+
+    #[test]
+    fn test_token_parse() {
+        let token = TokenValue::generate();
+        let s = token.to_string();
+        let parsed = TokenValue::parse(&s).unwrap();
+
+        assert_eq!(parsed.prefix, token.prefix);
+        assert_eq!(parsed.secret, token.secret);
+    }
+
+    #[test]
+    fn test_token_parse_invalid() {
+        assert!(TokenValue::parse("invalid").is_err());
+        assert!(TokenValue::parse("guts_short_secret").is_err());
+        assert!(TokenValue::parse("github_abc12345_12345678901234567890123456789012").is_err());
+    }
+
+    #[test]
+    fn test_token_expiration() {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        let (mut token, _) =
+            PersonalAccessToken::generate(1, 1, "test".into(), vec![], Some(now - 1)).unwrap();
+        assert!(token.is_expired());
+
+        token.expires_at = Some(now + 3600);
+        assert!(!token.is_expired());
+
+        token.expires_at = None;
+        assert!(!token.is_expired());
+    }
+
+    #[test]
+    fn test_token_scope_hierarchy() {
+        let (token, _) =
+            PersonalAccessToken::generate(1, 1, "test".into(), vec![TokenScope::RepoAdmin], None)
+                .unwrap();
+
+        assert!(token.has_scope(TokenScope::RepoAdmin));
+        assert!(token.has_scope(TokenScope::RepoWrite));
+        assert!(token.has_scope(TokenScope::RepoRead));
+        assert!(!token.has_scope(TokenScope::OrgRead));
+    }
+
+    #[test]
+    fn test_admin_scope_grants_all() {
+        let (token, _) =
+            PersonalAccessToken::generate(1, 1, "test".into(), vec![TokenScope::Admin], None)
+                .unwrap();
+
+        assert!(token.has_scope(TokenScope::RepoRead));
+        assert!(token.has_scope(TokenScope::UserWrite));
+        assert!(token.has_scope(TokenScope::OrgAdmin));
+        assert!(token.has_scope(TokenScope::Admin));
+    }
+
+    #[test]
+    fn test_scope_display_names() {
+        assert_eq!(TokenScope::RepoRead.display_name(), "repo:read");
+        assert_eq!(TokenScope::Admin.display_name(), "admin");
+    }
+}

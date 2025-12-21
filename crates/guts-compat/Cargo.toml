@@ -1,0 +1,51 @@
+[package]
+name = "guts-compat"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Git and GitHub compatibility layer for Guts code collaboration platform."
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+guts-types = { workspace = true }
+guts-storage = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true, features = ["sync", "time"] }
+futures = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }
+parking_lot = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+rand = { workspace = true }
+bytes = { workspace = true }
+flate2 = { workspace = true }
+
+# Password hashing
+argon2 = { workspace = true }
+
+# Base encoding for tokens
+base64 = { workspace = true }
+
+# Tar archive support
+tar = { workspace = true }
+
+# Zip archive support
+zip = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tempfile = { workspace = true }
