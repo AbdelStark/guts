@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}{{ filename }} - {{ owner }}/{{ name }} - Guts{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center space-x-2 text-xl">
+        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <a href="/{{ owner }}" class="text-green-400 hover:underline">{{ owner }}</a>
+        <span class="text-gray-500">/</span>
+        <a href="/{{ owner }}/{{ name }}" class="text-green-400 hover:underline">{{ name }}</a>
+    </div>
+</div>
+
+<!-- Breadcrumb -->
+<div class="flex items-center space-x-2 mb-4 text-sm">
+    <a href="/{{ owner }}/{{ name }}" class="text-blue-400 hover:underline">{{ name }}</a>
+    {% for part in breadcrumbs %}
+    <span class="text-gray-500">/</span>
+    {% if loop.last %}
+    <span class="text-gray-100">{{ part.name }}</span>
+    {% else %}
+    <a href="/{{ owner }}/{{ name }}/tree/{{ ref_name }}/{{ part.path }}" class="text-blue-400 hover:underline">{{ part.name }}</a>
+    {% endif %}
+    {% endfor %}
+</div>
+
+<!-- File content -->
+<div class="bg-gray-800 rounded-lg border border-gray-700">
+    <div class="flex items-center justify-between p-4 border-b border-gray-700">
+        <div class="flex items-center space-x-4">
+            <span class="text-gray-400">{{ line_count }} lines</span>
+            <span class="text-gray-600">|</span>
+            <span class="text-gray-400">{{ size }}</span>
+        </div>
+        <div class="flex items-center space-x-2">
+            <a href="/{{ owner }}/{{ name }}/raw/{{ ref_name }}/{{ path }}"
+               class="text-gray-400 hover:text-white px-3 py-1 rounded-md hover:bg-gray-700">
+                Raw
+            </a>
+            <a href="/{{ owner }}/{{ name }}/commits/{{ ref_name }}/{{ path }}"
+               class="text-gray-400 hover:text-white px-3 py-1 rounded-md hover:bg-gray-700">
+                History
+            </a>
+        </div>
+    </div>
+
+    {% if is_binary %}
+    <div class="p-8 text-center text-gray-500">
+        <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <p>Binary file not shown</p>
+        <a href="/{{ owner }}/{{ name }}/raw/{{ ref_name }}/{{ path }}" class="text-blue-400 hover:underline mt-2 inline-block">Download</a>
+    </div>
+    {% else %}
+    <div class="overflow-x-auto">
+        <pre><code class="language-{{ language }}">{{ content }}</code></pre>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

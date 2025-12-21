@@ -13,8 +13,7 @@ use axum::{
 use guts_auth::AuthStore;
 use guts_collaboration::CollaborationStore;
 use guts_git::{advertise_refs, receive_pack, upload_pack};
-use guts_storage::{Reference, Repository};
-use parking_lot::RwLock;
+use guts_storage::{Reference, StorageError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::Cursor;
@@ -24,6 +23,9 @@ use tower_http::trace::TraceLayer;
 use crate::auth_api::auth_routes;
 use crate::collaboration_api::collaboration_routes;
 use crate::p2p::P2PManager;
+
+/// Re-export RepoStore for external use.
+pub use guts_storage::RepoStore;
 
 /// Application state shared across handlers.
 #[derive(Clone)]
@@ -38,52 +40,12 @@ pub struct AppState {
     pub auth: Arc<AuthStore>,
 }
 
-/// In-memory repository store.
-#[derive(Default)]
-pub struct RepoStore {
-    repos: RwLock<HashMap<String, Arc<Repository>>>,
-}
-
-impl RepoStore {
-    /// Creates a new empty repository store.
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Creates a new repository.
-    pub fn create(&self, owner: &str, name: &str) -> Result<Arc<Repository>, ApiError> {
-        let mut repos = self.repos.write();
-        let key = format!("{}/{}", owner, name);
-
-        if repos.contains_key(&key) {
-            return Err(ApiError::RepoExists(key));
+impl axum::extract::FromRef<AppState> for guts_web::WebState {
+    fn from_ref(app_state: &AppState) -> Self {
+        guts_web::WebState {
+            repos: app_state.repos.clone(),
+            collaboration: app_state.collaboration.clone(),
         }
-
-        let repo = Arc::new(Repository::new(name, owner));
-        repos.insert(key, repo.clone());
-        Ok(repo)
-    }
-
-    /// Gets a repository by owner and name.
-    pub fn get(&self, owner: &str, name: &str) -> Result<Arc<Repository>, ApiError> {
-        let key = format!("{}/{}", owner, name);
-        self.repos
-            .read()
-            .get(&key)
-            .cloned()
-            .ok_or(ApiError::RepoNotFound(key))
-    }
-
-    /// Lists all repositories.
-    pub fn list(&self) -> Vec<RepoInfo> {
-        self.repos
-            .read()
-            .values()
-            .map(|r| RepoInfo {
-                name: r.name.clone(),
-                owner: r.owner.clone(),
-            })
-            .collect()
     }
 }
 
@@ -97,10 +59,20 @@ pub enum ApiError {
     #[error("git error: {0}")]
     Git(#[from] guts_git::GitError),
     #[error("storage error: {0}")]
-    Storage(#[from] guts_storage::StorageError),
+    Storage(StorageError),
     #[error("bad request: {0}")]
     #[allow(dead_code)]
     BadRequest(String),
+}
+
+impl From<StorageError> for ApiError {
+    fn from(err: StorageError) -> Self {
+        match &err {
+            StorageError::RepoNotFound(key) => ApiError::RepoNotFound(key.clone()),
+            StorageError::RepoExists(key) => ApiError::RepoExists(key.clone()),
+            _ => ApiError::Storage(err),
+        }
+    }
 }
 
 impl IntoResponse for ApiError {
@@ -155,6 +127,8 @@ pub fn create_router(state: AppState) -> Router {
         .merge(collaboration_routes())
         // Authorization API (Organizations, Teams, Permissions, Webhooks)
         .merge(auth_routes())
+        // Web UI routes
+        .merge(guts_web::web_routes())
         .layer(TraceLayer::new_for_http())
         .with_state(state)
 }
@@ -169,7 +143,16 @@ async fn health_check() -> impl IntoResponse {
 
 /// Lists all repositories.
 async fn list_repos(State(state): State<AppState>) -> impl IntoResponse {
-    Json(state.repos.list())
+    let repos: Vec<RepoInfo> = state
+        .repos
+        .list()
+        .into_iter()
+        .map(|r| RepoInfo {
+            name: r.name.clone(),
+            owner: r.owner.clone(),
+        })
+        .collect();
+    Json(repos)
 }
 
 /// Creates a new repository.
@@ -177,7 +160,7 @@ async fn create_repo(
     State(state): State<AppState>,
     Json(req): Json<CreateRepoRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let repo = state.repos.create(&req.owner, &req.name)?;
+    let repo = state.repos.create(&req.name, &req.owner)?;
 
     Ok((
         StatusCode::CREATED,
@@ -258,11 +241,11 @@ async fn git_receive_pack(
             objects_before = repo.objects.list_objects().into_iter().collect();
             repo
         }
-        Err(ApiError::RepoNotFound(_)) => {
+        Err(StorageError::RepoNotFound(_)) => {
             objects_before = std::collections::HashSet::new();
-            state.repos.create(&owner, &name)?
+            state.repos.create(&name, &owner)?
         }
-        Err(e) => return Err(e),
+        Err(e) => return Err(e.into()),
     };
 
     let mut input = Cursor::new(body.to_vec());

@@ -6,6 +6,7 @@ members = [
     "crates/guts-p2p",
     "crates/guts-collaboration",
     "crates/guts-auth",
+    "crates/guts-web",
     "crates/guts-node",
     "crates/guts-cli",
 ]
@@ -27,6 +28,7 @@ guts-git = { version = "0.1.0", path = "crates/guts-git" }
 guts-p2p = { version = "0.1.0", path = "crates/guts-p2p" }
 guts-collaboration = { version = "0.1.0", path = "crates/guts-collaboration" }
 guts-auth = { version = "0.1.0", path = "crates/guts-auth" }
+guts-web = { version = "0.1.0", path = "crates/guts-web" }
 
 # Commonware dependencies (matching Alto's versions)
 commonware-broadcast = "0.0.63"
@@ -81,6 +83,12 @@ hex = "0.4"
 sha1 = "0.10"
 flate2 = "1.0"
 parking_lot = "0.12"
+
+# Web/HTML
+askama = { version = "0.12", features = ["with-axum"] }
+askama_axum = "0.4"
+pulldown-cmark = "0.12"
+mime_guess = "2.0"
 
 # Testing
 proptest = "1.5"

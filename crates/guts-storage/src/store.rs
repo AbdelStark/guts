@@ -190,13 +190,11 @@ impl Repository {
 }
 
 /// Global repository store.
-#[allow(dead_code)]
 #[derive(Debug, Default)]
 pub struct RepoStore {
     repos: RwLock<HashMap<String, Arc<Repository>>>,
 }
 
-#[allow(dead_code)]
 impl RepoStore {
     /// Creates a new empty repository store.
     pub fn new() -> Self {

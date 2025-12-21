@@ -5,7 +5,8 @@
 use clap::Parser;
 use guts_auth::AuthStore;
 use guts_collaboration::CollaborationStore;
-use guts_node::api::{create_router, AppState, RepoStore};
+use guts_node::api::{create_router, AppState};
+use guts_storage::RepoStore;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
