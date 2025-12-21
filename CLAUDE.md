@@ -88,7 +88,7 @@ Completed milestones:
 
 ### Testing
 
-The project has comprehensive test coverage (250+ tests):
+The project has comprehensive test coverage (254+ tests):
 
 ```bash
 # Run all tests
@@ -114,8 +114,10 @@ cargo llvm-cov --workspace --html
 
 **Key test files:**
 - `guts-node/tests/collaboration_e2e.rs` - Collaboration API tests
+- `guts-node/tests/auth_e2e.rs` - Auth/Governance API tests
 - `guts-node/tests/multi_node_replication.rs` - P2P consensus tests
 - `guts-collaboration/src/store.rs` - Store operations tests
+- `guts-auth/src/store.rs` - Auth store operations tests
 
 ### Commits
 
@@ -187,6 +189,31 @@ let comment = Comment::new(id, target, author, body);
 let review = Review::new(id, repo_key, pr_number, author, state, commit_id);
 ```
 
+### Governance Types
+
+```rust
+use guts_auth::{Permission, Organization, Team, Collaborator, BranchProtection, Webhook};
+
+// Permission levels: Read < Write < Admin
+let perm = Permission::Admin;
+assert!(perm.has(Permission::Write)); // Admin has Write access
+
+// Organizations with role-based membership
+let org = Organization::new(id, "acme", "Acme Corp", creator);
+org.is_owner(user)?;
+org.add_member(member)?;
+
+// Teams for group-based access
+let team = Team::new(id, org_id, "backend", Permission::Write, creator);
+team.add_member(user)?;
+team.add_repo("owner/repo")?;
+
+// Branch protection rules
+let protection = BranchProtection::new(id, "owner/repo", "main");
+protection.with_required_reviews(2);
+protection.with_require_pr(true);
+```
+
 ## API Endpoints
 
 The node exposes a REST API at `/api`:
@@ -207,6 +234,34 @@ The node exposes a REST API at `/api`:
 - `GET /api/repos/{owner}/{repo}/info/refs` - Reference advertisement
 - `POST /api/repos/{owner}/{repo}/git-upload-pack` - Clone/fetch
 - `POST /api/repos/{owner}/{repo}/git-receive-pack` - Push
+
+**Organizations:**
+- `GET/POST /api/orgs` - List/create organizations
+- `GET/PATCH/DELETE /api/orgs/{org}` - Get/update/delete org
+- `GET/POST /api/orgs/{org}/members` - List/add members
+- `PUT/DELETE /api/orgs/{org}/members/{user}` - Update/remove member
+
+**Teams:**
+- `GET/POST /api/orgs/{org}/teams` - List/create teams
+- `GET/PATCH/DELETE /api/orgs/{org}/teams/{team}` - Get/update/delete team
+- `GET /api/orgs/{org}/teams/{team}/members` - List team members
+- `PUT/DELETE /api/orgs/{org}/teams/{team}/members/{user}` - Add/remove member
+- `PUT/DELETE /api/orgs/{org}/teams/{team}/repos/{owner}/{name}` - Add/remove repo
+
+**Collaborators:**
+- `GET /api/repos/{owner}/{repo}/collaborators` - List collaborators
+- `GET/PUT/DELETE /api/repos/{owner}/{repo}/collaborators/{user}` - Manage collaborator
+
+**Branch Protection:**
+- `GET/PUT/DELETE /api/repos/{owner}/{repo}/branches/{branch}/protection` - Manage protection
+
+**Webhooks:**
+- `GET/POST /api/repos/{owner}/{repo}/hooks` - List/create webhooks
+- `GET/PATCH/DELETE /api/repos/{owner}/{repo}/hooks/{id}` - Manage webhook
+- `POST /api/repos/{owner}/{repo}/hooks/{id}/ping` - Test webhook
+
+**Permissions:**
+- `GET /api/repos/{owner}/{repo}/permission/{user}` - Check user permission
 
 ## Error Handling
 

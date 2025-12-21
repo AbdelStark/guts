@@ -27,107 +27,180 @@ All running on a 3-node Guts network with consensus.
 └─────────────┘     └─────────────┘
 ```
 
-## Phase 1: Core Infrastructure
+## Current Status
 
-### 1.1 Git Object Storage
-- [ ] Implement content-addressed blob storage
-- [ ] Store git objects (blobs, trees, commits)
-- [ ] Reference management (branches, tags, HEAD)
+| Milestone | Status | Description |
+|-----------|--------|-------------|
+| Milestone 1 | ✅ Complete | Foundation (Git Storage, Protocol, Node API) |
+| Milestone 2 | ✅ Complete | Multi-node P2P Replication |
+| Milestone 3 | ✅ Complete | Collaboration (PRs, Issues, Comments, Reviews) |
+| Milestone 4 | ✅ Complete | Governance (Orgs, Teams, Permissions, Webhooks) |
+| Milestone 5 | 🔜 Next | Ecosystem (Web Gateway, CI/CD, Package Registry) |
 
-### 1.2 Repository State
-- [ ] Repository metadata (name, owner, refs)
-- [ ] Ref updates with optimistic locking
-- [ ] Pack file support (for efficient transfer)
+## Phase 1: Core Infrastructure ✅
 
-## Phase 2: Networking
+### 1.1 Git Object Storage ✅
+- [x] Implement content-addressed blob storage
+- [x] Store git objects (blobs, trees, commits)
+- [x] Reference management (branches, tags, HEAD)
 
-### 2.1 P2P Node Communication
-- [ ] Node discovery and connection
-- [ ] Message passing between nodes
-- [ ] Peer management
+### 1.2 Repository State ✅
+- [x] Repository metadata (name, owner, refs)
+- [x] Ref updates with optimistic locking
+- [x] Pack file support (for efficient transfer)
 
-### 2.2 Broadcast & Replication
-- [ ] Broadcast repository updates to all nodes
-- [ ] Replicate git objects across nodes
-- [ ] Consistency verification
+## Phase 2: Networking ✅
 
-## Phase 3: Git Protocol
+### 2.1 P2P Node Communication ✅
+- [x] Node discovery and connection
+- [x] Message passing between nodes
+- [x] Peer management
 
-### 3.1 Git Smart HTTP Protocol
-- [ ] `/info/refs` - Reference advertisement
-- [ ] `/git-upload-pack` - Fetch/clone (client pulls)
-- [ ] `/git-receive-pack` - Push (client pushes)
+### 2.2 Broadcast & Replication ✅
+- [x] Broadcast repository updates to all nodes
+- [x] Replicate git objects across nodes
+- [x] Consistency verification
 
-### 3.2 Pack Protocol
-- [ ] Pack file parsing
-- [ ] Pack file generation
-- [ ] Delta compression (optional for MVP)
+## Phase 3: Git Protocol ✅
 
-## Phase 4: API & CLI
+### 3.1 Git Smart HTTP Protocol ✅
+- [x] `/info/refs` - Reference advertisement
+- [x] `/git-upload-pack` - Fetch/clone (client pulls)
+- [x] `/git-receive-pack` - Push (client pushes)
 
-### 4.1 HTTP API
-- [ ] Create repository endpoint
-- [ ] List repositories endpoint
-- [ ] Git smart HTTP endpoints
+### 3.2 Pack Protocol ✅
+- [x] Pack file parsing
+- [x] Pack file generation
+- [x] Delta compression (optional for MVP)
 
-### 4.2 CLI Commands
-- [ ] `guts repo create <name>` - Create repository
-- [ ] `guts repo list` - List repositories
-- [ ] `guts clone <repo>` - Clone via git
-- [ ] `guts push` / `guts pull` - Git operations
+## Phase 4: API & CLI ✅
 
-## Phase 5: E2E Testing
+### 4.1 HTTP API ✅
+- [x] Create repository endpoint
+- [x] List repositories endpoint
+- [x] Git smart HTTP endpoints
 
-### 5.1 Test Infrastructure
-- [ ] Multi-node test harness
-- [ ] Deterministic networking for tests
-- [ ] Test utilities for git operations
+### 4.2 CLI Commands ✅
+- [x] `guts repo create <name>` - Create repository
+- [x] `guts repo list` - List repositories
+- [x] `guts clone <repo>` - Clone via git
+- [x] `guts push` / `guts pull` - Git operations
 
-### 5.2 Collaboration Test
-- [ ] Start 3 nodes
-- [ ] Client 1: init, commit, push
-- [ ] Client 2: clone, commit, push
-- [ ] Client 1: pull, verify changes
-- [ ] All nodes: verify consistency
+## Phase 5: Collaboration ✅
 
-## Implementation Order
+### 5.1 Pull Requests ✅
+- [x] Create, update, close, merge PRs
+- [x] PR comments and discussions
+- [x] Code review workflow
 
-1. **Git Storage** (`guts-storage` crate)
+### 5.2 Issues ✅
+- [x] Create, update, close, reopen issues
+- [x] Issue comments and labels
+
+### 5.3 Reviews ✅
+- [x] Submit reviews (Approve, Request Changes, Comment)
+- [x] Review comments
+
+## Phase 6: Governance ✅
+
+### 6.1 Organizations ✅
+- [x] Create and manage organizations
+- [x] Member management with roles (Owner, Admin, Member)
+- [x] Multi-user repository ownership
+
+### 6.2 Teams ✅
+- [x] Create teams within organizations
+- [x] Team-based repository access
+- [x] Default permission levels for teams
+
+### 6.3 Permissions ✅
+- [x] Granular permission levels (Read, Write, Admin)
+- [x] Collaborator management
+- [x] Permission resolution algorithm
+
+### 6.4 Branch Protection ✅
+- [x] Branch protection rules
+- [x] Require PRs for protected branches
+- [x] Required review counts
+
+### 6.5 Webhooks ✅
+- [x] Webhook subscriptions
+- [x] Event notifications (push, PR, issues, etc.)
+- [x] Webhook management API
+
+## Phase 7: E2E Testing ✅
+
+### 7.1 Test Infrastructure ✅
+- [x] Multi-node test harness
+- [x] Deterministic networking for tests
+- [x] Test utilities for git operations
+
+### 7.2 Collaboration Test ✅
+- [x] Start 3 nodes
+- [x] Client 1: init, commit, push
+- [x] Client 2: clone, commit, push
+- [x] Client 1: pull, verify changes
+- [x] All nodes: verify consistency
+
+## Implementation Order (Historical)
+
+1. **Git Storage** (`guts-storage` crate) ✅
    - In-memory storage first, then persistent
    - Content-addressed object store
    - Reference store
 
-2. **Git Protocol** (`guts-git` crate)
+2. **Git Protocol** (`guts-git` crate) ✅
    - Pack file parsing/generation
    - Smart HTTP protocol handlers
 
-3. **HTTP API** (in `guts-node`)
+3. **HTTP API** (in `guts-node`) ✅
    - Repository CRUD
    - Git smart HTTP endpoints
 
-4. **P2P Replication** (using commonware)
+4. **P2P Replication** (using commonware) ✅
    - Broadcast git objects
    - Replicate refs
 
-5. **E2E Tests** (`tests/` directory)
+5. **Collaboration** (`guts-collaboration` crate) ✅
+   - Pull requests, issues, comments
+   - Code review infrastructure
+
+6. **Governance** (`guts-auth` crate) ✅
+   - Organizations and teams
+   - Permissions and branch protection
+   - Webhooks
+
+7. **E2E Tests** (`tests/` directory) ✅
    - Multi-node harness
    - Collaboration scenario
 
-## Success Criteria
+## Success Criteria ✅
 
-- [ ] 3 nodes start and form a network
-- [ ] Client 1 can create a repo and push commits
-- [ ] Client 2 can clone, modify, and push
-- [ ] Client 1 can pull Client 2's changes
-- [ ] All 3 nodes have consistent state
-- [ ] E2E test passes in CI
+- [x] 3 nodes start and form a network
+- [x] Client 1 can create a repo and push commits
+- [x] Client 2 can clone, modify, and push
+- [x] Client 1 can pull Client 2's changes
+- [x] All 3 nodes have consistent state
+- [x] E2E test passes in CI
+- [x] Pull requests and issues work across nodes
+- [x] Organizations and teams manage access
+- [x] Branch protection enforces policies
 
-## Timeline Estimate
+## Next Steps: Ecosystem (Milestone 5)
 
-| Phase | Components | Complexity |
-|-------|-----------|------------|
-| Phase 1 | Storage | Medium |
-| Phase 2 | Networking | Medium |
-| Phase 3 | Git Protocol | High |
-| Phase 4 | API & CLI | Low |
-| Phase 5 | E2E Tests | Medium |
+The following features are planned for the next milestone:
+
+| Feature | Description | Priority |
+|---------|-------------|----------|
+| Web Gateway | Browser access to repositories | P3 |
+| CI/CD Integration | Decentralized build pipelines | P3 |
+| Package Registry | Decentralized package hosting | P3 |
+| Federation | Inter-network repository bridging | P3 |
+
+## Test Coverage
+
+The project currently has **254+ tests** covering:
+- Unit tests for all crates
+- E2E tests for HTTP API
+- Integration tests for P2P replication
+- Collaboration and governance scenarios
