@@ -108,12 +108,7 @@ impl SerializablePullRequest {
             "open" => PullRequestState::Open,
             "closed" => PullRequestState::Closed,
             "merged" => PullRequestState::Merged,
-            s => {
-                return Err(P2PError::InvalidMessage(format!(
-                    "invalid PR state: {}",
-                    s
-                )))
-            }
+            s => return Err(P2PError::InvalidMessage(format!("invalid PR state: {}", s))),
         };
 
         let mut pr = PullRequest::new(
@@ -492,7 +487,9 @@ impl CollaborationMessage {
     /// Decode a message from bytes.
     pub fn decode(data: &[u8]) -> Result<Self> {
         if data.is_empty() {
-            return Err(P2PError::InvalidMessage("empty collaboration message".into()));
+            return Err(P2PError::InvalidMessage(
+                "empty collaboration message".into(),
+            ));
         }
 
         let msg_type = CollaborationMessageType::from_byte(data[0])?;
@@ -525,15 +522,15 @@ impl CollaborationMessage {
             }
             CollaborationMessageType::CommentCreated => {
                 let len = read_u32(&mut payload)?;
-                let comment: SerializableComment =
-                    serde_json::from_slice(&payload[..len as usize])
-                        .map_err(|e| P2PError::InvalidMessage(e.to_string()))?;
+                let comment: SerializableComment = serde_json::from_slice(&payload[..len as usize])
+                    .map_err(|e| P2PError::InvalidMessage(e.to_string()))?;
                 Ok(CollaborationMessage::CommentCreated(comment))
             }
             CollaborationMessageType::ReviewCreated => {
                 let len = read_u32(&mut payload)?;
-                let review: SerializableReview = serde_json::from_slice(&payload[..len as usize])
-                    .map_err(|e| P2PError::InvalidMessage(e.to_string()))?;
+                let review: SerializableReview =
+                    serde_json::from_slice(&payload[..len as usize])
+                        .map_err(|e| P2PError::InvalidMessage(e.to_string()))?;
                 Ok(CollaborationMessage::ReviewCreated(review))
             }
             CollaborationMessageType::SyncCollaborationRequest => {

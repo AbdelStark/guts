@@ -268,9 +268,7 @@ fn main() {
             }
         },
         Commands::Issue { command } => match command {
-            IssueCommands::List { state, node, repo } => {
-                commands::issue_list(&node, &repo, &state)
-            }
+            IssueCommands::List { state, node, repo } => commands::issue_list(&node, &repo, &state),
             IssueCommands::Create {
                 title,
                 body,

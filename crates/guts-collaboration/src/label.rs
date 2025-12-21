@@ -44,7 +44,8 @@ impl Label {
 
     /// Documentation label.
     pub fn documentation() -> Self {
-        Self::new("documentation", "0075ca").with_description("Improvements or additions to documentation")
+        Self::new("documentation", "0075ca")
+            .with_description("Improvements or additions to documentation")
     }
 
     /// Good first issue label.

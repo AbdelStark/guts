@@ -90,13 +90,13 @@ pub fn status() -> Result<()> {
 /// List pull requests.
 pub fn pr_list(node: &str, repo: &str, state: &str) -> Result<()> {
     println!("Listing pull requests for {} (state: {})", repo, state);
-    println!("API endpoint: {}/api/repos/{}/pulls?state={}", node, repo, state);
-    println!();
-    println!("Note: HTTP client not yet implemented. Use curl:");
     println!(
-        "  curl {}/api/repos/{}/pulls?state={}",
+        "API endpoint: {}/api/repos/{}/pulls?state={}",
         node, repo, state
     );
+    println!();
+    println!("Note: HTTP client not yet implemented. Use curl:");
+    println!("  curl {}/api/repos/{}/pulls?state={}", node, repo, state);
     Ok(())
 }
 
@@ -111,7 +111,10 @@ pub fn pr_create(
 ) -> Result<()> {
     println!("Creating pull request in {}", repo);
     println!("  Title:  {}", title);
-    println!("  Body:   {}", if body.is_empty() { "(empty)" } else { body });
+    println!(
+        "  Body:   {}",
+        if body.is_empty() { "(empty)" } else { body }
+    );
     println!("  Source: {}", source);
     println!("  Target: {}", target);
     println!();
@@ -179,10 +182,7 @@ pub fn issue_list(node: &str, repo: &str, state: &str) -> Result<()> {
     println!("Listing issues for {} (state: {})", repo, state);
     println!();
     println!("Note: HTTP client not yet implemented. Use curl:");
-    println!(
-        "  curl {}/api/repos/{}/issues?state={}",
-        node, repo, state
-    );
+    println!("  curl {}/api/repos/{}/issues?state={}", node, repo, state);
     Ok(())
 }
 
@@ -190,7 +190,10 @@ pub fn issue_list(node: &str, repo: &str, state: &str) -> Result<()> {
 pub fn issue_create(node: &str, repo: &str, title: &str, body: &str) -> Result<()> {
     println!("Creating issue in {}", repo);
     println!("  Title: {}", title);
-    println!("  Body:  {}", if body.is_empty() { "(empty)" } else { body });
+    println!(
+        "  Body:  {}",
+        if body.is_empty() { "(empty)" } else { body }
+    );
     println!();
     println!("Note: HTTP client not yet implemented. Use curl:");
     println!(

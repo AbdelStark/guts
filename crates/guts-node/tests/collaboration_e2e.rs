@@ -2,7 +2,7 @@
 
 use axum::{body::Body, http::Request};
 use guts_collaboration::CollaborationStore;
-use guts_node::{api::{create_router, AppState, RepoStore}};
+use guts_node::api::{create_router, AppState, RepoStore};
 use serde_json::{json, Value};
 use std::sync::Arc;
 use tower::ServiceExt;

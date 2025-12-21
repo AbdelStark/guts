@@ -84,14 +84,12 @@ impl CollaborationStore {
     /// Gets a pull request by repository and number.
     pub fn get_pull_request(&self, repo_key: &str, number: u32) -> Result<PullRequest> {
         let key = (repo_key.to_string(), number);
-        self.pull_requests
-            .read()
-            .get(&key)
-            .cloned()
-            .ok_or_else(|| CollaborationError::PullRequestNotFound {
+        self.pull_requests.read().get(&key).cloned().ok_or_else(|| {
+            CollaborationError::PullRequestNotFound {
                 repo_key: repo_key.to_string(),
                 number,
-            })
+            }
+        })
     }
 
     /// Lists pull requests for a repository.
@@ -103,9 +101,7 @@ impl CollaborationStore {
         self.pull_requests
             .read()
             .values()
-            .filter(|pr| {
-                pr.repo_key == repo_key && state.map_or(true, |s| pr.state == s)
-            })
+            .filter(|pr| pr.repo_key == repo_key && state.is_none_or(|s| pr.state == s))
             .cloned()
             .collect()
     }
@@ -118,12 +114,12 @@ impl CollaborationStore {
         let key = (repo_key.to_string(), number);
         let mut prs = self.pull_requests.write();
 
-        let pr = prs.get_mut(&key).ok_or_else(|| {
-            CollaborationError::PullRequestNotFound {
+        let pr = prs
+            .get_mut(&key)
+            .ok_or_else(|| CollaborationError::PullRequestNotFound {
                 repo_key: repo_key.to_string(),
                 number,
-            }
-        })?;
+            })?;
 
         f(pr)?;
         Ok(pr.clone())
@@ -191,9 +187,7 @@ impl CollaborationStore {
         self.issues
             .read()
             .values()
-            .filter(|issue| {
-                issue.repo_key == repo_key && state.map_or(true, |s| issue.state == s)
-            })
+            .filter(|issue| issue.repo_key == repo_key && state.is_none_or(|s| issue.state == s))
             .cloned()
             .collect()
     }
@@ -206,12 +200,12 @@ impl CollaborationStore {
         let key = (repo_key.to_string(), number);
         let mut issues = self.issues.write();
 
-        let issue = issues.get_mut(&key).ok_or_else(|| {
-            CollaborationError::IssueNotFound {
+        let issue = issues
+            .get_mut(&key)
+            .ok_or_else(|| CollaborationError::IssueNotFound {
                 repo_key: repo_key.to_string(),
                 number,
-            }
-        })?;
+            })?;
 
         f(issue)?;
         Ok(issue.clone())
@@ -254,7 +248,7 @@ impl CollaborationStore {
             .read()
             .get(&id)
             .cloned()
-            .ok_or_else(|| CollaborationError::CommentNotFound { id })
+            .ok_or(CollaborationError::CommentNotFound { id })
     }
 
     /// Lists comments for a pull request.
@@ -294,7 +288,7 @@ impl CollaborationStore {
         let mut comments = self.comments.write();
         let comment = comments
             .get_mut(&id)
-            .ok_or_else(|| CollaborationError::CommentNotFound { id })?;
+            .ok_or(CollaborationError::CommentNotFound { id })?;
 
         comment.update_body(body);
         Ok(comment.clone())
@@ -305,7 +299,7 @@ impl CollaborationStore {
         self.comments
             .write()
             .remove(&id)
-            .ok_or_else(|| CollaborationError::CommentNotFound { id })?;
+            .ok_or(CollaborationError::CommentNotFound { id })?;
         Ok(())
     }
 
@@ -329,7 +323,7 @@ impl CollaborationStore {
             .read()
             .get(&id)
             .cloned()
-            .ok_or_else(|| CollaborationError::ReviewNotFound { id })
+            .ok_or(CollaborationError::ReviewNotFound { id })
     }
 
     /// Lists reviews for a pull request.
@@ -347,7 +341,7 @@ impl CollaborationStore {
         let mut reviews = self.reviews.write();
         let review = reviews
             .get_mut(&id)
-            .ok_or_else(|| CollaborationError::ReviewNotFound { id })?;
+            .ok_or(CollaborationError::ReviewNotFound { id })?;
 
         review.dismiss();
         Ok(review.clone())

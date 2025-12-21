@@ -141,7 +141,12 @@ mod tests {
     #[test]
     fn test_issue_comment() {
         let target = CommentTarget::issue("alice/repo", 5);
-        let comment = Comment::new(2, target.clone(), "carol_pubkey", "I can reproduce this bug");
+        let comment = Comment::new(
+            2,
+            target.clone(),
+            "carol_pubkey",
+            "I can reproduce this bug",
+        );
 
         assert_eq!(comment.target.number(), 5);
         assert!(target.is_issue());

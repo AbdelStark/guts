@@ -67,6 +67,7 @@ pub struct PullRequest {
 
 impl PullRequest {
     /// Creates a new pull request.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: u64,
         repo_key: impl Into<String>,

@@ -20,7 +20,10 @@ use crate::api::AppState;
 pub fn collaboration_routes() -> Router<AppState> {
     Router::new()
         // Pull Request endpoints
-        .route("/api/repos/{owner}/{name}/pulls", get(list_prs).post(create_pr))
+        .route(
+            "/api/repos/{owner}/{name}/pulls",
+            get(list_prs).post(create_pr),
+        )
         .route(
             "/api/repos/{owner}/{name}/pulls/{number}",
             get(get_pr).patch(update_pr),
@@ -281,9 +284,7 @@ impl IntoResponse for CollaborationApiError {
             CollaborationError::PullRequestNotFound { .. } => {
                 (StatusCode::NOT_FOUND, self.0.to_string())
             }
-            CollaborationError::IssueNotFound { .. } => {
-                (StatusCode::NOT_FOUND, self.0.to_string())
-            }
+            CollaborationError::IssueNotFound { .. } => (StatusCode::NOT_FOUND, self.0.to_string()),
             CollaborationError::CommentNotFound { .. } => {
                 (StatusCode::NOT_FOUND, self.0.to_string())
             }
@@ -304,9 +305,7 @@ impl IntoResponse for CollaborationApiError {
                 (StatusCode::BAD_REQUEST, self.0.to_string())
             }
             CollaborationError::IssueClosed { .. } => (StatusCode::BAD_REQUEST, self.0.to_string()),
-            CollaborationError::RepoNotFound { .. } => {
-                (StatusCode::NOT_FOUND, self.0.to_string())
-            }
+            CollaborationError::RepoNotFound { .. } => (StatusCode::NOT_FOUND, self.0.to_string()),
             CollaborationError::Validation(_) => (StatusCode::BAD_REQUEST, self.0.to_string()),
             CollaborationError::Serialization(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, self.0.to_string())
@@ -351,10 +350,10 @@ async fn create_pr(
 ) -> Result<impl IntoResponse, CollaborationApiError> {
     let repo_key = format!("{}/{}", owner, name);
 
-    let source_commit =
-        ObjectId::from_hex(&req.source_commit).map_err(|e| CollaborationError::Validation(e.to_string()))?;
-    let target_commit =
-        ObjectId::from_hex(&req.target_commit).map_err(|e| CollaborationError::Validation(e.to_string()))?;
+    let source_commit = ObjectId::from_hex(&req.source_commit)
+        .map_err(|e| CollaborationError::Validation(e.to_string()))?;
+    let target_commit = ObjectId::from_hex(&req.target_commit)
+        .map_err(|e| CollaborationError::Validation(e.to_string()))?;
 
     let pr = PullRequest::new(
         0,
@@ -371,7 +370,10 @@ async fn create_pr(
 
     let created = state.collaboration.create_pull_request(pr)?;
 
-    Ok((StatusCode::CREATED, Json(PullRequestResponse::from(created))))
+    Ok((
+        StatusCode::CREATED,
+        Json(PullRequestResponse::from(created)),
+    ))
 }
 
 /// Gets a specific pull request.
@@ -393,27 +395,29 @@ async fn update_pr(
 ) -> Result<impl IntoResponse, CollaborationApiError> {
     let repo_key = format!("{}/{}", owner, name);
 
-    let updated = state.collaboration.update_pull_request(&repo_key, number, |pr| {
-        if let Some(title) = &req.title {
-            pr.update_title(title);
-        }
-        if let Some(desc) = &req.description {
-            pr.update_description(desc);
-        }
-        if let Some(state_str) = &req.state {
-            match state_str.as_str() {
-                "closed" => pr.close()?,
-                "open" => pr.reopen()?,
-                _ => {
-                    return Err(CollaborationError::Validation(format!(
-                        "invalid state: {}",
-                        state_str
-                    )))
+    let updated = state
+        .collaboration
+        .update_pull_request(&repo_key, number, |pr| {
+            if let Some(title) = &req.title {
+                pr.update_title(title);
+            }
+            if let Some(desc) = &req.description {
+                pr.update_description(desc);
+            }
+            if let Some(state_str) = &req.state {
+                match state_str.as_str() {
+                    "closed" => pr.close()?,
+                    "open" => pr.reopen()?,
+                    _ => {
+                        return Err(CollaborationError::Validation(format!(
+                            "invalid state: {}",
+                            state_str
+                        )))
+                    }
                 }
             }
-        }
-        Ok(())
-    })?;
+            Ok(())
+        })?;
 
     Ok(Json(PullRequestResponse::from(updated)))
 }
@@ -477,10 +481,18 @@ async fn create_review(
     Json(req): Json<CreateReviewRequest>,
 ) -> Result<impl IntoResponse, CollaborationApiError> {
     let repo_key = format!("{}/{}", owner, name);
-    let review_state = parse_review_state(&req.state)
-        .ok_or_else(|| CollaborationError::Validation(format!("invalid review state: {}", req.state)))?;
+    let review_state = parse_review_state(&req.state).ok_or_else(|| {
+        CollaborationError::Validation(format!("invalid review state: {}", req.state))
+    })?;
 
-    let mut review = Review::new(0, &repo_key, number, req.author, review_state, req.commit_id);
+    let mut review = Review::new(
+        0,
+        &repo_key,
+        number,
+        req.author,
+        review_state,
+        req.commit_id,
+    );
     if let Some(body) = req.body {
         review = review.with_body(body);
     }
@@ -547,30 +559,32 @@ async fn update_issue(
 ) -> Result<impl IntoResponse, CollaborationApiError> {
     let repo_key = format!("{}/{}", owner, name);
 
-    let updated = state.collaboration.update_issue(&repo_key, number, |issue| {
-        if let Some(title) = &req.title {
-            issue.update_title(title);
-        }
-        if let Some(desc) = &req.description {
-            issue.update_description(desc);
-        }
-        if let Some(state_str) = &req.state {
-            match state_str.as_str() {
-                "closed" => {
-                    let closed_by = req.closed_by.as_deref().unwrap_or("unknown");
-                    issue.close(closed_by)?;
-                }
-                "open" => issue.reopen()?,
-                _ => {
-                    return Err(CollaborationError::Validation(format!(
-                        "invalid state: {}",
-                        state_str
-                    )))
+    let updated = state
+        .collaboration
+        .update_issue(&repo_key, number, |issue| {
+            if let Some(title) = &req.title {
+                issue.update_title(title);
+            }
+            if let Some(desc) = &req.description {
+                issue.update_description(desc);
+            }
+            if let Some(state_str) = &req.state {
+                match state_str.as_str() {
+                    "closed" => {
+                        let closed_by = req.closed_by.as_deref().unwrap_or("unknown");
+                        issue.close(closed_by)?;
+                    }
+                    "open" => issue.reopen()?,
+                    _ => {
+                        return Err(CollaborationError::Validation(format!(
+                            "invalid state: {}",
+                            state_str
+                        )))
+                    }
                 }
             }
-        }
-        Ok(())
-    })?;
+            Ok(())
+        })?;
 
     Ok(Json(IssueResponse::from(updated)))
 }
