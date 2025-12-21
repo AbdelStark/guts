@@ -107,6 +107,12 @@ base64 = "0.22"
 tar = "0.4"
 zip = { version = "2.2", default-features = false, features = ["deflate"] }
 
+# Validation & Configuration
+validator = { version = "0.18", features = ["derive"] }
+config = "0.14"
+once_cell = "1.19"
+regex = "1.10"
+
 [profile.bench]
 overflow-checks = true
 

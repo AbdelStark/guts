@@ -58,6 +58,10 @@
 //! - [`realtime_api`] - Real-time WebSocket API for live updates
 //! - [`config`] - Node configuration management
 //! - [`p2p`] - Peer-to-peer networking and replication
+//! - [`observability`] - Structured logging, metrics, and request tracing
+//! - [`validation`] - Input validation middleware
+//! - [`health`] - Health check endpoints (liveness, readiness, startup)
+//! - [`resilience`] - Retry policies, circuit breakers, and timeouts
 //!
 //! ## Example: Creating an AppState
 //!
@@ -97,5 +101,9 @@ pub mod ci_api;
 pub mod collaboration_api;
 pub mod compat_api;
 pub mod config;
+pub mod health;
+pub mod observability;
 pub mod p2p;
 pub mod realtime_api;
+pub mod resilience;
+pub mod validation;

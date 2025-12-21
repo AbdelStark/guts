@@ -4,13 +4,18 @@
 //!
 //! - **Git Smart HTTP Protocol**: Standard Git endpoints for clone, push, and pull
 //! - **Repository Management**: CRUD operations for repositories
-//! - **Health Checks**: Node status and version information
+//! - **Health Checks**: Comprehensive liveness, readiness, and startup probes
+//! - **Metrics**: Prometheus metrics endpoint
 //!
 //! ## Endpoint Overview
 //!
 //! | Method | Path | Description |
 //! |--------|------|-------------|
-//! | GET | `/health` | Health check with version info |
+//! | GET | `/health` | Overall health status |
+//! | GET | `/health/live` | Liveness probe |
+//! | GET | `/health/ready` | Readiness probe |
+//! | GET | `/health/startup` | Startup probe |
+//! | GET | `/metrics` | Prometheus metrics |
 //! | GET | `/api/repos` | List all repositories |
 //! | POST | `/api/repos` | Create a new repository |
 //! | GET | `/api/repos/{owner}/{name}` | Get repository details |
@@ -58,12 +63,14 @@
 //! |--------|---------|
 //! | 404 | Repository not found |
 //! | 409 | Repository already exists |
+//! | 422 | Validation error |
 //! | 500 | Internal server error |
 
 use axum::{
     body::Body,
     extract::{Path, State},
     http::{header, StatusCode},
+    middleware,
     response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
@@ -78,13 +85,19 @@ use std::collections::HashMap;
 use std::io::Cursor;
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
+use validator::Validate;
 
 use crate::auth_api::auth_routes;
 use crate::ci_api::ci_routes;
 use crate::collaboration_api::collaboration_routes;
 use crate::compat_api::compat_routes;
+use crate::health::{health_routes, HealthState};
+use crate::observability::middleware::{
+    metrics_handler, metrics_middleware, request_id_middleware,
+};
 use crate::p2p::P2PManager;
 use crate::realtime_api::realtime_routes;
+use crate::validation::validate_name;
 use guts_ci::CiStore;
 use guts_compat::CompatStore;
 
@@ -133,8 +146,9 @@ pub enum ApiError {
     #[error("storage error: {0}")]
     Storage(StorageError),
     #[error("bad request: {0}")]
-    #[allow(dead_code)]
     BadRequest(String),
+    #[error("validation error: {0}")]
+    Validation(String),
 }
 
 impl From<StorageError> for ApiError {
@@ -155,7 +169,15 @@ impl IntoResponse for ApiError {
             ApiError::Git(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             ApiError::Storage(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             ApiError::BadRequest(_) => (StatusCode::BAD_REQUEST, self.to_string()),
+            ApiError::Validation(_) => (StatusCode::UNPROCESSABLE_ENTITY, self.to_string()),
         };
+
+        tracing::warn!(
+            error_type = %std::any::type_name::<Self>(),
+            error = %message,
+            status = %status.as_u16(),
+            "API error"
+        );
 
         (status, Json(ErrorResponse { error: message })).into_response()
     }
@@ -174,17 +196,19 @@ pub struct RepoInfo {
 }
 
 /// Request to create a repository.
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 pub struct CreateRepoRequest {
+    #[validate(length(min = 1, max = 100))]
     pub name: String,
+    #[validate(length(min = 1, max = 100))]
     pub owner: String,
 }
 
-/// Creates the API router.
-pub fn create_router(state: AppState) -> Router {
+/// Creates the API router with health state.
+pub fn create_router(state: AppState, health_state: HealthState) -> Router {
     Router::new()
-        // Health check
-        .route("/health", get(health_check))
+        // Metrics endpoint (on main router for now)
+        .route("/metrics", get(metrics_handler))
         // Repository management
         .route("/api/repos", get(list_repos).post(create_repo))
         .route("/api/repos/{owner}/{name}", get(get_repo))
@@ -205,22 +229,20 @@ pub fn create_router(state: AppState) -> Router {
         .merge(compat_routes())
         // Real-time WebSocket API
         .merge(realtime_routes())
+        // Health check routes
+        .merge(health_routes(health_state))
         // Web UI routes
         .merge(guts_web::web_routes())
+        // Observability layers
+        .layer(middleware::from_fn(metrics_middleware))
+        .layer(middleware::from_fn(request_id_middleware))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
 }
 
-/// Health check endpoint.
-async fn health_check() -> impl IntoResponse {
-    Json(serde_json::json!({
-        "status": "ok",
-        "version": env!("CARGO_PKG_VERSION")
-    }))
-}
-
 /// Lists all repositories.
 async fn list_repos(State(state): State<AppState>) -> impl IntoResponse {
+    tracing::debug!("Listing repositories");
     let repos: Vec<RepoInfo> = state
         .repos
         .list()
@@ -238,6 +260,32 @@ async fn create_repo(
     State(state): State<AppState>,
     Json(req): Json<CreateRepoRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
+    // Validate request
+    if let Err(e) = req.validate() {
+        return Err(ApiError::Validation(e.to_string()));
+    }
+
+    // Validate name format
+    if let Err(e) = validate_name(&req.name) {
+        return Err(ApiError::Validation(format!(
+            "Invalid repository name: {}",
+            e.message.unwrap_or_default()
+        )));
+    }
+
+    if let Err(e) = validate_name(&req.owner) {
+        return Err(ApiError::Validation(format!(
+            "Invalid owner name: {}",
+            e.message.unwrap_or_default()
+        )));
+    }
+
+    tracing::info!(
+        owner = %req.owner,
+        name = %req.name,
+        "Creating repository"
+    );
+
     let repo = state.repos.create(&req.name, &req.owner)?;
 
     Ok((
@@ -254,6 +302,7 @@ async fn get_repo(
     State(state): State<AppState>,
     Path((owner, name)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, ApiError> {
+    tracing::debug!(owner = %owner, name = %name, "Getting repository");
     let repo = state.repos.get(&owner, &name)?;
 
     Ok(Json(RepoInfo {
@@ -276,12 +325,12 @@ async fn git_info_refs(
 
     let content_type = format!("application/x-{}-advertisement", service);
 
-    Ok(Response::builder()
+    Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, content_type)
         .header("Cache-Control", "no-cache")
         .body(Body::from(output))
-        .unwrap())
+        .map_err(|e| ApiError::BadRequest(format!("Failed to build response: {}", e)))
 }
 
 /// Git upload-pack endpoint - handles fetch/clone.
@@ -297,11 +346,11 @@ async fn git_upload_pack(
 
     upload_pack(&mut input, &mut output, &repo)?;
 
-    Ok(Response::builder()
+    Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, "application/x-git-upload-pack-result")
         .body(Body::from(output))
-        .unwrap())
+        .map_err(|e| ApiError::BadRequest(format!("Failed to build response: {}", e)))
 }
 
 /// Git receive-pack endpoint - handles push.
@@ -384,12 +433,12 @@ async fn git_receive_pack(
         }),
     );
 
-    Ok(Response::builder()
+    Response::builder()
         .status(StatusCode::OK)
         .header(
             header::CONTENT_TYPE,
             "application/x-git-receive-pack-result",
         )
         .body(Body::from(output))
-        .unwrap())
+        .map_err(|e| ApiError::BadRequest(format!("Failed to build response: {}", e)))
 }
