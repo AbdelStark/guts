@@ -150,32 +150,33 @@ Browser Request
 
 ## Implementation Plan
 
-### Phase 1: Foundation
+### Phase 1: Foundation (Completed)
 
-1. Create `guts-web` crate structure
-2. Set up Askama template engine
-3. Create base template with navigation
-4. Add static asset serving (CSS/JS)
-5. Implement landing page
+1. [x] Create `guts-web` crate structure
+2. [x] Set up Askama template engine
+3. [x] Create base template with navigation
+4. [x] Add static asset serving (CSS via Tailwind CDN)
+5. [x] Implement landing page
+6. [x] Implement explore/repository list page
 
-### Phase 2: Repository Browsing
+### Phase 2: Repository Browsing (Completed)
 
-1. Repository list page
-2. Repository home page (README)
-3. File tree browser
-4. File content viewer with syntax highlighting
-5. Commit history page
-6. Single commit diff view
+1. [x] Repository list page (`/explore`)
+2. [x] Repository home page (README) (`/{owner}/{repo}`)
+3. [x] File tree browser (`/{owner}/{repo}/tree/{ref}/*path`)
+4. [x] File content viewer with syntax highlighting (`/{owner}/{repo}/blob/{ref}/*path`)
+5. [x] Commit history page (`/{owner}/{repo}/commits/{ref}`)
+6. [x] Single commit view (`/{owner}/{repo}/commit/{sha}`)
 
-### Phase 3: Collaboration Views
+### Phase 3: Collaboration Views (Completed)
 
-1. Pull request list page
-2. Pull request detail page
-3. Issue list page
-4. Issue detail page
-5. Comment rendering
+1. [x] Pull request list page (`/{owner}/{repo}/pulls`)
+2. [x] Pull request detail page (`/{owner}/{repo}/pull/{num}`)
+3. [x] Issue list page (`/{owner}/{repo}/issues`)
+4. [x] Issue detail page (`/{owner}/{repo}/issues/{num}`)
+5. [x] Comment rendering with markdown
 
-### Phase 4: Organization Views
+### Phase 4: Organization Views (Planned)
 
 1. User profile page
 2. Organization page

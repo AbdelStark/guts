@@ -46,6 +46,41 @@ pub struct IssueSummary {
     pub labels: Vec<String>,
 }
 
+/// Commit summary for lists.
+#[derive(Debug, Clone, Serialize)]
+pub struct CommitSummary {
+    pub sha: String,
+    pub short_sha: String,
+    pub message: String,
+    pub author: String,
+    pub date: String,
+}
+
+/// File change in a commit.
+#[derive(Debug, Clone, Serialize)]
+pub struct FileChange {
+    pub path: String,
+    pub status: String,
+    pub additions: usize,
+    pub deletions: usize,
+    pub diff: Option<String>,
+}
+
+/// Comment with rendered body.
+#[derive(Debug, Clone, Serialize)]
+pub struct CommentView {
+    pub author: String,
+    pub body_html: String,
+}
+
+/// Review with state.
+#[derive(Debug, Clone, Serialize)]
+pub struct ReviewView {
+    pub author: String,
+    pub state: String,
+    pub body: Option<String>,
+}
+
 /// Landing page template.
 #[derive(Template)]
 #[template(path = "index.html")]
@@ -131,4 +166,65 @@ pub struct IssueListTemplate {
     pub open_count: usize,
     pub closed_count: usize,
     pub issues: Vec<IssueSummary>,
+}
+
+/// Commit history page.
+#[derive(Template)]
+#[template(path = "repo/commits.html")]
+pub struct CommitsTemplate {
+    pub owner: String,
+    pub name: String,
+    pub ref_name: String,
+    pub commits: Vec<CommitSummary>,
+}
+
+/// Single commit view page.
+#[derive(Template)]
+#[template(path = "repo/commit.html")]
+pub struct CommitTemplate {
+    pub owner: String,
+    pub name: String,
+    pub sha: String,
+    pub short_sha: String,
+    pub message: String,
+    pub author: String,
+    pub date: String,
+    pub parent_sha: Option<String>,
+    pub files_changed: Vec<FileChange>,
+    pub additions: usize,
+    pub deletions: usize,
+}
+
+/// Pull request detail page.
+#[derive(Template)]
+#[template(path = "pr/view.html")]
+pub struct PullRequestViewTemplate {
+    pub owner: String,
+    pub name: String,
+    pub number: u32,
+    pub title: String,
+    pub description_html: String,
+    pub author: String,
+    pub state: String,
+    pub source_branch: String,
+    pub target_branch: String,
+    pub merged_by: Option<String>,
+    pub comments: Vec<CommentView>,
+    pub reviews: Vec<ReviewView>,
+}
+
+/// Issue detail page.
+#[derive(Template)]
+#[template(path = "issue/view.html")]
+pub struct IssueViewTemplate {
+    pub owner: String,
+    pub name: String,
+    pub number: u32,
+    pub title: String,
+    pub description_html: String,
+    pub author: String,
+    pub state: String,
+    pub labels: Vec<String>,
+    pub closed_by: Option<String>,
+    pub comments: Vec<CommentView>,
 }

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Commits - {{ owner }}/{{ name }} - Guts{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center space-x-2 text-xl">
+        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <a href="/{{ owner }}" class="text-green-400 hover:underline">{{ owner }}</a>
+        <span class="text-gray-500">/</span>
+        <a href="/{{ owner }}/{{ name }}" class="text-green-400 hover:underline">{{ name }}</a>
+    </div>
+</div>
+
+<!-- Branch selector and count -->
+<div class="flex items-center justify-between mb-6">
+    <div class="flex items-center space-x-4">
+        <button class="flex items-center space-x-2 bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-md">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+            </svg>
+            <span>{{ ref_name }}</span>
+        </button>
+    </div>
+    <span class="text-gray-400">{{ commits.len() }} commits</span>
+</div>
+
+<!-- Commits list -->
+<div class="bg-gray-800 rounded-lg border border-gray-700">
+    {% if commits.is_empty() %}
+    <div class="p-8 text-center text-gray-500">
+        <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <p>No commits found</p>
+    </div>
+    {% else %}
+    <div class="divide-y divide-gray-700">
+        {% for commit in commits %}
+        <div class="p-4 hover:bg-gray-750">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <a href="/{{ owner }}/{{ name }}/commit/{{ commit.sha }}" class="text-blue-400 hover:underline font-medium">
+                        {{ commit.message }}
+                    </a>
+                    <div class="flex items-center space-x-2 mt-1 text-sm text-gray-400">
+                        <span class="font-medium text-gray-300">{{ commit.author }}</span>
+                        <span>committed {{ commit.date }}</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <a href="/{{ owner }}/{{ name }}/commit/{{ commit.sha }}"
+                       class="text-xs font-mono bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-blue-400">
+                        {{ commit.short_sha }}
+                    </a>
+                    <a href="/{{ owner }}/{{ name }}/tree/{{ commit.sha }}"
+                       class="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-700"
+                       title="Browse files at this commit">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

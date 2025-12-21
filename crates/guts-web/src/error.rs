@@ -60,3 +60,17 @@ impl From<askama::Error> for WebError {
         WebError::Template(err.to_string())
     }
 }
+
+impl From<guts_storage::StorageError> for WebError {
+    fn from(err: guts_storage::StorageError) -> Self {
+        match err {
+            guts_storage::StorageError::ObjectNotFound(id) => {
+                WebError::NotFound(format!("Object '{}' not found", id))
+            }
+            guts_storage::StorageError::RepoNotFound(key) => {
+                WebError::NotFound(format!("Repository '{}' not found", key))
+            }
+            other => WebError::Internal(other.to_string()),
+        }
+    }
+}
