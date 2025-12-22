@@ -44,6 +44,9 @@ use rand::{CryptoRng, Rng};
 use std::{marker::PhantomData, num::NonZero, sync::Arc, time::Duration};
 use tracing::{error, info, warn};
 
+/// Type alias for the finalization callback.
+pub type FinalizedCallback = Arc<dyn Fn(&SimplexBlock) + Send + Sync>;
+
 /// Namespace for Guts consensus messages.
 pub const NAMESPACE: &[u8] = b"guts-consensus";
 
@@ -148,7 +151,7 @@ pub struct Config<B: Blocker<PublicKey = PublicKey>> {
     pub fetch_rate_per_peer: Quota,
 
     /// Callback for finalized blocks.
-    pub on_finalized: Option<Arc<dyn Fn(&SimplexBlock) + Send + Sync>>,
+    pub on_finalized: Option<FinalizedCallback>,
 }
 
 impl<B: Blocker<PublicKey = PublicKey>> Config<B> {

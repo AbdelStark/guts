@@ -155,6 +155,7 @@ pub fn start_simplex_consensus(
 }
 
 /// Run the consensus engine (called within the commonware runtime).
+#[allow(clippy::too_many_arguments)]
 async fn run_consensus_engine(
     context: TokioContext,
     private_key: commonware_cryptography::ed25519::PrivateKey,

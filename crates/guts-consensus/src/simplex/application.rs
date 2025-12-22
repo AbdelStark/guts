@@ -24,6 +24,9 @@ use rand::Rng;
 use std::sync::{Arc, Mutex};
 use tracing::{debug, info, warn};
 
+/// Type alias for the finalization callback.
+pub type FinalizedCallback = Arc<dyn Fn(&SimplexBlock) + Send + Sync>;
+
 /// Genesis message used during initialization.
 const GENESIS: &[u8] = b"guts-genesis";
 
@@ -158,7 +161,7 @@ pub struct Actor<R: Rng + Spawner + Metrics + Clock> {
     mailbox: mpsc::Receiver<Message>,
 
     /// Callback for when a block is finalized.
-    on_finalized: Option<Arc<dyn Fn(&SimplexBlock) + Send + Sync>>,
+    on_finalized: Option<FinalizedCallback>,
 }
 
 impl<R: Rng + Spawner + Metrics + Clock> Actor<R> {
