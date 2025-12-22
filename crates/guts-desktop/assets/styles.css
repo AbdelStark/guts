@@ -388,6 +388,25 @@ input::placeholder {
     color: var(--text-tertiary);
 }
 
+input.input-readonly,
+input[readonly] {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+input.input-readonly:focus,
+input[readonly]:focus {
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+}
+
+.form-hint {
+    font-size: 12px;
+    margin-top: var(--space-xs);
+}
+
 /* --------------------------------------------------------------------------
    Buttons
    -------------------------------------------------------------------------- */

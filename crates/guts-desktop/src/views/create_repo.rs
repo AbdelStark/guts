@@ -15,9 +15,12 @@ pub fn CreateRepository() -> Element {
     let state = use_context::<AppState>();
     let navigator = use_navigator();
 
+    // Get current username for owner field
+    let current_user = state.current_user.read().clone().unwrap_or_default();
+
     // Form state
     let mut name_input = use_signal(String::new);
-    let mut owner_input = use_signal(|| "alice".to_string());
+    let owner_input = use_signal(move || current_user.clone());
     let mut creating = use_signal(|| false);
     let mut error_msg = use_signal(|| Option::<String>::None);
 
@@ -83,9 +86,10 @@ pub fn CreateRepository() -> Element {
                         r#type: "text",
                         value: "{owner_input}",
                         placeholder: "Owner name",
-                        oninput: move |evt| owner_input.set(evt.value().clone()),
-                        disabled: *creating.read(),
+                        readonly: true,
+                        class: "input-readonly",
                     }
+                    p { class: "form-hint text-tertiary", "Repository will be created under your account" }
                 }
 
                 div {
