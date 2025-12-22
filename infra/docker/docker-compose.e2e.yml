@@ -29,6 +29,7 @@ x-common-env: &common-env
   GUTS_LOG_FORMAT: json
   RUST_LOG: guts=info,tower_http=info
   GUTS_CONSENSUS_ENABLED: "true"
+  GUTS_CONSENSUS_GENESIS_FILE: "/etc/guts/genesis.json"
   GUTS_CONSENSUS_BLOCK_TIME_MS: "1000"
   GUTS_CONSENSUS_MAX_TXS_PER_BLOCK: "100"
   GUTS_CONSENSUS_MEMPOOL_MAX_TXS: "1000"
@@ -64,6 +65,7 @@ services:
       # Deterministic private key for devnet (seed=1)
       GUTS_PRIVATE_KEY: "0100000000000000000000000000000000000000000000000000000000000000"
     volumes:
+      - ./genesis.e2e.json:/etc/guts/genesis.json:ro
       - e2e-validator1-data:/data
       - e2e-validator1-logs:/var/log/guts
     networks:
@@ -99,6 +101,7 @@ services:
       GUTS_PRIVATE_KEY: "0200000000000000000000000000000000000000000000000000000000000000"
       GUTS_BOOTSTRAP_NODES: validator1:9000
     volumes:
+      - ./genesis.e2e.json:/etc/guts/genesis.json:ro
       - e2e-validator2-data:/data
       - e2e-validator2-logs:/var/log/guts
     networks:
@@ -137,6 +140,7 @@ services:
       GUTS_PRIVATE_KEY: "0300000000000000000000000000000000000000000000000000000000000000"
       GUTS_BOOTSTRAP_NODES: validator1:9000,validator2:9000
     volumes:
+      - ./genesis.e2e.json:/etc/guts/genesis.json:ro
       - e2e-validator3-data:/data
       - e2e-validator3-logs:/var/log/guts
     networks:
@@ -177,6 +181,7 @@ services:
       GUTS_PRIVATE_KEY: "0400000000000000000000000000000000000000000000000000000000000000"
       GUTS_BOOTSTRAP_NODES: validator1:9000,validator2:9000,validator3:9000
     volumes:
+      - ./genesis.e2e.json:/etc/guts/genesis.json:ro
       - e2e-validator4-data:/data
       - e2e-validator4-logs:/var/log/guts
     networks:
@@ -219,6 +224,7 @@ services:
       # Observer has no private key - it's a non-voting node
       GUTS_BOOTSTRAP_NODES: validator1:9000,validator2:9000,validator3:9000,validator4:9000
     volumes:
+      - ./genesis.e2e.json:/etc/guts/genesis.json:ro
       - e2e-observer-data:/data
       - e2e-observer-logs:/var/log/guts
     networks:

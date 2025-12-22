@@ -19,7 +19,7 @@ use guts_ci::CiStore;
 use guts_collaboration::CollaborationStore;
 use guts_compat::CompatStore;
 use guts_consensus::{
-    ConsensusEngine, EngineConfig, Mempool, MempoolConfig, ValidatorConfig, ValidatorSet,
+    ConsensusEngine, EngineConfig, Genesis, Mempool, MempoolConfig, ValidatorConfig, ValidatorSet,
 };
 use guts_node::api::{create_router, AppState};
 use guts_node::config::NodeConfig;
@@ -194,26 +194,47 @@ async fn main() -> anyhow::Result<()> {
             })
         });
 
-        // Create validator set (single node for now, genesis-based in future)
-        // Use permissive config for single-node mode (min_validators = 0)
-        let validator_config = ValidatorConfig {
-            min_validators: 0, // Allow single-node mode
-            max_validators: 100,
-            quorum_threshold: 2.0 / 3.0,
-            block_time_ms: config.consensus.block_time_ms,
-        };
-
-        let validators = if let Some(ref key) = validator_key {
-            use guts_consensus::{SerializablePublicKey, Validator};
-            let pubkey = SerializablePublicKey::from_pubkey(
-                &commonware_cryptography::Signer::public_key(key),
-            );
-            let validator = Validator::new(pubkey, "local", 1, config.p2p.addr);
-            ValidatorSet::new(vec![validator], 0, validator_config)
-                .expect("Failed to create validator set")
+        // Load validator set from genesis file if available, otherwise single-node mode
+        let validators = if let Some(ref genesis_path) = config.consensus.genesis_file {
+            tracing::info!(path = %genesis_path.display(), "Loading genesis file");
+            match Genesis::load_json(genesis_path) {
+                Ok(genesis) => {
+                    tracing::info!(
+                        chain_id = %genesis.chain_id,
+                        validator_count = genesis.validators.len(),
+                        "Genesis loaded successfully"
+                    );
+                    genesis
+                        .into_validator_set()
+                        .expect("Failed to create validator set from genesis")
+                }
+                Err(e) => {
+                    tracing::error!(error = %e, "Failed to load genesis file");
+                    return Err(anyhow::anyhow!("Failed to load genesis: {}", e));
+                }
+            }
         } else {
-            ValidatorSet::new(vec![], 0, validator_config)
-                .expect("Failed to create empty validator set")
+            // Fallback to single-node mode
+            tracing::info!("No genesis file, using single-node mode");
+            let validator_config = ValidatorConfig {
+                min_validators: 0, // Allow single-node mode
+                max_validators: 100,
+                quorum_threshold: 2.0 / 3.0,
+                block_time_ms: config.consensus.block_time_ms,
+            };
+
+            if let Some(ref key) = validator_key {
+                use guts_consensus::{SerializablePublicKey, Validator};
+                let pubkey = SerializablePublicKey::from_pubkey(
+                    &commonware_cryptography::Signer::public_key(key),
+                );
+                let validator = Validator::new(pubkey, "local", 1, config.p2p.addr);
+                ValidatorSet::new(vec![validator], 0, validator_config)
+                    .expect("Failed to create validator set")
+            } else {
+                ValidatorSet::new(vec![], 0, validator_config)
+                    .expect("Failed to create empty validator set")
+            }
         };
 
         // Create consensus engine

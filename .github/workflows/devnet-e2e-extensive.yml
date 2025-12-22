@@ -1,6 +1,10 @@
 name: Devnet E2E Extensive
 
 on:
+  # Run on pushes to main
+  push:
+    branches: [main]
+
   # Run on PRs to main
   pull_request:
     branches: [main]
@@ -142,19 +146,27 @@ jobs:
           waited=0
 
           while [[ $waited -lt $max_wait ]]; do
+            enabled=$(curl -sf http://localhost:8081/api/consensus/status | jq -r '.enabled // false' 2>/dev/null || echo "false")
             state=$(curl -sf http://localhost:8081/api/consensus/status | jq -r '.state // "Unknown"' 2>/dev/null || echo "Unknown")
+            validators=$(curl -sf http://localhost:8081/api/consensus/validators | jq -r '.validator_count // 0' 2>/dev/null || echo "0")
 
-            if [[ "$state" == "Active" ]]; then
-              echo "Consensus is active!"
+            if [[ "$enabled" == "true" && "$validators" -ge 4 ]]; then
+              echo "Consensus is enabled with $validators validators!"
               break
             fi
 
-            echo "Consensus state: $state, waiting..."
+            echo "Consensus enabled=$enabled, state=$state, validators=$validators, waiting..."
             sleep 2
             waited=$((waited + 2))
           done
 
-          echo "Final consensus state: $state"
+          echo "Final consensus state: enabled=$enabled, state=$state, validators=$validators"
+
+          # Debug: print full status
+          echo "=== Full consensus status ==="
+          curl -sf http://localhost:8081/api/consensus/status | jq . || echo "Failed to get status"
+          echo "=== Validator set ==="
+          curl -sf http://localhost:8081/api/consensus/validators | jq . || echo "Failed to get validators"
 
       - name: Run E2E test suite
         id: e2e-tests

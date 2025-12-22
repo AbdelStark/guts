@@ -15,7 +15,7 @@
 #
 # =============================================================================
 
-set -euo pipefail
+set -eo pipefail
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -204,17 +204,22 @@ test_mempool_sync() {
         response=$(api_call GET "$node/api/consensus/mempool")
 
         local tx_count
-        tx_count=$(echo "$response" | jq -r '.transaction_count' 2>/dev/null || echo "0")
+        tx_count=$(echo "$response" | jq -r '.transaction_count // 0' 2>/dev/null || echo "0")
+        # Handle null/empty strings
+        [[ "$tx_count" == "null" || -z "$tx_count" ]] && tx_count=0
         mempool_counts+=("$tx_count")
 
         log_verbose "Validator $((i+1)): mempool_count=$tx_count"
     done
 
     # Check if all mempools have similar counts (within tolerance)
-    local first_count="${mempool_counts[0]}"
+    local first_count="${mempool_counts[0]:-0}"
     local all_similar=true
 
     for count in "${mempool_counts[@]}"; do
+        # Ensure both values are numbers
+        [[ "$first_count" == "null" || -z "$first_count" ]] && first_count=0
+        [[ "$count" == "null" || -z "$count" ]] && count=0
         local diff=$((first_count - count))
         diff=${diff#-}  # Absolute value
 
@@ -245,15 +250,20 @@ test_view_consistency() {
         response=$(api_call GET "$node/api/consensus/status")
 
         local view
-        view=$(echo "$response" | jq -r '.view' 2>/dev/null || echo "0")
+        view=$(echo "$response" | jq -r '.view // 0' 2>/dev/null || echo "0")
+        # Handle null/empty strings
+        [[ "$view" == "null" || -z "$view" ]] && view=0
         views+=("$view")
     done
 
     # Views should be within a small range (consensus rounds progress)
-    local min_view="${views[0]}"
-    local max_view="${views[0]}"
+    local min_view="${views[0]:-0}"
+    local max_view="${views[0]:-0}"
+    [[ "$min_view" == "null" || -z "$min_view" ]] && min_view=0
+    [[ "$max_view" == "null" || -z "$max_view" ]] && max_view=0
 
     for view in "${views[@]}"; do
+        [[ "$view" == "null" || -z "$view" ]] && view=0
         if [[ $view -lt $min_view ]]; then
             min_view=$view
         fi
@@ -317,7 +327,8 @@ test_finalized_height_progress() {
     local response1
     response1=$(api_call GET "$node/api/consensus/status")
     local height1
-    height1=$(echo "$response1" | jq -r '.finalized_height' 2>/dev/null || echo "0")
+    height1=$(echo "$response1" | jq -r '.finalized_height // 0' 2>/dev/null || echo "0")
+    [[ "$height1" == "null" || -z "$height1" ]] && height1=0
 
     log_verbose "Initial finalized height: $height1"
 
@@ -328,7 +339,8 @@ test_finalized_height_progress() {
     local response2
     response2=$(api_call GET "$node/api/consensus/status")
     local height2
-    height2=$(echo "$response2" | jq -r '.finalized_height' 2>/dev/null || echo "0")
+    height2=$(echo "$response2" | jq -r '.finalized_height // 0' 2>/dev/null || echo "0")
+    [[ "$height2" == "null" || -z "$height2" ]] && height2=0
 
     log_verbose "Final finalized height: $height2"
 
@@ -352,11 +364,12 @@ test_observer_sync() {
     response=$(api_call GET "$OBSERVER/api/consensus/status")
 
     local enabled
-    enabled=$(echo "$response" | jq -r '.enabled' 2>/dev/null)
+    enabled=$(echo "$response" | jq -r '.enabled // false' 2>/dev/null || echo "false")
     local height
-    height=$(echo "$response" | jq -r '.finalized_height' 2>/dev/null)
+    height=$(echo "$response" | jq -r '.finalized_height // 0' 2>/dev/null || echo "0")
+    [[ "$height" == "null" || -z "$height" ]] && height=0
 
-    if [[ "$enabled" != "null" ]]; then
+    if [[ "$enabled" == "true" || "$enabled" == "false" ]]; then
         log_success "Observer consensus status accessible (height=$height)"
     else
         log_error "Could not get observer consensus status"
@@ -364,7 +377,8 @@ test_observer_sync() {
 
     # Compare observer height with validators
     local validator_height
-    validator_height=$(api_call GET "${VALIDATORS[0]}/api/consensus/status" | jq -r '.finalized_height' 2>/dev/null || echo "0")
+    validator_height=$(api_call GET "${VALIDATORS[0]}/api/consensus/status" | jq -r '.finalized_height // 0' 2>/dev/null || echo "0")
+    [[ "$validator_height" == "null" || -z "$validator_height" ]] && validator_height=0
 
     local height_diff=$((validator_height - height))
     height_diff=${height_diff#-}
