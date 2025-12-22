@@ -1,0 +1,52 @@
+[package]
+name = "guts-consensus"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "BFT consensus engine for Guts decentralized code collaboration"
+
+[dependencies]
+# Internal crates
+guts-types = { workspace = true }
+guts-storage = { workspace = true }
+guts-collaboration = { workspace = true }
+guts-auth = { workspace = true }
+
+# Commonware dependencies
+commonware-consensus = { workspace = true }
+commonware-cryptography = { workspace = true }
+commonware-runtime = { workspace = true }
+commonware-utils = { workspace = true }
+
+# Cryptography
+ed25519-consensus = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+
+# Async
+tokio = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
+parking_lot = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+
+# Utilities
+bytes = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full", "test-util"] }
+tempfile = { workspace = true }
+proptest = { workspace = true }
+
+[features]
+default = []

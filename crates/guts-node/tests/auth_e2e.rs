@@ -16,6 +16,8 @@ fn create_test_app() -> axum::Router {
     let state = AppState {
         repos: Arc::new(RepoStore::new()),
         p2p: None,
+        consensus: None,
+        mempool: None,
         collaboration: Arc::new(CollaborationStore::new()),
         auth: Arc::new(AuthStore::new()),
         realtime: Arc::new(EventHub::new()),

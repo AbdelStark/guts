@@ -72,6 +72,11 @@ pub struct NodeConfig {
     #[serde(default)]
     pub p2p: P2pConfig,
 
+    /// Consensus configuration.
+    #[validate(nested)]
+    #[serde(default)]
+    pub consensus: ConsensusConfig,
+
     /// Metrics configuration.
     #[validate(nested)]
     #[serde(default)]
@@ -326,6 +331,54 @@ impl Default for P2pConfig {
             message_backlog: 1024,
             mailbox_size: 1024,
             timeout_secs: 10,
+        }
+    }
+}
+
+/// Consensus configuration.
+#[derive(Debug, Clone, Deserialize, Serialize, Validate)]
+pub struct ConsensusConfig {
+    /// Whether consensus is enabled (false = single-node mode).
+    pub enabled: bool,
+
+    /// Path to genesis file.
+    pub genesis_file: Option<PathBuf>,
+
+    /// Target block time in milliseconds.
+    #[validate(range(min = 100, max = 60000))]
+    pub block_time_ms: u64,
+
+    /// Maximum transactions per block.
+    #[validate(range(min = 1, max = 10000))]
+    pub max_txs_per_block: usize,
+
+    /// Maximum block size in bytes.
+    #[validate(range(min = 1024, max = 104857600))] // 1KB to 100MB
+    pub max_block_size: usize,
+
+    /// Mempool maximum transactions.
+    #[validate(range(min = 100, max = 1000000))]
+    pub mempool_max_txs: usize,
+
+    /// Mempool transaction TTL in seconds.
+    #[validate(range(min = 60, max = 3600))]
+    pub mempool_ttl_secs: u64,
+
+    /// View timeout multiplier for leader changes.
+    pub view_timeout_multiplier: f64,
+}
+
+impl Default for ConsensusConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            genesis_file: None,
+            block_time_ms: 2000,
+            max_txs_per_block: 1000,
+            max_block_size: 10 * 1024 * 1024, // 10MB
+            mempool_max_txs: 10_000,
+            mempool_ttl_secs: 600,
+            view_timeout_multiplier: 2.0,
         }
     }
 }
