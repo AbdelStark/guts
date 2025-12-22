@@ -7,8 +7,9 @@
 //! - Reference operations
 
 use bytes::Bytes;
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use guts_storage::{GitObject, ObjectStore, ObjectType, RepoStore};
+use std::hint::black_box;
 
 /// Generate test data of specified size
 fn generate_data(size: usize) -> Vec<u8> {
