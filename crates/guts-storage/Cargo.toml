@@ -7,6 +7,12 @@ description = "Git object storage for Guts - content-addressed storage for blobs
 repository.workspace = true
 homepage.workspace = true
 
+[features]
+default = ["memory"]
+memory = []
+rocksdb-backend = ["rocksdb"]
+full = ["memory", "rocksdb-backend"]
+
 [dependencies]
 guts-types = { workspace = true }
 
@@ -26,7 +32,25 @@ parking_lot = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 
+# Optional: Persistent storage
+rocksdb = { workspace = true, optional = true }
+
+# Caching
+lru = { workspace = true }
+
+# Memory optimization
+smallvec = { workspace = true }
+
 [dev-dependencies]
 tempfile = { workspace = true }
 guts-git = { workspace = true }
 serde_json = { workspace = true }
+criterion = { workspace = true }
+
+[[bench]]
+name = "storage_bench"
+harness = false
+
+[[bench]]
+name = "concurrent_bench"
+harness = false

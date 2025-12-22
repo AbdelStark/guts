@@ -62,6 +62,7 @@
 //! - [`validation`] - Input validation middleware
 //! - [`health`] - Health check endpoints (liveness, readiness, startup)
 //! - [`resilience`] - Retry policies, circuit breakers, and timeouts
+//! - [`performance`] - Connection pooling, request coalescing, CDN cache headers
 //!
 //! ## Example: Creating an AppState
 //!
@@ -104,6 +105,7 @@ pub mod config;
 pub mod health;
 pub mod observability;
 pub mod p2p;
+pub mod performance;
 pub mod realtime_api;
 pub mod resilience;
 pub mod validation;
