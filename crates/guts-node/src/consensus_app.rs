@@ -20,9 +20,13 @@ pub struct GutsApplication {
     repos: Arc<RepoStore>,
 
     /// Collaboration store (PRs, issues, comments).
+    /// Used when applying collaboration-related transactions (CreateIssue, CreatePullRequest, etc.)
+    #[allow(dead_code)]
     collaboration: Arc<CollaborationStore>,
 
     /// Auth store (orgs, teams, permissions).
+    /// Used when applying auth-related transactions (CreateOrganization, etc.)
+    #[allow(dead_code)]
     auth: Arc<AuthStore>,
 
     /// Real-time event hub for broadcasting updates.
