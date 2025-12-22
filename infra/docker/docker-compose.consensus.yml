@@ -1,0 +1,228 @@
+# =============================================================================
+# Guts Consensus Devnet - 4 Validator Test Network
+# =============================================================================
+#
+# This configuration spins up a 4-node BFT consensus network for testing.
+# With 4 validators and f=1, the network can tolerate 1 Byzantine node.
+#
+# Usage:
+#   docker compose -f docker-compose.consensus.yml up -d
+#   docker compose -f docker-compose.consensus.yml down
+#
+# Endpoints:
+#   Node 1: API=8091, P2P=9091
+#   Node 2: API=8092, P2P=9092
+#   Node 3: API=8093, P2P=9093
+#   Node 4: API=8094, P2P=9094
+#
+# Consensus endpoints (on each node):
+#   GET  /api/consensus/status     - Consensus engine status
+#   GET  /api/consensus/blocks     - List finalized blocks
+#   GET  /api/consensus/validators - Current validator set
+#   GET  /api/consensus/mempool    - Pending transactions
+#   POST /api/consensus/transactions - Submit a transaction
+#
+# =============================================================================
+
+name: guts-consensus-devnet
+
+services:
+  # ==========================================================================
+  # Validator 1 - Genesis validator, initial leader
+  # ==========================================================================
+  validator1:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    container_name: guts-consensus-validator1
+    hostname: validator1
+    ports:
+      - "8091:8080"   # API
+      - "9091:9000"   # P2P
+    environment:
+      # Node identification
+      - GUTS_NODE_ID=consensus-validator1
+      # Logging
+      - GUTS_LOG_LEVEL=info
+      - GUTS_LOG_FORMAT=json
+      - RUST_LOG=guts=info,tower_http=debug
+      # Consensus configuration (enabled)
+      - GUTS_CONSENSUS_ENABLED=true
+      - GUTS_CONSENSUS_BLOCK_TIME_MS=2000
+      - GUTS_CONSENSUS_MAX_TXS_PER_BLOCK=100
+      - GUTS_CONSENSUS_MEMPOOL_MAX_TXS=1000
+      - GUTS_CONSENSUS_MEMPOOL_TTL_SECS=600
+      # Validator private key (deterministic for devnet - seed=0)
+      # In production, these MUST be generated securely and kept secret
+      - GUTS_PRIVATE_KEY=0000000000000000000000000000000000000000000000000000000000000000
+      # P2P configuration
+      - GUTS_P2P_ENABLED=true
+      - GUTS_P2P_ADDR=0.0.0.0:9000
+    volumes:
+      - consensus-validator1-data:/data
+    networks:
+      guts-consensus-devnet:
+        ipv4_address: 172.30.0.11
+        aliases:
+          - validator1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Validator 2
+  # ==========================================================================
+  validator2:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    container_name: guts-consensus-validator2
+    hostname: validator2
+    ports:
+      - "8092:8080"
+      - "9092:9000"
+    environment:
+      - GUTS_NODE_ID=consensus-validator2
+      - GUTS_LOG_LEVEL=info
+      - GUTS_LOG_FORMAT=json
+      - RUST_LOG=guts=info,tower_http=debug
+      - GUTS_CONSENSUS_ENABLED=true
+      - GUTS_CONSENSUS_BLOCK_TIME_MS=2000
+      - GUTS_CONSENSUS_MAX_TXS_PER_BLOCK=100
+      - GUTS_CONSENSUS_MEMPOOL_MAX_TXS=1000
+      - GUTS_CONSENSUS_MEMPOOL_TTL_SECS=600
+      # Validator private key (deterministic for devnet - seed=1)
+      - GUTS_PRIVATE_KEY=0100000000000000000000000000000000000000000000000000000000000000
+      - GUTS_P2P_ENABLED=true
+      - GUTS_P2P_ADDR=0.0.0.0:9000
+      - GUTS_BOOTSTRAP_NODES=validator1:9000
+    volumes:
+      - consensus-validator2-data:/data
+    networks:
+      guts-consensus-devnet:
+        ipv4_address: 172.30.0.12
+        aliases:
+          - validator2
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      validator1:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Validator 3
+  # ==========================================================================
+  validator3:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    container_name: guts-consensus-validator3
+    hostname: validator3
+    ports:
+      - "8093:8080"
+      - "9093:9000"
+    environment:
+      - GUTS_NODE_ID=consensus-validator3
+      - GUTS_LOG_LEVEL=info
+      - GUTS_LOG_FORMAT=json
+      - RUST_LOG=guts=info,tower_http=debug
+      - GUTS_CONSENSUS_ENABLED=true
+      - GUTS_CONSENSUS_BLOCK_TIME_MS=2000
+      - GUTS_CONSENSUS_MAX_TXS_PER_BLOCK=100
+      - GUTS_CONSENSUS_MEMPOOL_MAX_TXS=1000
+      - GUTS_CONSENSUS_MEMPOOL_TTL_SECS=600
+      # Validator private key (deterministic for devnet - seed=2)
+      - GUTS_PRIVATE_KEY=0200000000000000000000000000000000000000000000000000000000000000
+      - GUTS_P2P_ENABLED=true
+      - GUTS_P2P_ADDR=0.0.0.0:9000
+      - GUTS_BOOTSTRAP_NODES=validator1:9000,validator2:9000
+    volumes:
+      - consensus-validator3-data:/data
+    networks:
+      guts-consensus-devnet:
+        ipv4_address: 172.30.0.13
+        aliases:
+          - validator3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      validator1:
+        condition: service_healthy
+      validator2:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Validator 4
+  # ==========================================================================
+  validator4:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    container_name: guts-consensus-validator4
+    hostname: validator4
+    ports:
+      - "8094:8080"
+      - "9094:9000"
+    environment:
+      - GUTS_NODE_ID=consensus-validator4
+      - GUTS_LOG_LEVEL=info
+      - GUTS_LOG_FORMAT=json
+      - RUST_LOG=guts=info,tower_http=debug
+      - GUTS_CONSENSUS_ENABLED=true
+      - GUTS_CONSENSUS_BLOCK_TIME_MS=2000
+      - GUTS_CONSENSUS_MAX_TXS_PER_BLOCK=100
+      - GUTS_CONSENSUS_MEMPOOL_MAX_TXS=1000
+      - GUTS_CONSENSUS_MEMPOOL_TTL_SECS=600
+      # Validator private key (deterministic for devnet - seed=3)
+      - GUTS_PRIVATE_KEY=0300000000000000000000000000000000000000000000000000000000000000
+      - GUTS_P2P_ENABLED=true
+      - GUTS_P2P_ADDR=0.0.0.0:9000
+      - GUTS_BOOTSTRAP_NODES=validator1:9000,validator2:9000,validator3:9000
+    volumes:
+      - consensus-validator4-data:/data
+    networks:
+      guts-consensus-devnet:
+        ipv4_address: 172.30.0.14
+        aliases:
+          - validator4
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      validator1:
+        condition: service_healthy
+      validator2:
+        condition: service_healthy
+      validator3:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  guts-consensus-devnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+
+volumes:
+  consensus-validator1-data:
+  consensus-validator2-data:
+  consensus-validator3-data:
+  consensus-validator4-data:

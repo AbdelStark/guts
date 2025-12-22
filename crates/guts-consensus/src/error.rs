@@ -60,6 +60,10 @@ pub enum ConsensusError {
     /// Invalid state transition.
     #[error("invalid state transition: {0}")]
     InvalidStateTransition(String),
+
+    /// Transaction execution failed.
+    #[error("transaction failed: {0}")]
+    TransactionFailed(String),
 }
 
 /// Result type for consensus operations.

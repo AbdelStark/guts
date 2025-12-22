@@ -104,6 +104,8 @@ pub mod ci_api;
 pub mod collaboration_api;
 pub mod compat_api;
 pub mod config;
+pub mod consensus_api;
+pub mod consensus_app;
 pub mod health;
 pub mod observability;
 pub mod p2p;
