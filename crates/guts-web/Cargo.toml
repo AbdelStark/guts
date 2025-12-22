@@ -16,7 +16,6 @@ guts-consensus.workspace = true
 
 axum.workspace = true
 askama.workspace = true
-askama_axum.workspace = true
 pulldown-cmark.workspace = true
 mime_guess.workspace = true
 
