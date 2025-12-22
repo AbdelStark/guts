@@ -11,6 +11,7 @@ use commonware_cryptography::{ed25519::PrivateKey, PrivateKeyExt, Signer};
 fn main() {
     // Generate validators for seeds 1, 2, 3, 4 (matching docker-compose.e2e.yml)
     // Docker uses: GUTS_PRIVATE_KEY: "0100000000000000..." where first byte is the seed
+    // IP addresses match docker-compose.e2e.yml network: 172.29.0.{11,12,13,14}
     let validators: Vec<serde_json::Value> = (1..=4u64)
         .map(|seed| {
             let key = PrivateKey::from_seed(seed);
@@ -20,7 +21,7 @@ fn main() {
                 "name": format!("validator{}", seed),
                 "pubkey": pubkey,
                 "weight": 100,
-                "addr": format!("validator{}:9000", seed)
+                "addr": format!("172.29.0.{}:9000", 10 + seed)
             })
         })
         .collect();

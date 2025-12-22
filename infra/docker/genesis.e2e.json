@@ -6,25 +6,25 @@
       "name": "validator1",
       "pubkey": "478b8e507e0bb2b18c0f9e0824769e8562d10df9abe2e774896f82b4b4405266",
       "weight": 100,
-      "addr": "validator1:9000"
+      "addr": "172.29.0.11:9000"
     },
     {
       "name": "validator2",
       "pubkey": "5925ba86e2189444a6c3b437b25d2ef35daecd1abf82c5fb36060f9fc0af428c",
       "weight": 100,
-      "addr": "validator2:9000"
+      "addr": "172.29.0.12:9000"
     },
     {
       "name": "validator3",
       "pubkey": "ec8924090e507c2d8371d2fb0bf965d553e6e5756aeec6c274df3801cf2b49b9",
       "weight": 100,
-      "addr": "validator3:9000"
+      "addr": "172.29.0.13:9000"
     },
     {
       "name": "validator4",
       "pubkey": "1c0c1c72c52dbd38c741a2c1989e02a41b388348011566b914a1ed6932b8f880",
       "weight": 100,
-      "addr": "validator4:9000"
+      "addr": "172.29.0.14:9000"
     }
   ],
   "repositories": [],
