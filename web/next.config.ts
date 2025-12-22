@@ -19,16 +19,11 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
 
-  // TypeScript and ESLint during builds
+  // TypeScript during builds
   typescript: {
     // Allow builds even with type errors in CI (for faster iteration)
     // Set to false for strict type checking
     ignoreBuildErrors: false,
-  },
-
-  eslint: {
-    // Allow builds even with lint warnings
-    ignoreDuringBuilds: false,
   },
 };
 
