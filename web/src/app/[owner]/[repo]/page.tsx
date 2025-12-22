@@ -15,7 +15,16 @@ import {
   TabsContent,
 } from "@/components/ui";
 import { mockRepositories, mockCode, mockFileTree } from "@/data/mock";
+
 import styles from "./page.module.css";
+
+// Generate static params for all mock repositories (required for static export)
+export function generateStaticParams() {
+  return mockRepositories.map((repo) => ({
+    owner: repo.owner,
+    repo: repo.name,
+  }));
+}
 
 interface FileNode {
   name: string;

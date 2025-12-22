@@ -52,6 +52,12 @@ cd infra/docker && docker compose up --build
 
 # Run E2E tests against devnet
 ./infra/scripts/e2e-test.sh
+
+# Run the web app (development)
+cd web && npm install && npm run dev
+
+# Build the web app for production (static export)
+cd web && npm run build
 ```
 
 ## Project Structure
@@ -72,6 +78,11 @@ guts/
 │   ├── guts-compat/            # Git/GitHub compatibility (tokens, users, releases)
 │   ├── guts-node/              # Full node binary & HTTP API
 │   └── guts-cli/               # CLI client binary
+├── web/                        # Next.js frontend (mocked MVP)
+│   ├── src/app/                # App router pages
+│   ├── src/components/         # React components (layout, UI)
+│   ├── src/data/               # Mock data
+│   └── src/styles/             # CSS tokens and globals
 ├── infra/                      # Infrastructure as code
 │   ├── terraform/              # AWS cloud provisioning
 │   ├── docker/                 # Container definitions & devnet
@@ -87,6 +98,8 @@ guts/
 
 ## Technology Stack
 
+### Backend (Rust)
+
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | Language | Rust (stable) | Memory safety, performance |
@@ -99,6 +112,18 @@ guts/
 | Serialization | serde + serde_json | JSON API |
 | Web UI | Askama + pulldown-cmark | HTML templates, Markdown |
 | CLI | clap | Command-line parsing |
+
+### Frontend (Next.js)
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| Framework | Next.js 16.1 | React framework, static export |
+| UI Library | React 19 | Component architecture |
+| Language | TypeScript (strict) | Type safety |
+| Styling | CSS Modules + Variables | Design tokens, scoped styles |
+| UI Primitives | Radix UI | Accessible components |
+| Animation | Framer Motion | Smooth transitions |
+| Design | Obsidian Minimalism | Premium dark theme |
 
 ## Current Status
 
@@ -377,6 +402,7 @@ terraform apply
 | `release.yml` | Tags | Multi-platform builds, Docker push |
 | `security.yml` | Weekly, PR | cargo-audit, cargo-deny, CodeQL, Trivy |
 | `devnet-e2e-extensive.yml` | PR, push, nightly | Simplex BFT E2E tests (4 validators, real consensus) |
+| `web.yml` | PR, push (web/) | Build, lint, deploy Next.js to GitHub Pages |
 
 ## Available Skills
 
@@ -448,3 +474,82 @@ docker logs guts-validator1 | grep "finalized block"
 2. Read the [PRD](docs/PRD.md) for product context
 3. See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines
 4. Review relevant milestone docs in `docs/`
+
+## Web App (Mocked MVP)
+
+The `web/` directory contains a premium, mocked frontend built with Next.js that showcases the GUTS user experience before full backend integration.
+
+**Live Demo**: https://abdelstark.github.io/guts/
+
+### Design System: Obsidian Minimalism
+
+The UI follows an "Obsidian Minimalism" aesthetic with Apple-level restraint:
+
+- **Premium dark theme** with Ink (#07080B) and Obsidian (#0B0D12) backgrounds
+- **The Slash motif**: A subtle 12° diagonal accent used sparingly on active elements
+- **Typography**: Satoshi (UI), Clash Display (headers), Fragment Mono (code)
+- **Accent colors**: Ember (#FF3B2E) for CTAs, Cipher (#6AE4FF) for network/consensus
+
+### Pages Implemented
+
+| Page | Route | Description |
+|------|-------|-------------|
+| Dashboard | `/` | Repository grid with tabs, recent activity sidebar |
+| Repository | `/[owner]/[repo]` | Code viewer, file tree, stats, tabs for Issues/PRs |
+| Pull Requests | `/pulls` | PR list with status badges, reviewers, labels |
+| Issues | `/issues` | Issue tracker with state, labels, assignees |
+| Explore | `/explore` | Discovery page for public repositories |
+| Nodes | `/nodes` | Network status, validator list, peer connections |
+| Identity | `/identity` | Ed25519 key management, profile, export |
+| Settings | `/settings` | Application preferences |
+
+### Component Library
+
+**Layout Components**:
+- `AppShell` - Main layout with sidebar, top bar, content area
+- `Sidebar` - Navigation with "The Slash" active indicator
+- `TopBar` - Search, breadcrumbs, sync status, identity pill
+- `CommandPalette` - `Cmd+K` quick navigation
+
+**UI Components**:
+- `Button` - Primary, secondary, ghost, destructive variants
+- `Badge` / `ConsensusSeal` / `SyncStatus` - Status indicators
+- `Card` / `InteractiveCard` - Content containers
+- `Table` - Data tables with sticky headers
+- `Tabs` - Content organization
+- `Dialog` / `Tooltip` / `Toast` - Overlays and feedback
+- `Input` / `SearchInput` - Form controls
+- `Avatar` / `AvatarGroup` - User representation
+- `Skeleton` - Loading states with diagonal shimmer
+
+### Development
+
+```bash
+cd web
+
+# Install dependencies
+npm install
+
+# Run development server (http://localhost:3000)
+npm run dev
+
+# Build for production (static export to out/)
+npm run build
+
+# Lint code
+npm run lint
+```
+
+### Deployment
+
+The web app automatically deploys to GitHub Pages on every push to `main`:
+- Workflow: `.github/workflows/web.yml`
+- Output: Static HTML/JS/CSS in `web/out/`
+- URL: `https://<owner>.github.io/guts/`
+
+### Future Integration
+
+The mocked data in `src/data/mock.ts` will be replaced with real API calls:
+1. API client layer with typed contracts (OpenAPI → TypeScript)
+2. MSW mocks for development (same shape as real endpoints)
+3. Incremental backend integration via TanStack Query
