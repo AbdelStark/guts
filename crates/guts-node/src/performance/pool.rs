@@ -8,7 +8,7 @@ use std::collections::VecDeque;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::{Semaphore, SemaphorePermit};
+use tokio::sync::Semaphore;
 
 /// Connection pool configuration.
 #[derive(Debug, Clone)]

@@ -6,13 +6,14 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Compression level configuration.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CompressionLevel {
     /// No compression
     None,
     /// Fast compression (lower ratio)
     Fast,
     /// Default compression (balanced)
+    #[default]
     Default,
     /// Best compression (slower, higher ratio)
     Best,
@@ -27,12 +28,6 @@ impl CompressionLevel {
             CompressionLevel::Default => flate2::Compression::default(),
             CompressionLevel::Best => flate2::Compression::best(),
         }
-    }
-}
-
-impl Default for CompressionLevel {
-    fn default() -> Self {
-        CompressionLevel::Default
     }
 }
 

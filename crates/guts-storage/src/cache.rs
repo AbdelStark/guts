@@ -3,7 +3,7 @@
 //! Provides a caching layer that can wrap any storage backend
 //! to improve read performance for frequently accessed objects.
 
-use crate::{GitObject, ObjectId, Result, StorageError};
+use crate::{GitObject, ObjectId, Result};
 use lru::LruCache;
 use parking_lot::Mutex;
 use std::num::NonZeroUsize;
@@ -469,7 +469,7 @@ mod tests {
         fn get(&self, id: &ObjectId) -> Result<Option<GitObject>> {
             match ObjectStore::get(self, id) {
                 Ok(obj) => Ok(Some(obj)),
-                Err(StorageError::ObjectNotFound(_)) => Ok(None),
+                Err(crate::StorageError::ObjectNotFound(_)) => Ok(None),
                 Err(e) => Err(e),
             }
         }

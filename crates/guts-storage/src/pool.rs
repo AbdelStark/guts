@@ -7,24 +7,6 @@ use parking_lot::Mutex;
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-/// Configuration for object pools.
-#[derive(Debug, Clone)]
-pub struct PoolConfig {
-    /// Maximum number of pooled objects.
-    pub max_size: usize,
-    /// Initial capacity for new buffers.
-    pub buffer_capacity: usize,
-}
-
-impl Default for PoolConfig {
-    fn default() -> Self {
-        Self {
-            max_size: 100,
-            buffer_capacity: 64 * 1024, // 64 KB
-        }
-    }
-}
-
 /// A pool of reusable objects.
 pub struct ObjectPool<T> {
     /// Available objects.
@@ -55,7 +37,7 @@ impl<T> ObjectPool<T> {
     }
 
     /// Acquires an object from the pool.
-    pub fn acquire(&self) -> PooledObject<T> {
+    pub fn acquire(&self) -> PooledObject<'_, T> {
         let obj = self.available.lock().pop().unwrap_or_else(|| {
             self.created.fetch_add(1, Ordering::Relaxed);
             (self.factory)()
@@ -126,23 +108,6 @@ impl<T> Drop for PooledObject<'_, T> {
 
 /// A pooled buffer specifically for byte vectors.
 pub type PooledBuffer<'a> = PooledObject<'a, Vec<u8>>;
-
-/// Creates a buffer pool with the default configuration.
-pub fn create_buffer_pool() -> ObjectPool<Vec<u8>> {
-    let config = PoolConfig::default();
-    ObjectPool::new(
-        move || Vec::with_capacity(config.buffer_capacity),
-        config.max_size,
-    )
-}
-
-/// Creates a buffer pool with custom configuration.
-pub fn create_buffer_pool_with_config(config: PoolConfig) -> ObjectPool<Vec<u8>> {
-    ObjectPool::new(
-        move || Vec::with_capacity(config.buffer_capacity),
-        config.max_size,
-    )
-}
 
 /// Global buffer pool for pack file generation.
 pub static PACK_BUFFER_POOL: std::sync::LazyLock<ObjectPool<Vec<u8>>> =
@@ -228,14 +193,6 @@ mod tests {
 
         assert_eq!(buf.len(), 2);
         assert_eq!(&*buf, &[1, 2]);
-    }
-
-    #[test]
-    fn test_buffer_pool() {
-        let pool = create_buffer_pool();
-
-        let buf = pool.acquire();
-        assert!(buf.capacity() >= 64 * 1024);
     }
 
     #[test]

@@ -10,7 +10,6 @@ use std::collections::HashMap;
 use std::future::Future;
 use std::hash::Hash;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 
@@ -210,6 +209,7 @@ where
 mod tests {
     use super::*;
     use std::sync::atomic::AtomicU32;
+    use std::sync::Arc;
     use tokio::time::sleep;
 
     #[tokio::test]

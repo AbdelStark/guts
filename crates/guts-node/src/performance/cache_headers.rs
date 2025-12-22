@@ -91,32 +91,6 @@ pub fn add_cache_headers<B>(response: &mut Response<B>, cache_control: CacheCont
     headers.insert(header::VARY, HeaderValue::from_static("Accept-Encoding"));
 }
 
-/// Adds an ETag header based on content hash.
-pub fn add_etag<B>(response: &mut Response<B>, etag: &str) {
-    if let Ok(value) = HeaderValue::from_str(&format!("\"{}\"", etag)) {
-        response.headers_mut().insert(header::ETAG, value);
-    }
-}
-
-/// Adds cache headers for Git object responses.
-pub fn add_git_object_headers<B>(response: &mut Response<B>, object_id: &str) {
-    let headers = response.headers_mut();
-
-    // Git objects are immutable
-    headers.insert(
-        header::CACHE_CONTROL,
-        HeaderValue::from_static("public, max-age=31536000, immutable"),
-    );
-
-    // Use object ID as ETag
-    if let Ok(etag) = HeaderValue::from_str(&format!("\"{}\"", object_id)) {
-        headers.insert(header::ETAG, etag);
-    }
-
-    // Vary header for proper CDN behavior
-    headers.insert(header::VARY, HeaderValue::from_static("Accept-Encoding"));
-}
-
 /// Axum middleware layer for automatic cache headers.
 pub async fn cache_control_layer(request: Request<Body>, next: Next) -> Response<Body> {
     let path = request.uri().path().to_string();
@@ -157,52 +131,6 @@ fn determine_cache_control(path: &str) -> CacheControl {
     } else {
         // Default: short cache
         CacheControl::Public(Duration::from_secs(60))
-    }
-}
-
-/// Configuration for archive pre-generation.
-#[derive(Debug, Clone)]
-pub struct ArchiveConfig {
-    /// Directory for storing pre-generated archives.
-    pub cache_dir: std::path::PathBuf,
-    /// Maximum cache size in bytes.
-    pub max_size_bytes: u64,
-    /// Time-to-live for cached archives.
-    pub ttl: Duration,
-}
-
-impl Default for ArchiveConfig {
-    fn default() -> Self {
-        Self {
-            cache_dir: std::path::PathBuf::from("/tmp/guts-archives"),
-            max_size_bytes: 10 * 1024 * 1024 * 1024, // 10 GB
-            ttl: Duration::from_secs(3600),          // 1 hour
-        }
-    }
-}
-
-/// Archive format types.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ArchiveFormat {
-    TarGz,
-    Zip,
-}
-
-impl ArchiveFormat {
-    /// Returns the file extension.
-    pub fn extension(&self) -> &'static str {
-        match self {
-            ArchiveFormat::TarGz => "tar.gz",
-            ArchiveFormat::Zip => "zip",
-        }
-    }
-
-    /// Returns the MIME type.
-    pub fn mime_type(&self) -> &'static str {
-        match self {
-            ArchiveFormat::TarGz => "application/gzip",
-            ArchiveFormat::Zip => "application/zip",
-        }
     }
 }
 
@@ -256,12 +184,5 @@ mod tests {
     fn test_determine_cache_control_health() {
         let cc = determine_cache_control("/health");
         assert!(matches!(cc, CacheControl::NoCache));
-    }
-
-    #[test]
-    fn test_archive_format() {
-        assert_eq!(ArchiveFormat::TarGz.extension(), "tar.gz");
-        assert_eq!(ArchiveFormat::Zip.extension(), "zip");
-        assert_eq!(ArchiveFormat::TarGz.mime_type(), "application/gzip");
     }
 }
