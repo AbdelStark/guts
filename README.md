@@ -8,6 +8,18 @@
 
 Guts is a decentralized, censorship-resistant alternative to GitHub built on [commonware](https://github.com/commonwarexyz/monorepo) primitives. It provides Git-compatible repository hosting, pull request workflows, and issue tracking without centralized control.
 
+## Why "Guts"?
+
+The name carries dual meaning:
+
+**G.U.T.S.** - **G**ithub **U**ncaptured **T**rustless **S**overeign
+
+An acronym capturing the project's essence: a platform that cannot be captured, requires no trust in central authorities, and preserves developer sovereignty over their code.
+
+**Guts** - The protagonist of *Berserk*
+
+Like the legendary Black Swordsman who fights against impossible odds, refusing to submit to fate or authority, this project embodies the same defiant spirit. Guts wields the massive Dragon Slayer sword alone against overwhelming forces - just as this project stands against the centralization of code collaboration infrastructure. The character's themes of perseverance, independence, and fighting for freedom resonate with the decentralization movement.
+
 ## Features
 
 - **Decentralized**: No single point of failure or control

@@ -1,1164 +1,981 @@
 # Milestone 11: True Decentralization
 
-> **Status:** Planned
-> **Target:** Q2 2025
-> **Priority:** Critical
+> **Status:** 🚧 Next
+> **Priority:** CRITICAL - This is the essence of the project
 
-## Overview
+## Executive Summary
 
-Milestone 12 transforms Guts from a replicated system into a truly decentralized, permissionless network. Currently, Guts requires pre-configured bootstrap nodes and has no mechanism for independent operators to join the network. This milestone implements trustless peer discovery, validator governance, Sybil resistance, and launches a public testnet with independent operators.
+This milestone transforms Guts from a replicated multi-node system into a truly decentralized, Byzantine fault-tolerant network. The current implementation has P2P messaging but lacks proper consensus, node discovery, and the ability for independent operators to join the network.
 
-## Goals
+**This milestone is the most important in the entire project** - without true decentralization, Guts is just a replicated database. With it, Guts becomes unstoppable infrastructure for code collaboration.
 
-1. **Permissionless Node Discovery**: DHT-based peer discovery without centralized bootstrap
-2. **Validator Governance**: On-chain mechanisms for validator set management
-3. **Sybil Resistance**: Stake-based or proof-of-work based protection
-4. **Gossip Protocol**: Efficient message propagation at scale
-5. **Network Partitioning**: Graceful handling and recovery from network splits
-6. **Public Testnet**: Launch with 20+ independent operators
-7. **Multi-Region**: Demonstrate global network operation
-
-## Current Limitations
+## Current State vs Target State
 
 | Aspect | Current State | Target State |
 |--------|---------------|--------------|
-| Node Discovery | Static bootstrap list | DHT-based discovery |
-| Validator Set | Fixed configuration | Dynamic governance |
-| Sybil Protection | None | Stake or PoW |
-| Message Propagation | Direct broadcast | Gossip protocol |
-| Partition Handling | Untested | Automatic recovery |
-| Network Type | Private/permissioned | Public/permissionless |
+| **Consensus** | None (broadcast only) | Simplex BFT consensus |
+| **Node Discovery** | Hardcoded bootstrap | Dynamic peer discovery |
+| **Validator Set** | Fixed/configured | Permissionless joining |
+| **Message Ordering** | None (eventual) | Total ordering via consensus |
+| **Fault Tolerance** | None | Tolerates f < n/3 Byzantine nodes |
+| **State Agreement** | Optimistic | Cryptographic proof |
 
-## Architecture
+## Architecture: Commonware Integration
 
-### New Components
+Based on analysis of the [commonware monorepo](https://github.com/commonwarexyz/monorepo) and the [Alto reference implementation](https://github.com/commonwarexyz/alto), we will integrate the following primitives:
 
-```
-crates/guts-p2p/
-├── src/
-│   ├── discovery/
-│   │   ├── mod.rs           # Discovery module
-│   │   ├── dht.rs           # Kademlia DHT implementation
-│   │   ├── bootstrap.rs     # Bootstrap node handling
-│   │   └── mdns.rs          # Local network discovery
-│   ├── gossip/
-│   │   ├── mod.rs           # Gossip module
-│   │   ├── epidemic.rs      # Epidemic broadcast
-│   │   ├── plumtree.rs      # Plumtree hybrid gossip
-│   │   └── mesh.rs          # Mesh-based gossip
-│   ├── governance/
-│   │   ├── mod.rs           # Governance module
-│   │   ├── validator_set.rs # Validator set management
-│   │   ├── staking.rs       # Stake management
-│   │   └── voting.rs        # On-chain voting
-│   └── sybil/
-│       ├── mod.rs           # Sybil resistance
-│       ├── stake.rs         # Proof of stake
-│       └── pow.rs           # Proof of work (optional)
-```
+### Core Commonware Crates
 
-### Network Architecture
+| Crate | Purpose | Usage in Guts |
+|-------|---------|---------------|
+| `commonware-consensus` | BFT message ordering | Order all state-changing operations |
+| `commonware-p2p` | Authenticated encrypted networking | Node-to-node communication |
+| `commonware-broadcast` | Message dissemination | Gossip for pending transactions |
+| `commonware-cryptography` | Ed25519/BLS signatures | Validator identity and signing |
+| `commonware-runtime` | Async task execution | Deterministic scheduling |
+| `commonware-storage` | Persistent storage | WAL and state persistence |
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Guts Decentralized Network                   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│   ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐  │
-│   │ Region 1│     │ Region 2│     │ Region 3│     │ Region 4│  │
-│   │ (US-E)  │     │ (EU-W)  │     │ (APAC)  │     │ (SA)    │  │
-│   └────┬────┘     └────┬────┘     └────┬────┘     └────┬────┘  │
-│        │               │               │               │        │
-│        └───────────────┼───────────────┼───────────────┘        │
-│                        │               │                         │
-│              ┌─────────┴───────────────┴─────────┐              │
-│              │       Kademlia DHT Network         │              │
-│              │   (Peer Discovery & Routing)       │              │
-│              └─────────────────────────────────────┘              │
-│                                                                  │
-│   ┌─────────────────────────────────────────────────────────┐   │
-│   │                   Gossip Layer                           │   │
-│   │   Plumtree for consensus messages, epidemic for data    │   │
-│   └─────────────────────────────────────────────────────────┘   │
-│                                                                  │
-│   ┌─────────────────────────────────────────────────────────┐   │
-│   │              BFT Consensus (Validators Only)            │   │
-│   │        Stake-weighted voting, dynamic validator set     │   │
-│   └─────────────────────────────────────────────────────────┘   │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
+### Simplex Consensus
 
-## Detailed Implementation
+The `commonware-consensus::simplex` module implements a BFT consensus algorithm with:
 
-### Phase 1: DHT-Based Peer Discovery
+- **2 network hops** for block proposal
+- **3 network hops** for finalization
+- **f < n/3** Byzantine fault tolerance (3f+1 quorum)
+- Partial synchrony model
 
-#### 1.1 Kademlia Implementation
+**Protocol Messages:**
+1. `Notarize(c, v)` - Proposals for containers in view v
+2. `Nullify(v)` - Votes when leaders are unresponsive
+3. `Finalize(c, v)` - Final commitment votes
 
+**Key Traits to Implement:**
 ```rust
-// crates/guts-p2p/src/discovery/dht.rs
-
-use libp2p::kad::{Kademlia, KademliaConfig, QueryResult};
-
-pub struct DhtDiscovery {
-    /// Kademlia DHT instance
-    kademlia: Kademlia<MemoryStore>,
-
-    /// Our peer ID
-    local_peer_id: PeerId,
-
-    /// Bootstrap nodes (used only on first start)
-    bootstrap_nodes: Vec<Multiaddr>,
-
-    /// Discovery configuration
-    config: DhtConfig,
+/// Application interface for consensus
+trait Application {
+    /// Called when a block is finalized
+    fn finalized(&mut self, block: Block);
 }
 
-pub struct DhtConfig {
-    /// Bucket size (k parameter)
-    pub k: usize,
+/// Automaton drives consensus forward
+trait Automaton {
+    /// Propose a new payload
+    fn propose(&mut self, context: Context) -> Option<Payload>;
 
-    /// Parallelism factor (alpha parameter)
-    pub alpha: usize,
-
-    /// Record TTL
-    pub record_ttl: Duration,
-
-    /// Provider record TTL
-    pub provider_ttl: Duration,
-
-    /// Replication interval
-    pub replication_interval: Duration,
+    /// Verify a proposed payload
+    fn verify(&self, payload: &Payload) -> bool;
 }
 
-impl Default for DhtConfig {
-    fn default() -> Self {
-        Self {
-            k: 20,
-            alpha: 3,
-            record_ttl: Duration::from_secs(36 * 3600),  // 36 hours
-            provider_ttl: Duration::from_secs(24 * 3600), // 24 hours
-            replication_interval: Duration::from_secs(3600), // 1 hour
-        }
-    }
-}
-
-impl DhtDiscovery {
-    pub async fn new(
-        local_key: identity::Keypair,
-        bootstrap_nodes: Vec<Multiaddr>,
-        config: DhtConfig,
-    ) -> Result<Self> {
-        let local_peer_id = PeerId::from(local_key.public());
-
-        let mut kad_config = KademliaConfig::default();
-        kad_config.set_kbucket_inserts(KademliaBucketInserts::OnConnected);
-        kad_config.set_record_ttl(Some(config.record_ttl));
-        kad_config.set_provider_record_ttl(Some(config.provider_ttl));
-        kad_config.set_replication_interval(Some(config.replication_interval));
-
-        let store = MemoryStore::new(local_peer_id);
-        let kademlia = Kademlia::with_config(local_peer_id, store, kad_config);
-
-        Ok(Self {
-            kademlia,
-            local_peer_id,
-            bootstrap_nodes,
-            config,
-        })
-    }
-
-    /// Bootstrap the DHT by connecting to known nodes
-    pub async fn bootstrap(&mut self) -> Result<()> {
-        // Add bootstrap nodes to routing table
-        for addr in &self.bootstrap_nodes {
-            if let Some(peer_id) = extract_peer_id(addr) {
-                self.kademlia.add_address(&peer_id, addr.clone());
-            }
-        }
-
-        // Perform bootstrap query
-        self.kademlia.bootstrap()?;
-
-        Ok(())
-    }
-
-    /// Announce ourselves as a Guts node
-    pub async fn announce(&mut self) -> Result<()> {
-        // Announce as provider for "guts-network" key
-        let key = Key::new(&b"guts-network");
-        self.kademlia.start_providing(key)?;
-
-        // Announce our services
-        self.announce_services().await?;
-
-        Ok(())
-    }
-
-    /// Find other Guts nodes
-    pub async fn find_peers(&mut self) -> Result<Vec<PeerInfo>> {
-        let key = Key::new(&b"guts-network");
-        self.kademlia.get_providers(key);
-
-        // Wait for providers
-        let providers = self.collect_providers().await?;
-
-        Ok(providers)
-    }
-
-    /// Find nodes providing a specific repository
-    pub async fn find_repo_providers(&mut self, repo_key: &RepoKey) -> Result<Vec<PeerInfo>> {
-        let key = Key::new(repo_key.as_bytes());
-        self.kademlia.get_providers(key);
-
-        self.collect_providers().await
-    }
-
-    /// Announce that we have a repository
-    pub async fn announce_repo(&mut self, repo_key: &RepoKey) -> Result<()> {
-        let key = Key::new(repo_key.as_bytes());
-        self.kademlia.start_providing(key)?;
-        Ok(())
-    }
-}
-```
-
-#### 1.2 Multi-Address Support
-
-```rust
-/// Support multiple network transports
-pub struct MultiTransport {
-    /// TCP transport
-    tcp: TcpTransport,
-
-    /// QUIC transport (preferred)
-    quic: QuicTransport,
-
-    /// WebSocket transport (for browser nodes)
-    websocket: WebSocketTransport,
-}
-
-impl MultiTransport {
-    pub fn listen_addresses(&self) -> Vec<Multiaddr> {
-        vec![
-            // TCP
-            format!("/ip4/0.0.0.0/tcp/{}", self.tcp_port).parse().unwrap(),
-            // QUIC
-            format!("/ip4/0.0.0.0/udp/{}/quic-v1", self.quic_port).parse().unwrap(),
-            // WebSocket
-            format!("/ip4/0.0.0.0/tcp/{}/ws", self.ws_port).parse().unwrap(),
-        ]
-    }
-}
-```
-
-#### 1.3 Local Network Discovery
-
-```rust
-/// mDNS for local network discovery
-pub struct MdnsDiscovery {
-    mdns: Mdns,
-    service_name: String,
-}
-
-impl MdnsDiscovery {
-    pub async fn new() -> Result<Self> {
-        let mdns = Mdns::new(MdnsConfig::default())?;
-
-        Ok(Self {
-            mdns,
-            service_name: "_guts._tcp.local".to_string(),
-        })
-    }
-
-    /// Discover peers on local network
-    pub fn discovered_peers(&self) -> impl Stream<Item = PeerInfo> {
-        self.mdns.discovered()
-    }
-}
-```
-
-### Phase 2: Gossip Protocol
-
-#### 2.1 Plumtree Implementation
-
-```rust
-// crates/guts-p2p/src/gossip/plumtree.rs
-
-/// Plumtree: Epidemic Broadcast Trees
-/// Combines eager push (tree) with lazy push (gossip)
-pub struct Plumtree {
-    /// Eager peers (tree edges)
-    eager_peers: HashSet<PeerId>,
-
-    /// Lazy peers (non-tree edges)
-    lazy_peers: HashSet<PeerId>,
-
-    /// Missing messages (for pull requests)
-    missing: HashMap<MessageId, HashSet<PeerId>>,
-
-    /// Received messages (dedup)
-    received: LruCache<MessageId, ()>,
-
-    /// Configuration
-    config: PlumtreeConfig,
-}
-
-pub struct PlumtreeConfig {
-    /// Threshold for moving peer to lazy
-    pub graft_threshold: Duration,
-
-    /// Missing message timeout
-    pub ihave_timeout: Duration,
-
-    /// Optimization interval
-    pub optimization_interval: Duration,
-}
-
-impl Plumtree {
-    /// Broadcast a message
-    pub async fn broadcast(&mut self, msg: GossipMessage) -> Result<()> {
-        let msg_id = msg.id();
-
-        // Already seen?
-        if self.received.contains(&msg_id) {
-            return Ok(());
-        }
-        self.received.put(msg_id.clone(), ());
-
-        // Eager push to tree neighbors
-        for peer in &self.eager_peers {
-            self.send_eager(peer, &msg).await?;
-        }
-
-        // Lazy push (IHAVE) to others
-        for peer in &self.lazy_peers {
-            self.send_ihave(peer, &msg_id).await?;
-        }
-
-        Ok(())
-    }
-
-    /// Handle received message
-    pub async fn on_message(&mut self, from: PeerId, msg: GossipMessage) -> Result<()> {
-        let msg_id = msg.id();
-
-        // Already seen?
-        if self.received.contains(&msg_id) {
-            // Prune: demote sender to lazy
-            self.eager_peers.remove(&from);
-            self.lazy_peers.insert(from);
-            self.send_prune(&from, &msg_id).await?;
-            return Ok(());
-        }
-
-        // New message: sender becomes eager
-        self.received.put(msg_id.clone(), ());
-        self.lazy_peers.remove(&from);
-        self.eager_peers.insert(from);
-
-        // Cancel any pending requests
-        self.missing.remove(&msg_id);
-
-        // Forward to other eager peers
-        for peer in &self.eager_peers {
-            if *peer != from {
-                self.send_eager(peer, &msg).await?;
-            }
-        }
-
-        // Lazy announce to lazy peers
-        for peer in &self.lazy_peers {
-            self.send_ihave(peer, &msg_id).await?;
-        }
-
-        Ok(())
-    }
-
-    /// Handle IHAVE announcement
-    pub async fn on_ihave(&mut self, from: PeerId, msg_id: MessageId) -> Result<()> {
-        // Already have it?
-        if self.received.contains(&msg_id) {
-            return Ok(());
-        }
-
-        // Track who has this message
-        self.missing
-            .entry(msg_id.clone())
-            .or_default()
-            .insert(from);
-
-        // Start timer for pull request
-        self.schedule_graft(msg_id).await;
-
-        Ok(())
-    }
-
-    /// Handle GRAFT request
-    pub async fn on_graft(&mut self, from: PeerId, msg_id: MessageId) -> Result<()> {
-        // Promote peer to eager
-        self.lazy_peers.remove(&from);
-        self.eager_peers.insert(from);
-
-        // Send the message if we have it
-        if let Some(msg) = self.get_message(&msg_id) {
-            self.send_eager(&from, &msg).await?;
-        }
-
-        Ok(())
-    }
-}
-```
-
-#### 2.2 Message Types
-
-```rust
-#[derive(Clone, Serialize, Deserialize)]
-pub enum GossipMessage {
-    /// New commit/ref update
-    RefUpdate {
-        repo_key: RepoKey,
-        ref_name: String,
-        old_oid: Option<ObjectId>,
-        new_oid: ObjectId,
-        commit_chain: Vec<ObjectId>,
-    },
-
-    /// New collaboration item
-    CollaborationEvent {
-        repo_key: RepoKey,
-        event_type: CollabEventType,
-        item_id: Uuid,
-        content_hash: [u8; 32],
-    },
-
-    /// Consensus proposal
-    ConsensusMessage {
-        epoch: u64,
-        slot: u64,
-        message_type: ConsensusMessageType,
-        payload: Vec<u8>,
-        signature: Signature,
-    },
-
-    /// Validator set change
-    ValidatorChange {
-        epoch: u64,
-        change: ValidatorSetChange,
-        proofs: Vec<ValidatorProof>,
-    },
-}
-```
-
-### Phase 3: Validator Governance
-
-#### 3.1 Stake-Based Validator Set
-
-```rust
-// crates/guts-p2p/src/governance/staking.rs
-
-pub struct StakingModule {
-    /// Current validator set
-    validators: ValidatorSet,
-
-    /// Pending stake changes
-    pending_changes: Vec<StakeChange>,
-
-    /// Stake lock period
-    lock_period: Duration,
-
-    /// Minimum stake to become validator
-    min_stake: u64,
-
-    /// Maximum validators
-    max_validators: usize,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Validator {
-    /// Validator public key
-    pub pubkey: PublicKey,
-
-    /// Staked amount
-    pub stake: u64,
-
-    /// Commission rate (basis points)
-    pub commission: u16,
-
-    /// Joined at epoch
-    pub joined_epoch: u64,
-
-    /// Performance metrics
-    pub uptime: f64,
-    pub blocks_proposed: u64,
-    pub blocks_missed: u64,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum StakeChange {
-    /// Add stake (becomes validator if above minimum)
-    Stake {
-        validator: PublicKey,
-        amount: u64,
-        proof: StakeProof,
-    },
-
-    /// Remove stake (exits validator set if below minimum)
-    Unstake {
-        validator: PublicKey,
-        amount: u64,
-    },
-
-    /// Slash validator for misbehavior
-    Slash {
-        validator: PublicKey,
-        reason: SlashReason,
-        amount: u64,
-        evidence: SlashEvidence,
-    },
-}
-
-impl StakingModule {
-    /// Process stake deposit
-    pub async fn stake(
-        &mut self,
-        validator: PublicKey,
-        amount: u64,
-        proof: StakeProof,
-    ) -> Result<()> {
-        // Verify stake proof
-        self.verify_stake_proof(&proof)?;
-
-        // Add to pending changes
-        self.pending_changes.push(StakeChange::Stake {
-            validator,
-            amount,
-            proof,
-        });
-
-        Ok(())
-    }
-
-    /// Process stake withdrawal
-    pub async fn unstake(&mut self, validator: PublicKey, amount: u64) -> Result<()> {
-        // Check if validator has enough stake
-        let current_stake = self.validators.get_stake(&validator)?;
-        if current_stake < amount {
-            return Err(Error::InsufficientStake);
-        }
-
-        // Check lock period
-        if !self.can_unstake(&validator)? {
-            return Err(Error::StakeLocked);
-        }
-
-        self.pending_changes.push(StakeChange::Unstake { validator, amount });
-
-        Ok(())
-    }
-
-    /// Apply pending changes at epoch boundary
-    pub async fn end_epoch(&mut self, epoch: u64) -> Result<ValidatorSetChange> {
-        let mut changes = ValidatorSetChange::default();
-
-        for change in std::mem::take(&mut self.pending_changes) {
-            match change {
-                StakeChange::Stake { validator, amount, .. } => {
-                    let new_stake = self.validators.add_stake(&validator, amount);
-
-                    if new_stake >= self.min_stake {
-                        if !self.validators.is_validator(&validator) {
-                            changes.added.push(validator);
-                        }
-                    }
-                }
-                StakeChange::Unstake { validator, amount } => {
-                    let new_stake = self.validators.remove_stake(&validator, amount);
-
-                    if new_stake < self.min_stake {
-                        if self.validators.is_validator(&validator) {
-                            changes.removed.push(validator);
-                        }
-                    }
-                }
-                StakeChange::Slash { validator, amount, .. } => {
-                    self.validators.slash(&validator, amount);
-                    changes.slashed.push(validator);
-                }
-            }
-        }
-
-        // Update validator set
-        self.validators.apply_changes(&changes);
-
-        Ok(changes)
-    }
-}
-```
-
-#### 3.2 Validator Voting
-
-```rust
-// crates/guts-p2p/src/governance/voting.rs
-
-pub struct GovernanceVoting {
-    /// Active proposals
-    proposals: HashMap<ProposalId, Proposal>,
-
-    /// Votes by proposal
-    votes: HashMap<ProposalId, HashMap<PublicKey, Vote>>,
-
-    /// Voting parameters
-    params: VotingParams,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Proposal {
-    pub id: ProposalId,
-    pub proposer: PublicKey,
-    pub proposal_type: ProposalType,
-    pub description: String,
-    pub created_at: u64,
-    pub voting_ends: u64,
-    pub execution_delay: u64,
-    pub status: ProposalStatus,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum ProposalType {
-    /// Change protocol parameters
-    ParameterChange {
-        parameter: String,
-        old_value: Value,
-        new_value: Value,
-    },
-
-    /// Upgrade protocol version
-    ProtocolUpgrade {
-        version: String,
-        activation_epoch: u64,
-    },
-
-    /// Emergency action
-    Emergency {
-        action: EmergencyAction,
-        justification: String,
-    },
-
-    /// Spend from treasury
-    TreasurySpend {
-        recipient: String,
-        amount: u64,
-        purpose: String,
-    },
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum Vote {
-    Yes,
-    No,
-    Abstain,
-}
-
-impl GovernanceVoting {
-    /// Submit a new proposal
-    pub async fn submit_proposal(
-        &mut self,
-        proposer: PublicKey,
-        proposal_type: ProposalType,
-        description: String,
-    ) -> Result<ProposalId> {
-        // Check proposer is a validator
-        if !self.is_validator(&proposer) {
-            return Err(Error::NotValidator);
-        }
-
-        // Check proposer has enough stake for proposal
-        if self.get_stake(&proposer) < self.params.proposal_threshold {
-            return Err(Error::InsufficientStakeForProposal);
-        }
-
-        let proposal = Proposal {
-            id: ProposalId::new(),
-            proposer,
-            proposal_type,
-            description,
-            created_at: current_epoch(),
-            voting_ends: current_epoch() + self.params.voting_period,
-            execution_delay: self.params.execution_delay,
-            status: ProposalStatus::Active,
-        };
-
-        let id = proposal.id.clone();
-        self.proposals.insert(id.clone(), proposal);
-
-        Ok(id)
-    }
-
-    /// Cast a vote
-    pub async fn vote(
-        &mut self,
-        proposal_id: &ProposalId,
-        voter: PublicKey,
-        vote: Vote,
-    ) -> Result<()> {
-        // Check proposal exists and is active
-        let proposal = self.proposals.get(proposal_id)
-            .ok_or(Error::ProposalNotFound)?;
-
-        if proposal.status != ProposalStatus::Active {
-            return Err(Error::ProposalNotActive);
-        }
-
-        if current_epoch() > proposal.voting_ends {
-            return Err(Error::VotingEnded);
-        }
-
-        // Check voter is a validator
-        if !self.is_validator(&voter) {
-            return Err(Error::NotValidator);
-        }
-
-        // Record vote
-        self.votes
-            .entry(proposal_id.clone())
-            .or_default()
-            .insert(voter, vote);
-
-        Ok(())
-    }
-
-    /// Tally votes and update proposal status
-    pub async fn tally(&mut self, proposal_id: &ProposalId) -> Result<ProposalStatus> {
-        let proposal = self.proposals.get(proposal_id)
-            .ok_or(Error::ProposalNotFound)?;
-
-        let votes = self.votes.get(proposal_id)
-            .map(|v| v.clone())
-            .unwrap_or_default();
-
-        // Calculate stake-weighted votes
-        let mut yes_stake = 0u64;
-        let mut no_stake = 0u64;
-        let mut abstain_stake = 0u64;
-
-        for (voter, vote) in votes {
-            let stake = self.get_stake(&voter);
-            match vote {
-                Vote::Yes => yes_stake += stake,
-                Vote::No => no_stake += stake,
-                Vote::Abstain => abstain_stake += stake,
-            }
-        }
-
-        let total_stake = self.total_stake();
-        let participation = (yes_stake + no_stake + abstain_stake) as f64 / total_stake as f64;
-
-        // Check quorum
-        if participation < self.params.quorum_threshold {
-            return Ok(ProposalStatus::Rejected { reason: "Quorum not reached".to_string() });
-        }
-
-        // Check approval
-        let approval = yes_stake as f64 / (yes_stake + no_stake) as f64;
-        if approval >= self.params.approval_threshold {
-            Ok(ProposalStatus::Passed {
-                execution_epoch: current_epoch() + proposal.execution_delay,
-            })
-        } else {
-            Ok(ProposalStatus::Rejected { reason: "Not enough support".to_string() })
-        }
-    }
-}
-```
-
-### Phase 4: Sybil Resistance
-
-#### 4.1 Stake-Based Protection
-
-```rust
-// crates/guts-p2p/src/sybil/stake.rs
-
-pub struct StakeBasedSybilResistance {
-    /// Minimum stake for various actions
-    min_stake: StakeRequirements,
-
-    /// Reputation scores
-    reputation: HashMap<PublicKey, ReputationScore>,
-}
-
-#[derive(Clone)]
-pub struct StakeRequirements {
-    /// Minimum to join as validator
-    pub validator: u64,
-
-    /// Minimum to create repository
-    pub create_repo: u64,
-
-    /// Minimum to push to any repo
-    pub push: u64,
-
-    /// Minimum for governance participation
-    pub governance: u64,
-}
-
-impl StakeBasedSybilResistance {
-    /// Check if identity can perform action
-    pub fn can_perform(&self, identity: &PublicKey, action: Action) -> Result<()> {
-        let stake = self.get_stake(identity);
-        let reputation = self.get_reputation(identity);
-
-        let required = match action {
-            Action::CreateRepository => self.min_stake.create_repo,
-            Action::Push { repo, .. } => {
-                if self.is_repo_owner(repo, identity) {
-                    0  // Owners can always push
-                } else {
-                    self.min_stake.push
-                }
-            }
-            Action::BecomeValidator => self.min_stake.validator,
-            Action::Vote => self.min_stake.governance,
-        };
-
-        // Apply reputation discount
-        let effective_required = (required as f64 * (1.0 - reputation.discount())) as u64;
-
-        if stake >= effective_required {
-            Ok(())
-        } else {
-            Err(Error::InsufficientStake {
-                required: effective_required,
-                have: stake,
-            })
-        }
-    }
-}
-```
-
-#### 4.2 Proof of Work (Optional Alternative)
-
-```rust
-// crates/guts-p2p/src/sybil/pow.rs
-
-pub struct PowSybilResistance {
-    /// Difficulty for various actions
-    difficulty: PowDifficulty,
-
-    /// Recent PoW cache
-    recent_pow: LruCache<[u8; 32], ()>,
-}
-
-#[derive(Clone)]
-pub struct PowDifficulty {
-    /// Bits of work for repository creation
-    pub create_repo: u8,
-
-    /// Bits of work per push
-    pub push: u8,
-
-    /// Bits of work for issue/PR creation
-    pub collaboration: u8,
-}
-
-impl PowSybilResistance {
-    /// Verify proof of work
-    pub fn verify_pow(&self, challenge: &[u8], nonce: u64, difficulty: u8) -> bool {
-        let mut hasher = Sha256::new();
-        hasher.update(challenge);
-        hasher.update(&nonce.to_le_bytes());
-        let hash = hasher.finalize();
-
-        // Check leading zero bits
-        leading_zeros(&hash) >= difficulty
-    }
-
-    /// Generate challenge for action
-    pub fn generate_challenge(&self, action: &Action) -> ([u8; 32], u8) {
-        let challenge = rand::random();
-        let difficulty = self.difficulty_for(action);
-        (challenge, difficulty)
-    }
-}
-```
-
-### Phase 5: Network Partition Handling
-
-#### 5.1 Partition Detection
-
-```rust
-pub struct PartitionDetector {
-    /// Known peer connectivity
-    peer_connectivity: HashMap<PeerId, PeerStatus>,
-
-    /// Partition detection threshold
-    threshold: f64,
-
-    /// Check interval
-    check_interval: Duration,
-}
-
-impl PartitionDetector {
-    /// Check for network partition
-    pub async fn check_partition(&self) -> PartitionStatus {
-        let total_peers = self.peer_connectivity.len();
-        let connected_peers = self.peer_connectivity.values()
-            .filter(|s| s.is_connected())
-            .count();
-
-        let connectivity = connected_peers as f64 / total_peers as f64;
-
-        if connectivity < self.threshold {
-            PartitionStatus::Partitioned {
-                connected: connected_peers,
-                total: total_peers,
-            }
-        } else {
-            PartitionStatus::Connected
-        }
-    }
-
-    /// Handle detected partition
-    pub async fn on_partition(&mut self) -> Result<()> {
-        // Pause consensus participation
-        self.pause_consensus().await?;
-
-        // Continue serving read-only requests
-        self.enable_read_only_mode().await?;
-
-        // Start partition healing
-        self.start_healing().await?;
-
-        Ok(())
-    }
-}
-```
-
-#### 5.2 Partition Recovery
-
-```rust
-pub struct PartitionRecovery {
-    /// State snapshot before partition
-    pre_partition_state: Option<StateSnapshot>,
-
-    /// Operations during partition
-    partition_operations: Vec<Operation>,
-
-    /// Recovery strategy
-    strategy: RecoveryStrategy,
-}
-
-#[derive(Clone)]
-pub enum RecoveryStrategy {
-    /// Longest chain wins
-    LongestChain,
-
-    /// Most stake-weighted support wins
-    MostStake,
-
-    /// Manual resolution required
-    Manual,
-}
-
-impl PartitionRecovery {
-    /// Recover from partition
-    pub async fn recover(&mut self, other_partition: &PartitionState) -> Result<()> {
-        match self.strategy {
-            RecoveryStrategy::LongestChain => {
-                self.recover_longest_chain(other_partition).await
-            }
-            RecoveryStrategy::MostStake => {
-                self.recover_most_stake(other_partition).await
-            }
-            RecoveryStrategy::Manual => {
-                self.require_manual_resolution(other_partition).await
-            }
-        }
-    }
-
-    async fn recover_longest_chain(&mut self, other: &PartitionState) -> Result<()> {
-        // Compare chain lengths
-        let our_height = self.partition_operations.len();
-        let their_height = other.operations.len();
-
-        if their_height > our_height {
-            // Rollback and apply their state
-            self.rollback_to(self.pre_partition_state.clone().unwrap()).await?;
-            self.apply_operations(&other.operations).await?;
-        }
-
-        // Resume normal operation
-        self.resume_consensus().await?;
-
-        Ok(())
-    }
-}
-```
-
-### Phase 6: Public Testnet
-
-#### 6.1 Testnet Configuration
-
-```yaml
-# infra/testnet/config.yml
-network:
-  name: "guts-testnet-1"
-  chain_id: "guts-testnet-1"
-
-genesis:
-  validators:
-    - pubkey: "ed25519:..."
-      stake: 1000000
-      name: "validator-1"
-    - pubkey: "ed25519:..."
-      stake: 1000000
-      name: "validator-2"
-    # ... 20+ validators
-
-  parameters:
-    min_stake: 100000
-    max_validators: 100
-    epoch_duration: 3600  # 1 hour
-    voting_period: 86400  # 24 hours
-
-bootstrap_nodes:
-  - "/dns4/bootstrap1.testnet.guts.network/tcp/9000/p2p/..."
-  - "/dns4/bootstrap2.testnet.guts.network/tcp/9000/p2p/..."
-  - "/dns4/bootstrap3.testnet.guts.network/tcp/9000/p2p/..."
-
-regions:
-  - name: "us-east"
-    nodes: 5
-  - name: "eu-west"
-    nodes: 5
-  - name: "ap-southeast"
-    nodes: 5
-  - name: "sa-east"
-    nodes: 5
-```
-
-#### 6.2 Testnet Faucet
-
-```rust
-pub struct TestnetFaucet {
-    /// Available balance
-    balance: AtomicU64,
-
-    /// Per-identity limit
-    limit_per_identity: u64,
-
-    /// Cooldown period
-    cooldown: Duration,
-
-    /// Recent requests
-    recent_requests: Mutex<HashMap<PublicKey, Instant>>,
-}
-
-impl TestnetFaucet {
-    /// Request testnet tokens
-    pub async fn request(&self, identity: PublicKey, amount: u64) -> Result<()> {
-        // Check cooldown
-        if let Some(last) = self.recent_requests.lock().await.get(&identity) {
-            if last.elapsed() < self.cooldown {
-                return Err(Error::CooldownActive);
-            }
-        }
-
-        // Check limit
-        if amount > self.limit_per_identity {
-            return Err(Error::ExceedsLimit);
-        }
-
-        // Check balance
-        let current = self.balance.load(Ordering::Relaxed);
-        if current < amount {
-            return Err(Error::FaucetEmpty);
-        }
-
-        // Dispense tokens
-        self.balance.fetch_sub(amount, Ordering::Relaxed);
-        self.recent_requests.lock().await.insert(identity, Instant::now());
-
-        // Transfer tokens
-        self.transfer_tokens(identity, amount).await?;
-
-        Ok(())
-    }
+/// Relay broadcasts payloads to the network
+trait Relay {
+    /// Broadcast a message to all peers
+    fn broadcast(&self, message: Vec<u8>);
 }
 ```
 
 ## Implementation Plan
 
-### Phase 1: DHT Discovery (Week 1-3)
-- [ ] Integrate libp2p Kademlia
-- [ ] Implement multi-address support
-- [ ] Add mDNS for local discovery
-- [ ] Create bootstrap node infrastructure
-- [ ] Test peer discovery in isolation
+### Phase 1: Consensus Engine Foundation (Week 1-2)
 
-### Phase 2: Gossip Protocol (Week 3-5)
-- [ ] Implement Plumtree gossip
-- [ ] Define gossip message types
-- [ ] Integrate with consensus layer
-- [ ] Benchmark message propagation
-- [ ] Tune gossip parameters
+#### 1.1 Create `guts-consensus` Crate
 
-### Phase 3: Validator Governance (Week 5-7)
-- [ ] Implement staking module
-- [ ] Add validator set management
-- [ ] Implement governance voting
-- [ ] Add proposal types
-- [ ] Test epoch transitions
+```
+crates/guts-consensus/
+├── Cargo.toml
+└── src/
+    ├── lib.rs              # Public API
+    ├── engine.rs           # Main consensus engine
+    ├── application.rs      # Application trait implementation
+    ├── automaton.rs        # Block proposal/verification
+    ├── block.rs            # Block structure
+    ├── transaction.rs      # Transaction types
+    ├── validator.rs        # Validator set management
+    └── config.rs           # Configuration
+```
 
-### Phase 4: Sybil Resistance (Week 7-8)
-- [ ] Implement stake-based protection
-- [ ] Add optional PoW fallback
-- [ ] Integrate with action authorization
-- [ ] Test attack scenarios
+#### 1.2 Define Transaction Types
 
-### Phase 5: Partition Handling (Week 8-9)
-- [ ] Implement partition detection
-- [ ] Add recovery strategies
-- [ ] Test partition scenarios
-- [ ] Document recovery procedures
+All state-changing operations become consensus transactions:
 
-### Phase 6: Testnet Launch (Week 9-12)
-- [ ] Set up testnet infrastructure
-- [ ] Deploy 20+ validator nodes
-- [ ] Launch testnet faucet
-- [ ] Create onboarding documentation
-- [ ] Monitor and iterate
+```rust
+/// Transactions that require consensus ordering
+#[derive(Clone, Serialize, Deserialize)]
+pub enum Transaction {
+    // Git operations
+    GitPush {
+        repo_key: String,
+        ref_name: String,
+        old_oid: ObjectId,
+        new_oid: ObjectId,
+        objects: Vec<ObjectId>,
+        signature: Signature,
+    },
+
+    // Repository management
+    CreateRepository {
+        owner: String,
+        name: String,
+        creator: PublicKey,
+        signature: Signature,
+    },
+
+    // Collaboration
+    CreatePullRequest {
+        repo_key: String,
+        pr: SerializablePullRequest,
+        signature: Signature,
+    },
+    UpdatePullRequest {
+        repo_key: String,
+        pr_number: u64,
+        update: PullRequestUpdate,
+        signature: Signature,
+    },
+    MergePullRequest {
+        repo_key: String,
+        pr_number: u64,
+        merge_commit: ObjectId,
+        signature: Signature,
+    },
+
+    CreateIssue {
+        repo_key: String,
+        issue: SerializableIssue,
+        signature: Signature,
+    },
+    UpdateIssue {
+        repo_key: String,
+        issue_number: u64,
+        update: IssueUpdate,
+        signature: Signature,
+    },
+
+    CreateComment {
+        repo_key: String,
+        target: CommentTarget,
+        comment: SerializableComment,
+        signature: Signature,
+    },
+
+    CreateReview {
+        repo_key: String,
+        pr_number: u64,
+        review: SerializableReview,
+        signature: Signature,
+    },
+
+    // Governance
+    CreateOrganization {
+        org: SerializableOrg,
+        signature: Signature,
+    },
+    UpdateOrganization {
+        org_id: String,
+        update: OrgUpdate,
+        signature: Signature,
+    },
+
+    CreateTeam {
+        org_id: String,
+        team: SerializableTeam,
+        signature: Signature,
+    },
+
+    UpdatePermissions {
+        repo_key: String,
+        user: String,
+        permission: Permission,
+        signature: Signature,
+    },
+
+    // Branch protection
+    SetBranchProtection {
+        repo_key: String,
+        branch: String,
+        protection: BranchProtection,
+        signature: Signature,
+    },
+}
+```
+
+#### 1.3 Block Structure
+
+```rust
+/// A block in the Guts consensus chain
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GutsBlock {
+    /// Block height
+    pub height: u64,
+
+    /// Previous block hash
+    pub parent: [u8; 32],
+
+    /// Block producer (validator public key)
+    pub producer: PublicKey,
+
+    /// Timestamp (unix millis)
+    pub timestamp: u64,
+
+    /// Ordered transactions
+    pub transactions: Vec<Transaction>,
+
+    /// Merkle root of transactions
+    pub tx_root: [u8; 32],
+
+    /// State root after applying transactions
+    pub state_root: [u8; 32],
+}
+```
+
+#### 1.4 Implement Application Trait
+
+```rust
+/// Guts application implementing consensus interface
+pub struct GutsApplication {
+    /// Current state (repositories, collaboration, auth)
+    state: Arc<RwLock<AppState>>,
+
+    /// Pending transaction pool
+    mempool: Arc<RwLock<Mempool>>,
+
+    /// Block storage
+    blocks: Arc<dyn BlockStore>,
+
+    /// Event broadcaster for real-time updates
+    events: broadcast::Sender<Event>,
+}
+
+impl Application for GutsApplication {
+    fn finalized(&mut self, block: Block) {
+        // Apply each transaction in order
+        let mut state = self.state.write();
+
+        for tx in block.transactions() {
+            match self.apply_transaction(&mut state, tx) {
+                Ok(events) => {
+                    // Broadcast events for real-time updates
+                    for event in events {
+                        let _ = self.events.send(event);
+                    }
+                }
+                Err(e) => {
+                    // Transaction failed - this shouldn't happen
+                    // if verification was correct
+                    tracing::error!(?tx, ?e, "Transaction failed");
+                }
+            }
+        }
+
+        // Persist block
+        self.blocks.put(block);
+    }
+}
+```
+
+### Phase 2: P2P Network Layer (Week 2-3)
+
+#### 2.1 Enhance `guts-p2p` with Commonware Authenticated Networking
+
+```rust
+use commonware_p2p::authenticated::{Config, Network};
+use commonware_cryptography::ed25519::Keypair;
+
+/// P2P network manager
+pub struct P2PNetwork {
+    /// Network instance
+    network: Network,
+
+    /// Our validator keypair
+    keypair: Keypair,
+
+    /// Connected peers
+    peers: Arc<RwLock<HashMap<PublicKey, PeerInfo>>>,
+
+    /// Channel senders for different message types
+    channels: Channels,
+}
+
+/// Communication channels
+pub struct Channels {
+    /// Consensus messages (highest priority)
+    pub consensus: Channel,
+
+    /// Block/transaction broadcasts
+    pub broadcast: Channel,
+
+    /// Object sync requests/responses
+    pub sync: Channel,
+
+    /// Peer discovery
+    pub discovery: Channel,
+}
+
+impl P2PNetwork {
+    pub async fn new(config: NetworkConfig) -> Result<Self> {
+        let keypair = Keypair::from_seed(&config.seed)?;
+
+        let network_config = Config {
+            keypair: keypair.clone(),
+            listen_addr: config.listen_addr,
+            max_peers: config.max_peers,
+            ..Default::default()
+        };
+
+        let network = Network::new(network_config).await?;
+
+        Ok(Self {
+            network,
+            keypair,
+            peers: Arc::new(RwLock::new(HashMap::new())),
+            channels: Channels::new(),
+        })
+    }
+
+    /// Bootstrap by connecting to known nodes
+    pub async fn bootstrap(&mut self, bootstrap_nodes: &[SocketAddr]) -> Result<()> {
+        for addr in bootstrap_nodes {
+            match self.network.connect(*addr).await {
+                Ok(peer_id) => {
+                    tracing::info!(?addr, ?peer_id, "Connected to bootstrap node");
+                    self.request_peers(peer_id).await?;
+                }
+                Err(e) => {
+                    tracing::warn!(?addr, ?e, "Failed to connect to bootstrap node");
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Request peer list from a connected node
+    async fn request_peers(&mut self, peer: PublicKey) -> Result<Vec<PeerInfo>> {
+        let request = DiscoveryMessage::GetPeers;
+        let response = self.network.request(&peer, request.encode()).await?;
+        let peers: Vec<PeerInfo> = DiscoveryMessage::decode(&response)?.into_peers()?;
+
+        // Connect to new peers
+        for info in &peers {
+            if !self.peers.read().contains_key(&info.pubkey) {
+                self.network.connect(info.addr).await?;
+            }
+        }
+
+        Ok(peers)
+    }
+}
+```
+
+#### 2.2 Bootstrap Node Discovery
+
+```rust
+/// Bootstrap configuration
+pub struct BootstrapConfig {
+    /// Well-known bootstrap nodes (DNS or IP)
+    pub bootstrap_nodes: Vec<String>,
+
+    /// Local network discovery (mDNS-like)
+    pub enable_local_discovery: bool,
+
+    /// Maximum peers to maintain
+    pub max_peers: usize,
+
+    /// Peer exchange interval
+    pub peer_exchange_interval: Duration,
+}
+
+/// Peer discovery service
+pub struct Discovery {
+    network: Arc<P2PNetwork>,
+    config: BootstrapConfig,
+    known_peers: Arc<RwLock<HashSet<PeerInfo>>>,
+}
+
+impl Discovery {
+    /// Run the discovery loop
+    pub async fn run(&self) -> Result<()> {
+        // Initial bootstrap
+        self.bootstrap().await?;
+
+        // Periodic peer exchange
+        let mut interval = tokio::time::interval(self.config.peer_exchange_interval);
+
+        loop {
+            interval.tick().await;
+
+            // Exchange peers with connected nodes
+            let peers: Vec<_> = self.network.peers.read().keys().cloned().collect();
+            for peer in peers {
+                if let Ok(new_peers) = self.network.request_peers(peer).await {
+                    for info in new_peers {
+                        self.known_peers.write().insert(info);
+                    }
+                }
+            }
+
+            // Ensure minimum peer count
+            self.maintain_connections().await?;
+        }
+    }
+
+    async fn maintain_connections(&self) -> Result<()> {
+        let current_count = self.network.peers.read().len();
+
+        if current_count < self.config.max_peers / 2 {
+            // Need more peers
+            let known = self.known_peers.read().clone();
+            for info in known {
+                if !self.network.peers.read().contains_key(&info.pubkey) {
+                    if let Ok(_) = self.network.connect(info.addr).await {
+                        if self.network.peers.read().len() >= self.config.max_peers {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+```
+
+### Phase 3: Validator Set Management (Week 3-4)
+
+#### 3.1 Validator Registration
+
+For the initial implementation, we use a simple permissioned validator set that can be expanded later:
+
+```rust
+/// Validator set management
+pub struct ValidatorSet {
+    /// Current validators
+    validators: Vec<Validator>,
+
+    /// Epoch number (changes when validator set changes)
+    epoch: u64,
+
+    /// Configuration
+    config: ValidatorConfig,
+}
+
+#[derive(Clone)]
+pub struct Validator {
+    /// Validator public key
+    pub pubkey: PublicKey,
+
+    /// Voting weight
+    pub weight: u64,
+
+    /// Network address
+    pub addr: SocketAddr,
+
+    /// Joined at epoch
+    pub joined_epoch: u64,
+
+    /// Is active (participating in consensus)
+    pub active: bool,
+}
+
+#[derive(Clone)]
+pub struct ValidatorConfig {
+    /// Minimum validators for network operation
+    pub min_validators: usize,
+
+    /// Maximum validators
+    pub max_validators: usize,
+
+    /// Quorum threshold (2/3 + 1)
+    pub quorum_threshold: f64,
+
+    /// Block time target
+    pub block_time: Duration,
+}
+
+impl ValidatorSet {
+    /// Create genesis validator set
+    pub fn genesis(validators: Vec<Validator>) -> Self {
+        Self {
+            validators,
+            epoch: 0,
+            config: ValidatorConfig::default(),
+        }
+    }
+
+    /// Get quorum weight required for consensus
+    pub fn quorum_weight(&self) -> u64 {
+        let total: u64 = self.validators.iter().map(|v| v.weight).sum();
+        (total * 2 / 3) + 1
+    }
+
+    /// Get validators for current epoch
+    pub fn validators(&self) -> &[Validator] {
+        &self.validators
+    }
+
+    /// Check if a public key is a validator
+    pub fn is_validator(&self, pubkey: &PublicKey) -> bool {
+        self.validators.iter().any(|v| v.pubkey == *pubkey)
+    }
+
+    /// Get leader for a given view (round-robin initially)
+    pub fn leader_for_view(&self, view: u64) -> &Validator {
+        let active: Vec<_> = self.validators.iter().filter(|v| v.active).collect();
+        let idx = (view as usize) % active.len();
+        active[idx]
+    }
+}
+```
+
+#### 3.2 Genesis Configuration
+
+```rust
+/// Genesis configuration for the network
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Genesis {
+    /// Network identifier
+    pub chain_id: String,
+
+    /// Genesis timestamp
+    pub timestamp: u64,
+
+    /// Initial validators
+    pub validators: Vec<GenesisValidator>,
+
+    /// Initial repositories (optional, for testnet)
+    pub repositories: Vec<GenesisRepository>,
+
+    /// Consensus parameters
+    pub consensus: ConsensusParams,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GenesisValidator {
+    pub name: String,
+    pub pubkey: String,  // hex-encoded
+    pub weight: u64,
+    pub addr: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ConsensusParams {
+    /// Target block time in milliseconds
+    pub block_time_ms: u64,
+
+    /// Maximum transactions per block
+    pub max_txs_per_block: usize,
+
+    /// Maximum block size in bytes
+    pub max_block_size: usize,
+
+    /// View timeout multiplier
+    pub view_timeout_multiplier: f64,
+}
+
+impl Genesis {
+    /// Load from file
+    pub fn load(path: &Path) -> Result<Self> {
+        let content = std::fs::read_to_string(path)?;
+        let genesis: Genesis = serde_json::from_str(&content)?;
+        genesis.validate()?;
+        Ok(genesis)
+    }
+
+    /// Validate genesis configuration
+    pub fn validate(&self) -> Result<()> {
+        if self.validators.is_empty() {
+            return Err(Error::InvalidGenesis("No validators"));
+        }
+
+        if self.validators.len() < 4 {
+            return Err(Error::InvalidGenesis("Need at least 4 validators for BFT"));
+        }
+
+        // Verify all public keys are valid
+        for v in &self.validators {
+            PublicKey::from_hex(&v.pubkey)?;
+        }
+
+        Ok(())
+    }
+}
+```
+
+### Phase 4: Consensus Integration (Week 4-5)
+
+#### 4.1 Wire Up Consensus Engine
+
+```rust
+/// Main node with consensus
+pub struct ConsensusNode {
+    /// Network layer
+    network: Arc<P2PNetwork>,
+
+    /// Consensus engine
+    consensus: SimplexConsensus,
+
+    /// Application state
+    application: GutsApplication,
+
+    /// Validator set
+    validators: Arc<RwLock<ValidatorSet>>,
+
+    /// Transaction mempool
+    mempool: Arc<RwLock<Mempool>>,
+
+    /// HTTP API server
+    api: ApiServer,
+}
+
+impl ConsensusNode {
+    pub async fn new(config: NodeConfig) -> Result<Self> {
+        // Load genesis
+        let genesis = Genesis::load(&config.genesis_path)?;
+
+        // Initialize network
+        let network = Arc::new(P2PNetwork::new(config.network).await?);
+
+        // Initialize validator set from genesis
+        let validators = Arc::new(RwLock::new(
+            ValidatorSet::from_genesis(&genesis)?
+        ));
+
+        // Initialize application state
+        let application = GutsApplication::new(config.storage).await?;
+
+        // Initialize mempool
+        let mempool = Arc::new(RwLock::new(Mempool::new(config.mempool)));
+
+        // Initialize consensus
+        let consensus = SimplexConsensus::new(
+            config.consensus,
+            network.clone(),
+            validators.clone(),
+        )?;
+
+        // Initialize API server
+        let api = ApiServer::new(config.api, application.clone(), mempool.clone())?;
+
+        Ok(Self {
+            network,
+            consensus,
+            application,
+            validators,
+            mempool,
+            api,
+        })
+    }
+
+    /// Run the node
+    pub async fn run(&mut self) -> Result<()> {
+        // Bootstrap network
+        self.network.bootstrap(&self.config.bootstrap_nodes).await?;
+
+        // Wait for minimum peers
+        self.wait_for_peers().await?;
+
+        // Start all components
+        tokio::select! {
+            result = self.consensus.run() => {
+                tracing::error!(?result, "Consensus exited");
+            }
+            result = self.network.run() => {
+                tracing::error!(?result, "Network exited");
+            }
+            result = self.api.run() => {
+                tracing::error!(?result, "API exited");
+            }
+        }
+
+        Ok(())
+    }
+}
+```
+
+#### 4.2 Transaction Flow
+
+```
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   Client     │────▶│   API Layer  │────▶│   Mempool    │
+│  (git push)  │     │  (validate)  │     │  (pending)   │
+└──────────────┘     └──────────────┘     └──────┬───────┘
+                                                  │
+                     ┌────────────────────────────┘
+                     ▼
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  Broadcast   │◀────│   Leader     │◀────│  Consensus   │
+│  to Peers    │     │  Proposes    │     │   Selects    │
+└──────────────┘     │   Block      │     │    Leader    │
+                     └──────┬───────┘     └──────────────┘
+                            │
+                            ▼
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  Validators  │────▶│  Notarize    │────▶│   Finalize   │
+│    Vote      │     │  (2f+1)      │     │   (2f+1)     │
+└──────────────┘     └──────────────┘     └──────┬───────┘
+                                                  │
+                                                  ▼
+                     ┌──────────────────────────────────┐
+                     │         Apply to State           │
+                     │  (git refs, PRs, issues, etc.)   │
+                     └──────────────────────────────────┘
+```
+
+### Phase 5: Testing & Validation (Week 5-6)
+
+#### 5.1 Consensus Tests
+
+```rust
+#[tokio::test]
+async fn test_consensus_finalization() {
+    // Start 4 validators (tolerates 1 Byzantine)
+    let network = TestNetwork::new(4).await;
+
+    // Submit a transaction
+    let tx = Transaction::CreateRepository {
+        owner: "alice".to_string(),
+        name: "test-repo".to_string(),
+        creator: network.validator(0).pubkey(),
+        signature: network.validator(0).sign(/* ... */),
+    };
+
+    network.submit_transaction(tx).await;
+
+    // Wait for finalization
+    let block = network.wait_for_block(1, Duration::from_secs(10)).await;
+
+    // Verify all nodes have the same state
+    for i in 0..4 {
+        let state = network.node(i).state().await;
+        assert!(state.has_repository("alice/test-repo"));
+    }
+}
+
+#[tokio::test]
+async fn test_byzantine_tolerance() {
+    // Start 4 validators
+    let network = TestNetwork::new(4).await;
+
+    // Make one validator Byzantine (doesn't vote)
+    network.set_byzantine(3, ByzantineBehavior::Silent);
+
+    // Consensus should still work with 3 honest validators
+    let tx = Transaction::CreateRepository { /* ... */ };
+    network.submit_transaction(tx).await;
+
+    // Should finalize despite Byzantine node
+    let block = network.wait_for_block(1, Duration::from_secs(15)).await;
+    assert!(block.is_some());
+}
+
+#[tokio::test]
+async fn test_leader_rotation() {
+    let network = TestNetwork::new(4).await;
+
+    // Generate multiple blocks
+    for i in 0..10 {
+        let tx = Transaction::CreateRepository {
+            name: format!("repo-{}", i),
+            /* ... */
+        };
+        network.submit_transaction(tx).await;
+    }
+
+    // Wait for blocks
+    network.wait_for_block(10, Duration::from_secs(30)).await;
+
+    // Verify different leaders proposed blocks
+    let blocks: Vec<_> = network.node(0).blocks(0..10).await;
+    let leaders: HashSet<_> = blocks.iter().map(|b| b.producer).collect();
+
+    // Should have multiple different leaders
+    assert!(leaders.len() > 1);
+}
+```
+
+#### 5.2 Network Partition Tests
+
+```rust
+#[tokio::test]
+async fn test_network_partition_recovery() {
+    let network = TestNetwork::new(7).await;
+
+    // Create some state
+    network.submit_transaction(/* ... */).await;
+    network.wait_for_block(1, Duration::from_secs(10)).await;
+
+    // Partition network: [0,1,2,3] and [4,5,6]
+    network.partition(vec![vec![0,1,2,3], vec![4,5,6]]);
+
+    // Neither partition has quorum (need 5 of 7)
+    // No new blocks should finalize
+
+    // Heal partition
+    network.heal_partition();
+
+    // Submit new transaction
+    network.submit_transaction(/* ... */).await;
+
+    // Should eventually finalize
+    let block = network.wait_for_block(2, Duration::from_secs(30)).await;
+    assert!(block.is_some());
+}
+```
+
+### Phase 6: DevNet & Documentation (Week 6-7)
+
+#### 6.1 DevNet Configuration
+
+```yaml
+# infra/devnet/genesis.yaml
+chain_id: "guts-devnet-1"
+timestamp: 1703980800000
+
+validators:
+  - name: "validator-1"
+    pubkey: "ed25519:abc123..."
+    weight: 100
+    addr: "validator-1:9000"
+
+  - name: "validator-2"
+    pubkey: "ed25519:def456..."
+    weight: 100
+    addr: "validator-2:9000"
+
+  - name: "validator-3"
+    pubkey: "ed25519:ghi789..."
+    weight: 100
+    addr: "validator-3:9000"
+
+  - name: "validator-4"
+    pubkey: "ed25519:jkl012..."
+    weight: 100
+    addr: "validator-4:9000"
+
+consensus:
+  block_time_ms: 2000
+  max_txs_per_block: 1000
+  max_block_size: 10485760  # 10 MB
+  view_timeout_multiplier: 2.0
+```
+
+#### 6.2 Docker Compose for DevNet
+
+```yaml
+# infra/docker/docker-compose.consensus.yml
+version: '3.8'
+
+services:
+  validator-1:
+    build: ../..
+    command:
+      - guts-node
+      - --genesis=/config/genesis.yaml
+      - --validator-key=/keys/validator-1.key
+      - --api-addr=0.0.0.0:8080
+      - --p2p-addr=0.0.0.0:9000
+    volumes:
+      - ./config:/config
+      - ./keys:/keys
+      - validator-1-data:/data
+    ports:
+      - "8081:8080"
+      - "9001:9000"
+    networks:
+      - guts-network
+
+  validator-2:
+    build: ../..
+    command:
+      - guts-node
+      - --genesis=/config/genesis.yaml
+      - --validator-key=/keys/validator-2.key
+      - --bootstrap=validator-1:9000
+      - --api-addr=0.0.0.0:8080
+      - --p2p-addr=0.0.0.0:9000
+    volumes:
+      - ./config:/config
+      - ./keys:/keys
+      - validator-2-data:/data
+    ports:
+      - "8082:8080"
+      - "9002:9000"
+    networks:
+      - guts-network
+    depends_on:
+      - validator-1
+
+  # ... validators 3 and 4 similar
+
+volumes:
+  validator-1-data:
+  validator-2-data:
+  validator-3-data:
+  validator-4-data:
+
+networks:
+  guts-network:
+    driver: bridge
+```
 
 ## Success Criteria
 
-- [ ] Nodes discover peers without bootstrap after initial connection
-- [ ] Message propagation reaches all nodes within 2 seconds
-- [ ] Validator set changes propagate correctly
-- [ ] Network survives 30% node failures
-- [ ] Partition recovery completes within 1 hour
-- [ ] 20+ independent operators running validators
-- [ ] Testnet stable for 30+ days
-- [ ] Geographic distribution across 4+ regions
-- [ ] Documentation complete for operators
+### Must Have (P0)
 
-## Security Considerations
+- [ ] Simplex BFT consensus integrated and working
+- [ ] 4+ node devnet with consensus achieving finality
+- [ ] Git push/pull works through consensus
+- [ ] PRs, issues, comments ordered by consensus
+- [ ] Network tolerates 1 Byzantine node (in 4-node setup)
+- [ ] Nodes can bootstrap from peers
+- [ ] State is consistent across all honest nodes
 
-1. **Eclipse Attacks**: Implement peer diversity requirements
-2. **Sybil Attacks**: Require stake or PoW for all actions
-3. **Long-Range Attacks**: Implement checkpointing
-4. **Partition Attacks**: Require supermajority for consensus
-5. **Governance Attacks**: Time-lock and veto mechanisms
+### Should Have (P1)
+
+- [ ] 7+ node devnet for better fault tolerance
+- [ ] Node can sync from scratch (catch up to current state)
+- [ ] Metrics for consensus (block time, finality latency)
+- [ ] Prometheus dashboards for monitoring
+- [ ] E2E tests for consensus scenarios
+
+### Nice to Have (P2)
+
+- [ ] Dynamic validator set changes
+- [ ] Testnet with 10+ independent operators
+- [ ] Geographic distribution testing
+- [ ] Chaos testing with network partitions
+
+## Timeline
+
+| Week | Focus | Deliverables |
+|------|-------|--------------|
+| 1 | Foundation | `guts-consensus` crate skeleton, transaction types |
+| 2 | Consensus | Simplex integration, block structure |
+| 3 | Networking | P2P authentication, bootstrap, peer discovery |
+| 4 | Validators | Validator set, genesis, leader election |
+| 5 | Integration | Wire up API -> mempool -> consensus -> application |
+| 6 | Testing | Consensus tests, Byzantine tests, partition tests |
+| 7 | DevNet | Docker compose, monitoring, documentation |
+
+## Risks & Mitigations
+
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| Commonware API changes | Medium | High | Pin to specific version, wrap primitives |
+| Performance issues | Medium | Medium | Benchmark early, optimize block size |
+| Consensus bugs | Low | Critical | Extensive testing, formal verification later |
+| Network complexity | High | Medium | Start simple, iterate on discovery |
 
 ## Dependencies
 
-- libp2p for networking primitives
-- External stake/token bridge (if using external token)
-- Multi-region infrastructure (AWS, GCP, Azure)
-- Independent validator operators
+- `commonware-consensus` v0.0.64+
+- `commonware-p2p` v0.0.64+
+- `commonware-broadcast` v0.0.64+
+- `commonware-cryptography` v0.0.64+
+- `commonware-runtime` v0.0.64+
 
 ## References
 
-- [Kademlia Paper](https://pdos.csail.mit.edu/~petar/papers/maymounkov-kademlia-lncs.pdf)
-- [Plumtree Paper](https://asc.di.fct.unl.pt/~jleitao/pdf/srds07-leitao.pdf)
-- [libp2p Specifications](https://github.com/libp2p/specs)
-- [Cosmos SDK Staking](https://docs.cosmos.network/main/build/modules/staking)
+- [Simplex Consensus Paper](https://eprint.iacr.org/2023/463) - Original BFT algorithm
+- [Alto Blockchain](https://github.com/commonwarexyz/alto) - Reference implementation
+- [Commonware Docs](https://docs.rs/commonware-consensus) - API documentation
+- [ADR-001](adr/001-commonware-primitives.md) - Decision to use Commonware
