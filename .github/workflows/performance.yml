@@ -57,7 +57,7 @@ jobs:
           cargo bench -p guts-storage --bench concurrent_bench -- --noplot
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: criterion-results
           path: target/criterion/
@@ -170,7 +170,7 @@ jobs:
             infra/benchmarks/k6/concurrent.js
 
       - name: Upload K6 results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: k6-results
           path: |

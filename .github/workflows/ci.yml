@@ -129,7 +129,7 @@ jobs:
         run: cargo build --workspace --release
 
       - name: Upload binaries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: binaries
           path: |
