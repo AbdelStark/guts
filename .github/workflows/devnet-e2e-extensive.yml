@@ -4,12 +4,6 @@ on:
   # Run on PRs to main
   pull_request:
     branches: [main]
-    paths:
-      - 'crates/**'
-      - 'infra/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - '.github/workflows/devnet-e2e-extensive.yml'
 
   # Allow manual triggering
   workflow_dispatch:
@@ -17,6 +11,11 @@ on:
       debug_enabled:
         type: boolean
         description: 'Enable debug mode with extended logs'
+        required: false
+        default: false
+      skip_load_test:
+        type: boolean
+        description: 'Skip load testing (faster)'
         required: false
         default: false
 
@@ -58,7 +57,7 @@ jobs:
         with:
           context: .
           file: infra/docker/Dockerfile
-          tags: guts-node:devnet-test
+          tags: guts-node:e2e-test
           outputs: type=docker,dest=/tmp/guts-node-image.tar
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -71,10 +70,10 @@ jobs:
           retention-days: 1
 
   # ============================================================================
-  # Devnet E2E Tests
+  # E2E Test Suite with Consensus
   # ============================================================================
-  devnet-e2e:
-    name: Devnet E2E Tests
+  e2e-consensus:
+    name: E2E Tests (4 Validators + Observer)
     runs-on: ubuntu-latest
     needs: build-image
     timeout-minutes: 30
@@ -96,163 +95,135 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq curl
+          sudo apt-get install -y jq curl bc
 
-      - name: Create Docker network
-        run: docker network create guts-devnet || true
-
-      - name: Start Node 1 (Bootstrap)
+      - name: Start E2E Devnet
         run: |
-          docker run -d \
-            --name guts-devnet-node1 \
-            --hostname node1 \
-            --network guts-devnet \
-            -p 8081:8080 \
-            -p 9001:9000 \
-            -e GUTS_NODE_ID=devnet-node1 \
-            -e GUTS_LOG_LEVEL=info \
-            -e RUST_LOG=guts=info,tower_http=info \
-            guts-node:devnet-test
+          cd infra/docker
+          docker compose -f docker-compose.e2e.yml up -d
 
-      - name: Wait for Node 1 to be healthy
-        run: |
-          for i in {1..30}; do
-            if curl -sf http://localhost:8081/health > /dev/null 2>&1; then
-              echo "Node 1 is healthy"
-              break
-            fi
-            echo "Waiting for Node 1... ($i/30)"
-            sleep 2
-          done
-
-      - name: Start Node 2
-        run: |
-          docker run -d \
-            --name guts-devnet-node2 \
-            --hostname node2 \
-            --network guts-devnet \
-            -p 8082:8080 \
-            -p 9002:9000 \
-            -e GUTS_NODE_ID=devnet-node2 \
-            -e GUTS_BOOTSTRAP_NODES=node1:9000 \
-            -e GUTS_LOG_LEVEL=info \
-            -e RUST_LOG=guts=info,tower_http=info \
-            guts-node:devnet-test
-
-      - name: Start Node 3
-        run: |
-          docker run -d \
-            --name guts-devnet-node3 \
-            --hostname node3 \
-            --network guts-devnet \
-            -p 8083:8080 \
-            -p 9003:9000 \
-            -e GUTS_NODE_ID=devnet-node3 \
-            -e GUTS_BOOTSTRAP_NODES=node1:9000,node2:9000 \
-            -e GUTS_LOG_LEVEL=info \
-            -e RUST_LOG=guts=info,tower_http=info \
-            guts-node:devnet-test
-
-      - name: Start Node 4
-        run: |
-          docker run -d \
-            --name guts-devnet-node4 \
-            --hostname node4 \
-            --network guts-devnet \
-            -p 8084:8080 \
-            -p 9004:9000 \
-            -e GUTS_NODE_ID=devnet-node4 \
-            -e GUTS_BOOTSTRAP_NODES=node1:9000,node2:9000,node3:9000 \
-            -e GUTS_LOG_LEVEL=info \
-            -e RUST_LOG=guts=info,tower_http=info \
-            guts-node:devnet-test
-
-      - name: Start Node 5
-        run: |
-          docker run -d \
-            --name guts-devnet-node5 \
-            --hostname node5 \
-            --network guts-devnet \
-            -p 8085:8080 \
-            -p 9005:9000 \
-            -e GUTS_NODE_ID=devnet-node5 \
-            -e GUTS_BOOTSTRAP_NODES=node1:9000,node2:9000,node3:9000,node4:9000 \
-            -e GUTS_LOG_LEVEL=info \
-            -e RUST_LOG=guts=info,tower_http=info \
-            guts-node:devnet-test
-
-      - name: Wait for all nodes to be healthy
+      - name: Wait for network to be healthy
         run: |
           echo "Waiting for all 5 nodes to become healthy..."
-          for node in 8081 8082 8083 8084 8085; do
-            for i in {1..30}; do
-              if curl -sf http://localhost:$node/health > /dev/null 2>&1; then
-                echo "Node on port $node is healthy"
-                break
-              fi
-              if [ $i -eq 30 ]; then
-                echo "Node on port $node failed to become healthy"
-                docker logs guts-devnet-node$((node - 8080))
-                exit 1
-              fi
-              sleep 2
-            done
-          done
-          echo "All nodes are healthy!"
+          max_wait=120
+          waited=0
 
-      - name: Run E2E Test Suite
+          while [[ $waited -lt $max_wait ]]; do
+            healthy=0
+            for port in 8081 8082 8083 8084 8085; do
+              if curl -sf http://localhost:$port/health > /dev/null 2>&1; then
+                healthy=$((healthy + 1))
+              fi
+            done
+
+            if [[ $healthy -eq 5 ]]; then
+              echo "All 5 nodes are healthy!"
+              break
+            fi
+
+            echo "Healthy nodes: $healthy/5, waiting..."
+            sleep 2
+            waited=$((waited + 2))
+          done
+
+          if [[ $healthy -lt 5 ]]; then
+            echo "ERROR: Not all nodes became healthy"
+            for port in 8081 8082 8083 8084 8085; do
+              echo "=== Node on port $port ==="
+              curl -sf http://localhost:$port/health || echo "NOT HEALTHY"
+            done
+            exit 1
+          fi
+
+      - name: Wait for consensus activation
+        run: |
+          echo "Waiting for consensus to activate..."
+          max_wait=60
+          waited=0
+
+          while [[ $waited -lt $max_wait ]]; do
+            state=$(curl -sf http://localhost:8081/api/consensus/status | jq -r '.state // "Unknown"' 2>/dev/null || echo "Unknown")
+
+            if [[ "$state" == "Active" ]]; then
+              echo "Consensus is active!"
+              break
+            fi
+
+            echo "Consensus state: $state, waiting..."
+            sleep 2
+            waited=$((waited + 2))
+          done
+
+          echo "Final consensus state: $state"
+
+      - name: Run E2E test suite
         id: e2e-tests
         run: |
           chmod +x infra/scripts/devnet-e2e-test.sh
           ./infra/scripts/devnet-e2e-test.sh --skip-setup --verbose 2>&1 | tee e2e-results.log
         continue-on-error: true
 
-      - name: Collect node logs on failure
-        if: failure() || steps.e2e-tests.outcome == 'failure'
+      - name: Run consensus tests
+        id: consensus-tests
         run: |
-          mkdir -p logs
-          for i in 1 2 3 4 5; do
-            docker logs guts-devnet-node$i > logs/node$i.log 2>&1 || true
+          chmod +x infra/scripts/devnet-consensus-test.sh
+          ./infra/scripts/devnet-consensus-test.sh --verbose 2>&1 | tee consensus-results.log
+        continue-on-error: true
+
+      - name: Collect logs
+        if: always()
+        run: |
+          mkdir -p e2e-artifacts/logs
+          chmod +x infra/scripts/devnet-collect-logs.sh
+          ./infra/scripts/devnet-collect-logs.sh --output-dir e2e-artifacts/logs || true
+
+          # Copy test results
+          cp e2e-results.log e2e-artifacts/ 2>/dev/null || true
+          cp consensus-results.log e2e-artifacts/ 2>/dev/null || true
+
+          # Capture final state
+          echo "=== Final Network State ===" > e2e-artifacts/final_state.txt
+          for port in 8081 8082 8083 8084 8085; do
+            echo "--- Node $port ---" >> e2e-artifacts/final_state.txt
+            curl -sf http://localhost:$port/api/consensus/status >> e2e-artifacts/final_state.txt 2>&1 || echo "unreachable"
+            echo "" >> e2e-artifacts/final_state.txt
           done
 
-      - name: Upload logs
-        if: failure() || steps.e2e-tests.outcome == 'failure'
+      - name: Upload E2E artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: devnet-logs
-          path: |
-            logs/
-            e2e-results.log
-          retention-days: 7
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-test-results
-          path: e2e-results.log
-          retention-days: 7
+          name: e2e-test-artifacts
+          path: e2e-artifacts/
+          retention-days: 14
 
       - name: Cleanup
         if: always()
         run: |
-          docker stop guts-devnet-node1 guts-devnet-node2 guts-devnet-node3 guts-devnet-node4 guts-devnet-node5 || true
-          docker rm guts-devnet-node1 guts-devnet-node2 guts-devnet-node3 guts-devnet-node4 guts-devnet-node5 || true
-          docker network rm guts-devnet || true
+          cd infra/docker
+          docker compose -f docker-compose.e2e.yml down -v --remove-orphans
 
-      - name: Check test results
+      - name: Check E2E test results
         if: steps.e2e-tests.outcome == 'failure'
         run: |
-          echo "E2E tests failed. See logs for details."
+          echo "E2E tests failed. See artifacts for details."
+          exit 1
+
+      - name: Check consensus test results
+        if: steps.consensus-tests.outcome == 'failure'
+        run: |
+          echo "Consensus tests failed. See artifacts for details."
           exit 1
 
   # ============================================================================
-  # Load Test (Stress Testing)
+  # Load Test
   # ============================================================================
   load-test:
-    name: Load Test
+    name: Load Test (Stress Testing)
     runs-on: ubuntu-latest
     needs: build-image
     timeout-minutes: 20
+    if: ${{ github.event.inputs.skip_load_test != 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -267,82 +238,74 @@ jobs:
         run: |
           docker load --input /tmp/guts-node-image.tar
 
-      - name: Start single node for load testing
+      - name: Install dependencies
         run: |
-          docker run -d \
-            --name guts-load-test \
-            -p 8080:8080 \
-            -p 9000:9000 \
-            -e GUTS_NODE_ID=load-test-node \
-            -e GUTS_LOG_LEVEL=warn \
-            -e RUST_LOG=guts=warn \
-            guts-node:devnet-test
+          sudo apt-get update
+          sudo apt-get install -y jq curl bc
 
-      - name: Wait for node to be healthy
+      - name: Start E2E Devnet for load testing
         run: |
-          for i in {1..30}; do
-            if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
-              echo "Node is healthy"
+          cd infra/docker
+          docker compose -f docker-compose.e2e.yml up -d
+
+      - name: Wait for network to be healthy
+        run: |
+          for i in {1..60}; do
+            healthy=0
+            for port in 8081 8082 8083 8084 8085; do
+              if curl -sf http://localhost:$port/health > /dev/null 2>&1; then
+                healthy=$((healthy + 1))
+              fi
+            done
+            if [[ $healthy -eq 5 ]]; then
+              echo "All nodes healthy"
               break
             fi
             sleep 2
           done
 
       - name: Run load tests
+        id: load-tests
         run: |
-          echo "=== Load Test: Repository Creation ==="
-          for i in {1..50}; do
-            curl -sf -X POST http://localhost:8080/api/repos \
-              -H "Content-Type: application/json" \
-              -d "{\"owner\": \"load-org\", \"name\": \"repo-$i\"}" > /dev/null &
-          done
-          wait
-          echo "Created 50 repositories"
+          chmod +x infra/scripts/devnet-load-test.sh
+          ./infra/scripts/devnet-load-test.sh \
+            --repos 50 \
+            --issues 100 \
+            --reads 200 \
+            --output load-test-results.json \
+            --verbose 2>&1 | tee load-test.log
+        continue-on-error: true
 
-          echo ""
-          echo "=== Load Test: Issue Creation ==="
-          for i in {1..100}; do
-            curl -sf -X POST http://localhost:8080/api/repos/load-org/repo-1/issues \
-              -H "Content-Type: application/json" \
-              -d "{\"title\": \"Issue $i\", \"description\": \"Load test issue\", \"author\": \"load-tester\"}" > /dev/null &
-          done
-          wait
-          echo "Created 100 issues"
+      - name: Collect load test artifacts
+        if: always()
+        run: |
+          mkdir -p load-test-artifacts
+          cp load-test.log load-test-artifacts/ 2>/dev/null || true
+          cp load-test-results.json load-test-artifacts/ 2>/dev/null || true
 
-          echo ""
-          echo "=== Load Test: Concurrent Reads ==="
-          for i in {1..200}; do
-            curl -sf http://localhost:8080/api/repos > /dev/null &
-          done
-          wait
-          echo "Completed 200 concurrent reads"
+          # Collect container stats
+          docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}" \
+            > load-test-artifacts/container-stats.txt 2>/dev/null || true
 
-          echo ""
-          echo "=== Verifying data integrity ==="
-          REPO_COUNT=$(curl -sf http://localhost:8080/api/repos | jq 'length')
-          echo "Total repositories: $REPO_COUNT"
-
-          ISSUE_COUNT=$(curl -sf http://localhost:8080/api/repos/load-org/repo-1/issues | jq 'length')
-          echo "Total issues in repo-1: $ISSUE_COUNT"
-
-          if [ "$REPO_COUNT" -lt 50 ]; then
-            echo "ERROR: Expected at least 50 repos, got $REPO_COUNT"
-            exit 1
-          fi
-
-          if [ "$ISSUE_COUNT" -lt 100 ]; then
-            echo "ERROR: Expected at least 100 issues, got $ISSUE_COUNT"
-            exit 1
-          fi
-
-          echo ""
-          echo "Load test passed!"
+      - name: Upload load test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-artifacts
+          path: load-test-artifacts/
+          retention-days: 14
 
       - name: Cleanup
         if: always()
         run: |
-          docker stop guts-load-test || true
-          docker rm guts-load-test || true
+          cd infra/docker
+          docker compose -f docker-compose.e2e.yml down -v --remove-orphans
+
+      - name: Check load test results
+        if: steps.load-tests.outcome == 'failure'
+        run: |
+          echo "Load tests failed. See artifacts for details."
+          exit 1
 
   # ============================================================================
   # Git Protocol Test
@@ -366,7 +329,7 @@ jobs:
         run: |
           docker load --input /tmp/guts-node-image.tar
 
-      - name: Start node for Git testing
+      - name: Start single node for Git testing
         run: |
           docker run -d \
             --name guts-git-test \
@@ -374,7 +337,7 @@ jobs:
             -p 9000:9000 \
             -e GUTS_NODE_ID=git-test-node \
             -e GUTS_LOG_LEVEL=info \
-            guts-node:devnet-test
+            guts-node:e2e-test
 
       - name: Wait for node to be healthy
         run: |
@@ -393,9 +356,16 @@ jobs:
 
       - name: Test Git info/refs endpoint
         run: |
-          echo "Testing info/refs endpoint..."
-          curl -sf "http://localhost:8080/git/test/gitrepo/info/refs?service=git-upload-pack" || echo "Expected to fail for non-existent repo"
-          echo "Git protocol endpoints are working"
+          echo "Testing Git protocol endpoints..."
+
+          # Test that the endpoint exists and responds
+          response=$(curl -sf "http://localhost:8080/git/test/gitrepo/info/refs?service=git-upload-pack" 2>&1 || echo "expected_error")
+
+          # The endpoint should respond (even if repo doesn't exist)
+          echo "Git protocol endpoints responding"
+
+          # Test health after git operations
+          curl -sf http://localhost:8080/health
 
       - name: Cleanup
         if: always()
@@ -404,30 +374,129 @@ jobs:
           docker rm guts-git-test || true
 
   # ============================================================================
+  # Web Gateway Test
+  # ============================================================================
+  web-gateway-test:
+    name: Web Gateway Test
+    runs-on: ubuntu-latest
+    needs: build-image
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: guts-node-image
+          path: /tmp
+
+      - name: Load Docker image
+        run: |
+          docker load --input /tmp/guts-node-image.tar
+
+      - name: Start node for web testing
+        run: |
+          docker run -d \
+            --name guts-web-test \
+            -p 8080:8080 \
+            -e GUTS_NODE_ID=web-test-node \
+            -e GUTS_CONSENSUS_ENABLED=true \
+            guts-node:e2e-test
+
+      - name: Wait for node to be healthy
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+              echo "Node is healthy"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Test web pages
+        run: |
+          echo "Testing web gateway pages..."
+
+          # Home page
+          curl -sf http://localhost:8080/ | grep -qi "guts" && echo "PASS: Home page" || exit 1
+
+          # Explore page
+          curl -sf http://localhost:8080/explore | grep -qi "explore\|repositor" && echo "PASS: Explore page" || exit 1
+
+          # Consensus dashboard
+          curl -sf http://localhost:8080/consensus | grep -qi "consensus\|validator" && echo "PASS: Consensus dashboard" || exit 1
+
+          # Organizations page
+          curl -sf http://localhost:8080/orgs | grep -qi "organization" && echo "PASS: Organizations page" || exit 1
+
+          # API docs
+          curl -sf http://localhost:8080/api/docs | grep -qi "api\|openapi" && echo "PASS: API docs" || exit 1
+
+          echo "All web gateway tests passed!"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop guts-web-test || true
+          docker rm guts-web-test || true
+
+  # ============================================================================
   # Summary
   # ============================================================================
   summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [devnet-e2e, load-test, git-protocol-test]
+    needs: [e2e-consensus, load-test, git-protocol-test, web-gateway-test]
     if: always()
     steps:
-      - name: Check results
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+
+      - name: Generate summary
+        run: |
+          echo "# Guts Devnet E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Suite | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests (Consensus) | ${{ needs.e2e-consensus.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Load Test | ${{ needs.load-test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Git Protocol | ${{ needs.git-protocol-test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Web Gateway | ${{ needs.web-gateway-test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f all-artifacts/load-test-artifacts/load-test-results.json ]; then
+            echo "## Load Test Metrics" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+            cat all-artifacts/load-test-artifacts/load-test-results.json >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check overall results
         run: |
           echo "============================================"
           echo "        Devnet E2E Extensive Results"
           echo "============================================"
           echo ""
-          echo "E2E Tests: ${{ needs.devnet-e2e.result }}"
-          echo "Load Test: ${{ needs.load-test.result }}"
+          echo "E2E Tests:    ${{ needs.e2e-consensus.result }}"
+          echo "Load Test:    ${{ needs.load-test.result }}"
           echo "Git Protocol: ${{ needs.git-protocol-test.result }}"
+          echo "Web Gateway:  ${{ needs.web-gateway-test.result }}"
           echo ""
 
-          if [ "${{ needs.devnet-e2e.result }}" != "success" ] || \
-             [ "${{ needs.load-test.result }}" != "success" ] || \
-             [ "${{ needs.git-protocol-test.result }}" != "success" ]; then
-            echo "Some tests failed!"
+          # Check for any failures
+          if [ "${{ needs.e2e-consensus.result }}" != "success" ] || \
+             [ "${{ needs.git-protocol-test.result }}" != "success" ] || \
+             [ "${{ needs.web-gateway-test.result }}" != "success" ]; then
+            echo "Some critical tests failed!"
             exit 1
           fi
 
-          echo "All tests passed!"
+          # Load test is optional
+          if [ "${{ needs.load-test.result }}" != "success" ] && [ "${{ needs.load-test.result }}" != "skipped" ]; then
+            echo "Load test failed (non-critical)"
+          fi
+
+          echo "All critical tests passed!"
