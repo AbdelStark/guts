@@ -47,11 +47,11 @@ All running on a 3-node Guts network with consensus.
 
 | Milestone | Status | Description |
 |-----------|--------|-------------|
-| Milestone 10 | 📋 Planned | Security Hardening & Audit Preparation |
-| Milestone 11 | 📋 Planned | Performance & Scalability Validation |
-| Milestone 12 | 📋 Planned | True Decentralization |
-| Milestone 13 | 📋 Planned | Operator Experience & Documentation |
-| Milestone 14 | 📋 Planned | User Adoption & Ecosystem |
+| Milestone 10 | 📋 Planned | Performance & Scalability Validation |
+| Milestone 11 | 📋 Planned | True Decentralization |
+| Milestone 12 | 📋 Planned | Operator Experience & Documentation |
+| Milestone 13 | 📋 Planned | User Adoption & Ecosystem |
+| Milestone 14 | 📋 Planned | Security Hardening & Audit Preparation |
 
 ## Phase 1: Core Infrastructure ✅
 
@@ -281,26 +281,13 @@ The following milestones represent the path from current state to a production-g
 
 | Milestone | Status | Description | Priority |
 |-----------|--------|-------------|----------|
-| Milestone 10 | Planned | [Security Hardening & Audit Preparation](MILESTONE-10.md) | Critical |
-| Milestone 11 | Planned | [Performance & Scalability Validation](MILESTONE-11.md) | Critical |
-| Milestone 12 | Planned | [True Decentralization](MILESTONE-12.md) | Critical |
-| Milestone 13 | Planned | [Operator Experience & Documentation](MILESTONE-13.md) | High |
-| Milestone 14 | Planned | [User Adoption & Ecosystem](MILESTONE-14.md) | High |
+| Milestone 10 | Planned | [Performance & Scalability Validation](MILESTONE-10.md) | Critical |
+| Milestone 11 | Planned | [True Decentralization](MILESTONE-11.md) | Critical |
+| Milestone 12 | Planned | [Operator Experience & Documentation](MILESTONE-12.md) | High |
+| Milestone 13 | Planned | [User Adoption & Ecosystem](MILESTONE-13.md) | High |
+| Milestone 14 | Planned | [Security Hardening & Audit Preparation](MILESTONE-14.md) | Critical |
 
-### Milestone 10: Security Hardening & Audit Preparation
-
-Prepare Guts for a professional security audit and establish robust security infrastructure.
-
-| Feature | Description | Status |
-|---------|-------------|--------|
-| Threat Model | Comprehensive STRIDE threat analysis | Planned |
-| Security Policy | Vulnerability disclosure and bug bounty | Planned |
-| Cryptographic Review | Audit all crypto implementations | Planned |
-| Extended Fuzzing | 15+ fuzz targets for all protocols | Planned |
-| Supply Chain | SBOM generation, reproducible builds | Planned |
-| Key Rotation | Automated key rotation infrastructure | Planned |
-
-### Milestone 11: Performance & Scalability Validation
+### Milestone 10: Performance & Scalability Validation
 
 Validate and optimize for production-scale workloads.
 
@@ -313,7 +300,7 @@ Validate and optimize for production-scale workloads.
 | Caching Strategy | Multi-level cache hierarchy | Planned |
 | CDN Integration | Cache headers, archive pre-generation | Planned |
 
-### Milestone 12: True Decentralization
+### Milestone 11: True Decentralization
 
 Transform from replicated system to fully permissionless network.
 
@@ -326,7 +313,7 @@ Transform from replicated system to fully permissionless network.
 | Partition Handling | Graceful split/recovery | Planned |
 | Public Testnet | 20+ independent operators | Planned |
 
-### Milestone 13: Operator Experience & Documentation
+### Milestone 12: Operator Experience & Documentation
 
 Make Guts easy to deploy, operate, and maintain.
 
@@ -339,7 +326,7 @@ Make Guts easy to deploy, operate, and maintain.
 | Disaster Recovery | Backup/restore procedures | Planned |
 | Cloud Deployment | AWS, GCP, Azure Terraform modules | Planned |
 
-### Milestone 14: User Adoption & Ecosystem
+### Milestone 13: User Adoption & Ecosystem
 
 Enable mass adoption through tooling and migration paths.
 
@@ -351,6 +338,19 @@ Enable mass adoption through tooling and migration paths.
 | SSH Support | Git over SSH | Planned |
 | Developer Docs | Comprehensive API documentation | Planned |
 | Community | Forum, Discord, support infrastructure | Planned |
+
+### Milestone 14: Security Hardening & Audit Preparation
+
+Prepare Guts for a professional security audit and establish robust security infrastructure.
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Threat Model | Comprehensive STRIDE threat analysis | Planned |
+| Security Policy | Vulnerability disclosure and bug bounty | Planned |
+| Cryptographic Review | Audit all crypto implementations | Planned |
+| Extended Fuzzing | 15+ fuzz targets for all protocols | Planned |
+| Supply Chain | SBOM generation, reproducible builds | Planned |
+| Key Rotation | Automated key rotation infrastructure | Planned |
 
 ## Future Milestones (Post-1.0)
 

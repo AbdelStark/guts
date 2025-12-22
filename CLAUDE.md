@@ -25,11 +25,11 @@
 | [Milestone 7](docs/MILESTONE-7.md) | CI/CD integration spec |
 | [Milestone 8](docs/MILESTONE-8.md) | Git/GitHub compatibility spec |
 | [Milestone 9](docs/MILESTONE-9.md) | Production quality spec |
-| [Milestone 10](docs/MILESTONE-10.md) | Security hardening spec |
-| [Milestone 11](docs/MILESTONE-11.md) | Performance & scalability spec |
-| [Milestone 12](docs/MILESTONE-12.md) | True decentralization spec |
-| [Milestone 13](docs/MILESTONE-13.md) | Operator experience spec |
-| [Milestone 14](docs/MILESTONE-14.md) | User adoption spec |
+| [Milestone 10](docs/MILESTONE-10.md) | Performance & scalability spec |
+| [Milestone 11](docs/MILESTONE-11.md) | True decentralization spec |
+| [Milestone 12](docs/MILESTONE-12.md) | Operator experience spec |
+| [Milestone 13](docs/MILESTONE-13.md) | User adoption spec |
+| [Milestone 14](docs/MILESTONE-14.md) | Security hardening spec |
 | [Contributing](CONTRIBUTING.md) | Contribution guidelines |
 
 ## Quick Start
@@ -116,11 +116,11 @@ guts/
 
 | Milestone | Status | Description | Priority |
 |-----------|--------|-------------|----------|
-| Milestone 10 | 📋 Planned | Security Hardening & Audit Preparation | Critical |
-| Milestone 11 | 📋 Planned | Performance & Scalability Validation | Critical |
-| Milestone 12 | 📋 Planned | True Decentralization (DHT, Governance) | Critical |
-| Milestone 13 | 📋 Planned | Operator Experience & Documentation | High |
-| Milestone 14 | 📋 Planned | User Adoption & Ecosystem | High |
+| Milestone 10 | 📋 Planned | Performance & Scalability Validation | Critical |
+| Milestone 11 | 📋 Planned | True Decentralization (DHT, Governance) | Critical |
+| Milestone 12 | 📋 Planned | Operator Experience & Documentation | High |
+| Milestone 13 | 📋 Planned | User Adoption & Ecosystem | High |
+| Milestone 14 | 📋 Planned | Security Hardening & Audit Preparation | Critical |
 
 ### Test Coverage
 

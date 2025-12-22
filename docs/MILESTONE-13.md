@@ -1,1014 +1,1140 @@
-# Milestone 13: Operator Experience & Documentation
+# Milestone 13: User Adoption & Ecosystem
 
 > **Status:** Planned
-> **Target:** Q2-Q3 2025
+> **Target:** Q3 2025
 > **Priority:** High
 
 ## Overview
 
-Milestone 13 focuses on making Guts easy to deploy, operate, and maintain in production environments. A decentralized network is only as strong as its operators. This milestone provides comprehensive documentation, operational runbooks, monitoring dashboards, disaster recovery procedures, and automation tools that enable anyone to run a reliable Guts node.
+Milestone 14 focuses on enabling mass adoption of Guts by providing migration tools, developer SDKs, IDE integrations, and a comprehensive developer experience. The goal is to make switching from GitHub to Guts as frictionless as possible while building an ecosystem of tools and integrations that make Guts a compelling platform for developers.
 
 ## Goals
 
-1. **Operator Documentation**: Comprehensive guides for deploying and operating Guts nodes
-2. **Operational Runbooks**: Step-by-step procedures for common operational scenarios
-3. **Monitoring & Alerting**: Pre-built dashboards and alert rules
-4. **Disaster Recovery**: Documented and tested backup/restore procedures
-5. **Upgrade Procedures**: Zero-downtime upgrade paths
-6. **Multi-Cloud Support**: Deployment guides for AWS, GCP, Azure, and bare metal
-7. **Automation Tools**: Ansible/Terraform modules for infrastructure
+1. **Migration Tools**: One-click migration from GitHub, GitLab, and Bitbucket
+2. **Developer SDKs**: Official SDKs for TypeScript, Python, Go, and Rust
+3. **IDE Integrations**: VS Code extension, JetBrains plugin
+4. **Git Integration**: Native Git credential helper and SSH support
+5. **Developer Documentation**: Comprehensive API docs, tutorials, and examples
+6. **Community Platform**: Forums, Discord, and support infrastructure
+7. **Ecosystem Growth**: Third-party integrations, CI/CD adapters
 
-## Documentation Structure
+## Migration Tools
+
+### Architecture
 
 ```
-docs/
-├── operator/
-│   ├── README.md                    # Operator guide overview
-│   ├── quickstart.md                # 5-minute deployment
-│   ├── architecture.md              # System architecture for operators
-│   ├── requirements.md              # Hardware and network requirements
-│   ├── installation/
-│   │   ├── docker.md                # Docker deployment
-│   │   ├── kubernetes.md            # Kubernetes deployment
-│   │   ├── bare-metal.md            # Bare metal deployment
-│   │   └── systemd.md               # Systemd service setup
-│   ├── configuration/
-│   │   ├── reference.md             # Full configuration reference
-│   │   ├── networking.md            # Network configuration
-│   │   ├── storage.md               # Storage configuration
-│   │   ├── security.md              # Security hardening
-│   │   └── performance.md           # Performance tuning
-│   ├── operations/
-│   │   ├── monitoring.md            # Monitoring setup
-│   │   ├── alerting.md              # Alert configuration
-│   │   ├── logging.md               # Log management
-│   │   ├── backup.md                # Backup procedures
-│   │   └── upgrades.md              # Upgrade procedures
-│   ├── runbooks/
-│   │   ├── README.md                # Runbook index
-│   │   ├── node-not-syncing.md      # Node sync issues
-│   │   ├── high-memory.md           # Memory problems
-│   │   ├── disk-full.md             # Storage issues
-│   │   ├── consensus-stuck.md       # Consensus problems
-│   │   ├── network-partition.md     # Network issues
-│   │   ├── data-corruption.md       # Data recovery
-│   │   ├── key-rotation.md          # Key management
-│   │   └── emergency-shutdown.md    # Emergency procedures
-│   ├── troubleshooting/
-│   │   ├── common-issues.md         # FAQ and common problems
-│   │   ├── diagnostics.md           # Diagnostic procedures
-│   │   └── support.md               # Getting help
-│   └── reference/
-│       ├── cli.md                   # CLI reference
-│       ├── api.md                   # API reference
-│       └── metrics.md               # Metrics reference
-├── cloud/
-│   ├── aws/
-│   │   ├── quickstart.md            # AWS quickstart
-│   │   ├── architecture.md          # AWS architecture
-│   │   └── terraform/               # Terraform modules
-│   ├── gcp/
-│   │   ├── quickstart.md            # GCP quickstart
-│   │   └── terraform/               # Terraform modules
-│   ├── azure/
-│   │   ├── quickstart.md            # Azure quickstart
-│   │   └── terraform/               # Terraform modules
-│   └── multi-cloud/
-│       └── federation.md            # Multi-cloud setup
-└── monitoring/
-    ├── dashboards/                  # Grafana dashboards
-    ├── alerts/                      # Alert rules
-    └── runbook-links/               # Dashboard to runbook links
+tools/migration/
+├── guts-migrate/           # CLI migration tool
+│   ├── src/
+│   │   ├── main.rs
+│   │   ├── github.rs       # GitHub migration
+│   │   ├── gitlab.rs       # GitLab migration
+│   │   ├── bitbucket.rs    # Bitbucket migration
+│   │   ├── progress.rs     # Progress reporting
+│   │   └── verify.rs       # Migration verification
+│   └── Cargo.toml
+├── web/                    # Web-based migration wizard
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── index.tsx
+│   │   │   ├── github.tsx
+│   │   │   └── progress.tsx
+│   │   └── components/
+│   └── package.json
+└── docs/
+    ├── github-migration.md
+    ├── gitlab-migration.md
+    └── troubleshooting.md
 ```
 
 ## Detailed Implementation
 
-### Phase 1: Core Documentation
+### Phase 1: GitHub Migration Tool
 
-#### 1.1 Quickstart Guide
+#### 1.1 CLI Migration Tool
 
-```markdown
-# Guts Node Quickstart
+```rust
+// tools/migration/guts-migrate/src/main.rs
 
-Deploy a Guts node in 5 minutes.
+use clap::{Parser, Subcommand};
 
-## Prerequisites
-
-- Docker 24+ or Kubernetes 1.28+
-- 4 CPU cores, 8GB RAM, 100GB SSD
-- Public IP with ports 8080 (HTTP), 9000 (P2P)
-
-## Option 1: Docker (Simplest)
-
-\`\`\`bash
-# Generate node identity
-docker run --rm guts/node:latest guts-node keygen > node.key
-
-# Start node
-docker run -d \
-  --name guts-node \
-  -p 8080:8080 \
-  -p 9000:9000 \
-  -v $(pwd)/data:/data \
-  -v $(pwd)/node.key:/etc/guts/node.key \
-  guts/node:latest
-
-# Verify node is running
-curl http://localhost:8080/health/ready
-\`\`\`
-
-## Option 2: Kubernetes (Production)
-
-\`\`\`bash
-# Add Helm repository
-helm repo add guts https://charts.guts.network
-
-# Install
-helm install guts-node guts/guts-node \
-  --set persistence.size=100Gi \
-  --set resources.requests.memory=8Gi
-
-# Check status
-kubectl get pods -l app=guts-node
-\`\`\`
-
-## Next Steps
-
-- [Configure networking](configuration/networking.md)
-- [Set up monitoring](operations/monitoring.md)
-- [Join the network](../guides/joining-network.md)
-```
-
-#### 1.2 Requirements Documentation
-
-```markdown
-# System Requirements
-
-## Hardware Requirements
-
-### Minimum (Development/Testing)
-
-| Component | Minimum | Notes |
-|-----------|---------|-------|
-| CPU | 2 cores | x86_64 or ARM64 |
-| RAM | 4 GB | |
-| Storage | 50 GB SSD | NVMe preferred |
-| Network | 10 Mbps | |
-
-### Recommended (Production)
-
-| Component | Recommended | Notes |
-|-----------|-------------|-------|
-| CPU | 8 cores | Dedicated, not shared |
-| RAM | 32 GB | ECC preferred |
-| Storage | 500 GB NVMe | RAID-1 for reliability |
-| Network | 1 Gbps | Low latency preferred |
-
-### Validator Requirements
-
-| Component | Required | Notes |
-|-----------|----------|-------|
-| CPU | 16 cores | High single-thread performance |
-| RAM | 64 GB | ECC required |
-| Storage | 2 TB NVMe | RAID-1 required |
-| Network | 1 Gbps | 99.9% uptime required |
-| UPS | Yes | Graceful shutdown support |
-
-## Software Requirements
-
-- Linux kernel 5.10+ (Ubuntu 22.04+, Debian 12+, RHEL 9+)
-- Docker 24+ or containerd 1.7+
-- Kubernetes 1.28+ (for K8s deployment)
-
-## Network Requirements
-
-| Port | Protocol | Purpose | Required |
-|------|----------|---------|----------|
-| 8080 | TCP | HTTP API | Yes |
-| 9000 | TCP/UDP | P2P | Yes |
-| 9090 | TCP | Metrics | Optional |
-| 443 | TCP | HTTPS (with proxy) | Recommended |
-
-### Firewall Rules
-
-\`\`\`bash
-# Required inbound
-ufw allow 8080/tcp  # API
-ufw allow 9000/tcp  # P2P
-ufw allow 9000/udp  # QUIC
-
-# Optional (internal only)
-ufw allow from 10.0.0.0/8 to any port 9090  # Metrics
-\`\`\`
-```
-
-### Phase 2: Operational Runbooks
-
-#### 2.1 Runbook Template
-
-```markdown
-# Runbook: [Issue Name]
-
-**Severity:** P1/P2/P3/P4
-**Impact:** [Description of user/system impact]
-**On-Call Action:** [Immediate action required]
-
-## Symptoms
-
-- [ ] Symptom 1
-- [ ] Symptom 2
-- [ ] Symptom 3
-
-## Detection
-
-**Alert Name:** `guts_[metric]_critical`
-
-**Query:**
-\`\`\`promql
-[Prometheus query that triggers this alert]
-\`\`\`
-
-## Diagnosis
-
-### Step 1: Verify the Issue
-
-\`\`\`bash
-# Command to verify
-guts-node status
-\`\`\`
-
-Expected output: [description]
-Actual output if issue present: [description]
-
-### Step 2: Check Related Metrics
-
-\`\`\`bash
-# Check metrics
-curl -s localhost:9090/metrics | grep [relevant_metric]
-\`\`\`
-
-### Step 3: Review Logs
-
-\`\`\`bash
-# Check recent logs
-journalctl -u guts-node --since "10 minutes ago" | grep -i error
-\`\`\`
-
-## Resolution
-
-### Option A: [First Resolution Path]
-
-\`\`\`bash
-# Step-by-step commands
-\`\`\`
-
-**Expected Result:** [What should happen]
-
-### Option B: [Alternative Resolution]
-
-\`\`\`bash
-# Alternative steps
-\`\`\`
-
-## Escalation
-
-If the above steps don't resolve the issue:
-
-1. Collect diagnostics: `guts-node diagnostics > diag.tar.gz`
-2. Contact: [escalation contact]
-3. Include: Node ID, timestamp, diagnostic bundle
-
-## Post-Incident
-
-- [ ] Update monitoring if detection was delayed
-- [ ] Document any new resolution steps
-- [ ] Create follow-up ticket if root cause needs investigation
-
-## Related Runbooks
-
-- [Related Runbook 1](link)
-- [Related Runbook 2](link)
-```
-
-#### 2.2 Node Not Syncing Runbook
-
-```markdown
-# Runbook: Node Not Syncing
-
-**Severity:** P2
-**Impact:** Node cannot serve current data, may serve stale content
-**On-Call Action:** Investigate within 30 minutes
-
-## Symptoms
-
-- [ ] Node reports sync status as "syncing" for extended period
-- [ ] Block height not increasing
-- [ ] API returns stale data
-- [ ] Alert: `guts_sync_lag_seconds > 60`
-
-## Detection
-
-**Alert Name:** `guts_node_sync_stalled`
-
-**Query:**
-\`\`\`promql
-time() - guts_last_block_time > 60
-\`\`\`
-
-## Diagnosis
-
-### Step 1: Check Sync Status
-
-\`\`\`bash
-guts-node status --format json | jq '.sync'
-\`\`\`
-
-Expected:
-\`\`\`json
-{
-  "status": "synced",
-  "current_height": 12345,
-  "highest_known": 12345,
-  "peers": 5
+#[derive(Parser)]
+#[command(name = "guts-migrate")]
+#[command(about = "Migrate repositories to Guts")]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
 }
-\`\`\`
 
-### Step 2: Check Peer Connectivity
+#[derive(Subcommand)]
+enum Commands {
+    /// Migrate from GitHub
+    Github {
+        /// GitHub repository (owner/repo)
+        #[arg(short, long)]
+        repo: String,
 
-\`\`\`bash
-guts-node peers list
-\`\`\`
+        /// GitHub personal access token
+        #[arg(short, long, env = "GITHUB_TOKEN")]
+        token: String,
 
-If fewer than 3 peers:
-- Check firewall rules
-- Verify bootstrap nodes are reachable
-- Check for network issues
+        /// Guts node URL
+        #[arg(long, default_value = "https://api.guts.network")]
+        guts_url: String,
 
-### Step 3: Check Disk Space
+        /// Include issues
+        #[arg(long, default_value = "true")]
+        issues: bool,
 
-\`\`\`bash
-df -h /var/lib/guts
-\`\`\`
+        /// Include pull requests
+        #[arg(long, default_value = "true")]
+        pull_requests: bool,
 
-If usage > 90%, see [Disk Full Runbook](disk-full.md)
+        /// Include releases
+        #[arg(long, default_value = "true")]
+        releases: bool,
 
-### Step 4: Check Memory
-
-\`\`\`bash
-free -h
-\`\`\`
-
-If memory exhausted, see [High Memory Runbook](high-memory.md)
-
-### Step 5: Check for Consensus Issues
-
-\`\`\`bash
-guts-node consensus status
-\`\`\`
-
-If consensus is stuck, see [Consensus Stuck Runbook](consensus-stuck.md)
-
-## Resolution
-
-### Option A: Restart Node
-
-\`\`\`bash
-systemctl restart guts-node
-# Wait 2 minutes
-guts-node status
-\`\`\`
-
-### Option B: Force Resync from Peers
-
-\`\`\`bash
-# Stop node
-systemctl stop guts-node
-
-# Clear sync state (preserves data)
-guts-node sync reset
-
-# Restart
-systemctl start guts-node
-\`\`\`
-
-### Option C: Resync from Snapshot
-
-\`\`\`bash
-# Stop node
-systemctl stop guts-node
-
-# Download latest snapshot
-guts-node snapshot download --latest
-
-# Restart
-systemctl start guts-node
-\`\`\`
-
-## Escalation
-
-If none of the above works:
-1. Collect full diagnostics
-2. Check if other nodes in network have same issue
-3. Escalate to core team if network-wide
-
-## Post-Incident
-
-- [ ] Verify node caught up completely
-- [ ] Check for any data inconsistencies
-- [ ] Monitor for recurrence
+        /// Include wiki
+        #[arg(long, default_value = "true")]
+        wiki: bool,
+    },
+    /// Migrate from GitLab
+    Gitlab {
+        // Similar options
+    },
+    /// Migrate from Bitbucket
+    Bitbucket {
+        // Similar options
+    },
+    /// Verify migration
+    Verify {
+        /// Source repository URL
+        source: String,
+        /// Guts repository
+        target: String,
+    },
+}
 ```
 
-### Phase 3: Monitoring & Alerting
+#### 1.2 GitHub Migration Implementation
 
-#### 3.1 Grafana Dashboards
+```rust
+// tools/migration/guts-migrate/src/github.rs
 
-```json
-{
-  "dashboard": {
-    "title": "Guts Node Overview",
-    "panels": [
-      {
-        "title": "Node Health",
-        "type": "stat",
-        "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
-        "targets": [
-          {
-            "expr": "up{job='guts-node'}",
-            "legendFormat": "Node Status"
-          }
-        ],
-        "options": {
-          "colorMode": "background",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {"color": "red", "value": 0},
-              {"color": "green", "value": 1}
-            ]
-          }
+use octocrab::Octocrab;
+use indicatif::{ProgressBar, ProgressStyle};
+
+pub struct GitHubMigration {
+    github: Octocrab,
+    guts: GutsClient,
+    config: MigrationConfig,
+}
+
+#[derive(Clone)]
+pub struct MigrationConfig {
+    pub repo: String,
+    pub issues: bool,
+    pub pull_requests: bool,
+    pub releases: bool,
+    pub wiki: bool,
+}
+
+impl GitHubMigration {
+    pub async fn new(token: &str, guts_url: &str) -> Result<Self> {
+        let github = Octocrab::builder()
+            .personal_token(token.to_string())
+            .build()?;
+
+        let guts = GutsClient::new(guts_url)?;
+
+        Ok(Self { github, guts, config: Default::default() })
+    }
+
+    /// Run complete migration
+    pub async fn migrate(&self, config: MigrationConfig) -> Result<MigrationReport> {
+        let mut report = MigrationReport::new();
+
+        // Step 1: Get repository info
+        println!("Fetching repository information...");
+        let (owner, name) = parse_repo(&config.repo)?;
+        let gh_repo = self.github.repos(owner, name).get().await?;
+
+        // Step 2: Create Guts repository
+        println!("Creating repository on Guts...");
+        let guts_repo = self.guts.create_repo(&CreateRepoRequest {
+            name: gh_repo.name.clone(),
+            description: gh_repo.description.clone(),
+            private: gh_repo.private.unwrap_or(false),
+        }).await?;
+        report.repo_created = true;
+
+        // Step 3: Mirror Git data
+        println!("Mirroring Git repository...");
+        self.mirror_git(&gh_repo, &guts_repo).await?;
+        report.git_mirrored = true;
+
+        // Step 4: Migrate issues
+        if config.issues {
+            println!("Migrating issues...");
+            let count = self.migrate_issues(&gh_repo, &guts_repo).await?;
+            report.issues_migrated = count;
         }
-      },
-      {
-        "title": "Sync Status",
-        "type": "gauge",
-        "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
-        "targets": [
-          {
-            "expr": "guts_sync_percentage",
-            "legendFormat": "Sync %"
-          }
-        ]
-      },
-      {
-        "title": "Connected Peers",
-        "type": "stat",
-        "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
-        "targets": [
-          {
-            "expr": "guts_p2p_peers_connected",
-            "legendFormat": "Peers"
-          }
-        ]
-      },
-      {
-        "title": "Request Rate",
-        "type": "graph",
-        "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
-        "targets": [
-          {
-            "expr": "rate(guts_http_requests_total[5m])",
-            "legendFormat": "{{method}} {{path}}"
-          }
-        ]
-      },
-      {
-        "title": "Request Latency (p99)",
-        "type": "graph",
-        "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
-        "targets": [
-          {
-            "expr": "histogram_quantile(0.99, rate(guts_http_request_duration_seconds_bucket[5m]))",
-            "legendFormat": "p99 Latency"
-          }
-        ]
+
+        // Step 5: Migrate pull requests
+        if config.pull_requests {
+            println!("Migrating pull requests...");
+            let count = self.migrate_pull_requests(&gh_repo, &guts_repo).await?;
+            report.prs_migrated = count;
+        }
+
+        // Step 6: Migrate releases
+        if config.releases {
+            println!("Migrating releases...");
+            let count = self.migrate_releases(&gh_repo, &guts_repo).await?;
+            report.releases_migrated = count;
+        }
+
+        // Step 7: Migrate wiki
+        if config.wiki && gh_repo.has_wiki.unwrap_or(false) {
+            println!("Migrating wiki...");
+            self.migrate_wiki(&gh_repo, &guts_repo).await?;
+            report.wiki_migrated = true;
+        }
+
+        // Step 8: Set up redirect (optional)
+        println!("Setting up GitHub redirect...");
+        self.setup_redirect(&gh_repo, &guts_repo).await?;
+
+        Ok(report)
+    }
+
+    async fn mirror_git(&self, source: &Repository, target: &GutsRepo) -> Result<()> {
+        let temp_dir = tempfile::tempdir()?;
+        let clone_path = temp_dir.path().join("repo");
+
+        // Clone with all branches and tags
+        let output = Command::new("git")
+            .args(["clone", "--mirror", &source.clone_url.unwrap(), clone_path.to_str().unwrap()])
+            .output()?;
+
+        if !output.status.success() {
+            return Err(Error::GitCloneFailed(String::from_utf8_lossy(&output.stderr).to_string()));
+        }
+
+        // Push to Guts
+        let output = Command::new("git")
+            .current_dir(&clone_path)
+            .args(["push", "--mirror", &target.clone_url])
+            .output()?;
+
+        if !output.status.success() {
+            return Err(Error::GitPushFailed(String::from_utf8_lossy(&output.stderr).to_string()));
+        }
+
+        Ok(())
+    }
+
+    async fn migrate_issues(&self, source: &Repository, target: &GutsRepo) -> Result<usize> {
+        let issues = self.github.issues(&source.owner.login, &source.name)
+            .list()
+            .state(octocrab::params::State::All)
+            .send()
+            .await?;
+
+        let pb = ProgressBar::new(issues.items.len() as u64);
+        pb.set_style(ProgressStyle::default_bar()
+            .template("{msg} [{bar:40.cyan/blue}] {pos}/{len}")
+            .unwrap());
+        pb.set_message("Migrating issues");
+
+        let mut count = 0;
+        for issue in issues.items {
+            // Create issue on Guts
+            let guts_issue = self.guts.create_issue(&target.key, &CreateIssueRequest {
+                title: issue.title,
+                body: self.rewrite_content(&issue.body.unwrap_or_default()),
+                labels: issue.labels.iter().map(|l| l.name.clone()).collect(),
+                assignees: issue.assignees.iter().map(|a| self.map_user(&a.login)).collect(),
+            }).await?;
+
+            // Migrate comments
+            let comments = self.github.issues(&source.owner.login, &source.name)
+                .list_comments(issue.number)
+                .send()
+                .await?;
+
+            for comment in comments.items {
+                self.guts.create_comment(&target.key, guts_issue.number, &CreateCommentRequest {
+                    body: self.rewrite_content(&comment.body.unwrap_or_default()),
+                }).await?;
+            }
+
+            // Close if closed on GitHub
+            if issue.state == IssueState::Closed {
+                self.guts.close_issue(&target.key, guts_issue.number).await?;
+            }
+
+            pb.inc(1);
+            count += 1;
+        }
+
+        pb.finish_with_message("Issues migrated");
+        Ok(count)
+    }
+
+    async fn migrate_pull_requests(&self, source: &Repository, target: &GutsRepo) -> Result<usize> {
+        let prs = self.github.pulls(&source.owner.login, &source.name)
+            .list()
+            .state(octocrab::params::State::All)
+            .send()
+            .await?;
+
+        let mut count = 0;
+        for pr in prs.items {
+            // Create PR on Guts
+            let guts_pr = self.guts.create_pull_request(&target.key, &CreatePullRequest {
+                title: pr.title.unwrap_or_default(),
+                body: self.rewrite_content(&pr.body.unwrap_or_default()),
+                source_branch: pr.head.ref_field,
+                target_branch: pr.base.ref_field,
+            }).await?;
+
+            // Migrate reviews
+            let reviews = self.github.pulls(&source.owner.login, &source.name)
+                .list_reviews(pr.number)
+                .await?;
+
+            for review in reviews.items {
+                self.guts.create_review(&target.key, guts_pr.number, &CreateReview {
+                    body: review.body.unwrap_or_default(),
+                    state: self.map_review_state(&review.state),
+                }).await?;
+            }
+
+            count += 1;
+        }
+
+        Ok(count)
+    }
+
+    /// Rewrite content to update links and references
+    fn rewrite_content(&self, content: &str) -> String {
+        // Rewrite GitHub URLs to Guts URLs
+        let content = content.replace(
+            &format!("https://github.com/{}", self.config.repo),
+            &format!("https://guts.network/{}", self.config.repo)
+        );
+
+        // Rewrite user mentions
+        // @github-user -> @guts-user (if mapped)
+
+        // Rewrite issue references
+        // #123 -> guts#123
+
+        content
+    }
+}
+
+#[derive(Default)]
+pub struct MigrationReport {
+    pub repo_created: bool,
+    pub git_mirrored: bool,
+    pub issues_migrated: usize,
+    pub prs_migrated: usize,
+    pub releases_migrated: usize,
+    pub wiki_migrated: bool,
+    pub errors: Vec<String>,
+}
+
+impl MigrationReport {
+    pub fn print_summary(&self) {
+        println!("\n=== Migration Summary ===");
+        println!("Repository created: {}", if self.repo_created { "✓" } else { "✗" });
+        println!("Git data mirrored: {}", if self.git_mirrored { "✓" } else { "✗" });
+        println!("Issues migrated: {}", self.issues_migrated);
+        println!("Pull requests migrated: {}", self.prs_migrated);
+        println!("Releases migrated: {}", self.releases_migrated);
+        println!("Wiki migrated: {}", if self.wiki_migrated { "✓" } else { "N/A" });
+
+        if !self.errors.is_empty() {
+            println!("\nErrors:");
+            for error in &self.errors {
+                println!("  - {}", error);
+            }
+        }
+    }
+}
+```
+
+### Phase 2: Developer SDKs
+
+#### 2.1 TypeScript SDK
+
+```typescript
+// packages/guts-sdk/src/index.ts
+
+export class GutsClient {
+  private baseUrl: string;
+  private token?: string;
+
+  constructor(options: GutsClientOptions) {
+    this.baseUrl = options.baseUrl || 'https://api.guts.network';
+    this.token = options.token;
+  }
+
+  // Repository operations
+  repos = {
+    list: () => this.get<Repository[]>('/api/repos'),
+    get: (owner: string, name: string) =>
+      this.get<Repository>(`/api/repos/${owner}/${name}`),
+    create: (data: CreateRepoRequest) =>
+      this.post<Repository>('/api/repos', data),
+    delete: (owner: string, name: string) =>
+      this.delete(`/api/repos/${owner}/${name}`),
+  };
+
+  // Pull request operations
+  pulls = {
+    list: (owner: string, repo: string) =>
+      this.get<PullRequest[]>(`/api/repos/${owner}/${repo}/pulls`),
+    get: (owner: string, repo: string, number: number) =>
+      this.get<PullRequest>(`/api/repos/${owner}/${repo}/pulls/${number}`),
+    create: (owner: string, repo: string, data: CreatePullRequest) =>
+      this.post<PullRequest>(`/api/repos/${owner}/${repo}/pulls`, data),
+    merge: (owner: string, repo: string, number: number) =>
+      this.post(`/api/repos/${owner}/${repo}/pulls/${number}/merge`, {}),
+  };
+
+  // Issue operations
+  issues = {
+    list: (owner: string, repo: string, options?: ListIssuesOptions) =>
+      this.get<Issue[]>(`/api/repos/${owner}/${repo}/issues`, options),
+    get: (owner: string, repo: string, number: number) =>
+      this.get<Issue>(`/api/repos/${owner}/${repo}/issues/${number}`),
+    create: (owner: string, repo: string, data: CreateIssue) =>
+      this.post<Issue>(`/api/repos/${owner}/${repo}/issues`, data),
+    update: (owner: string, repo: string, number: number, data: UpdateIssue) =>
+      this.patch<Issue>(`/api/repos/${owner}/${repo}/issues/${number}`, data),
+  };
+
+  // WebSocket for real-time updates
+  subscribe(channel: string): EventSource {
+    const url = new URL(`/ws/subscribe`, this.baseUrl);
+    url.searchParams.set('channel', channel);
+    if (this.token) {
+      url.searchParams.set('token', this.token);
+    }
+    return new EventSource(url.toString());
+  }
+
+  private async get<T>(path: string, params?: Record<string, any>): Promise<T> {
+    const url = new URL(path, this.baseUrl);
+    if (params) {
+      Object.entries(params).forEach(([key, value]) =>
+        url.searchParams.set(key, String(value))
+      );
+    }
+
+    const response = await fetch(url.toString(), {
+      headers: this.headers(),
+    });
+
+    if (!response.ok) {
+      throw new GutsError(response.status, await response.text());
+    }
+
+    return response.json();
+  }
+
+  private async post<T>(path: string, data: any): Promise<T> {
+    const response = await fetch(new URL(path, this.baseUrl).toString(), {
+      method: 'POST',
+      headers: this.headers(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new GutsError(response.status, await response.text());
+    }
+
+    return response.json();
+  }
+
+  private headers(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+    return headers;
+  }
+}
+
+// React hooks
+export function useRepository(owner: string, name: string) {
+  const [repo, setRepo] = useState<Repository | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    const client = new GutsClient({});
+    client.repos.get(owner, name)
+      .then(setRepo)
+      .catch(setError)
+      .finally(() => setLoading(false));
+  }, [owner, name]);
+
+  return { repo, loading, error };
+}
+
+export function useIssues(owner: string, repo: string) {
+  // Similar implementation
+}
+```
+
+#### 2.2 Python SDK
+
+```python
+# packages/guts-python/guts/__init__.py
+
+from dataclasses import dataclass
+from typing import Optional, List, Iterator
+import httpx
+
+@dataclass
+class GutsConfig:
+    base_url: str = "https://api.guts.network"
+    token: Optional[str] = None
+
+class GutsClient:
+    def __init__(self, config: Optional[GutsConfig] = None):
+        self.config = config or GutsConfig()
+        self._client = httpx.Client(
+            base_url=self.config.base_url,
+            headers=self._headers(),
+        )
+
+    def _headers(self) -> dict:
+        headers = {"Content-Type": "application/json"}
+        if self.config.token:
+            headers["Authorization"] = f"Bearer {self.config.token}"
+        return headers
+
+    # Repository operations
+    def list_repos(self) -> List["Repository"]:
+        response = self._client.get("/api/repos")
+        response.raise_for_status()
+        return [Repository(**r) for r in response.json()]
+
+    def get_repo(self, owner: str, name: str) -> "Repository":
+        response = self._client.get(f"/api/repos/{owner}/{name}")
+        response.raise_for_status()
+        return Repository(**response.json())
+
+    def create_repo(
+        self,
+        name: str,
+        description: Optional[str] = None,
+        private: bool = False,
+    ) -> "Repository":
+        response = self._client.post(
+            "/api/repos",
+            json={"name": name, "description": description, "private": private},
+        )
+        response.raise_for_status()
+        return Repository(**response.json())
+
+    # Pull request operations
+    def list_pulls(
+        self, owner: str, repo: str, state: str = "open"
+    ) -> List["PullRequest"]:
+        response = self._client.get(
+            f"/api/repos/{owner}/{repo}/pulls",
+            params={"state": state},
+        )
+        response.raise_for_status()
+        return [PullRequest(**pr) for pr in response.json()]
+
+    def create_pull(
+        self,
+        owner: str,
+        repo: str,
+        title: str,
+        source_branch: str,
+        target_branch: str,
+        body: Optional[str] = None,
+    ) -> "PullRequest":
+        response = self._client.post(
+            f"/api/repos/{owner}/{repo}/pulls",
+            json={
+                "title": title,
+                "body": body,
+                "source_branch": source_branch,
+                "target_branch": target_branch,
+            },
+        )
+        response.raise_for_status()
+        return PullRequest(**response.json())
+
+    # Issue operations
+    def list_issues(
+        self, owner: str, repo: str, state: str = "open"
+    ) -> List["Issue"]:
+        response = self._client.get(
+            f"/api/repos/{owner}/{repo}/issues",
+            params={"state": state},
+        )
+        response.raise_for_status()
+        return [Issue(**issue) for issue in response.json()]
+
+    def create_issue(
+        self,
+        owner: str,
+        repo: str,
+        title: str,
+        body: Optional[str] = None,
+        labels: Optional[List[str]] = None,
+    ) -> "Issue":
+        response = self._client.post(
+            f"/api/repos/{owner}/{repo}/issues",
+            json={"title": title, "body": body, "labels": labels or []},
+        )
+        response.raise_for_status()
+        return Issue(**response.json())
+
+    # Context manager support
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self._client.close()
+
+# CLI convenience
+def cli():
+    """Command-line interface for Guts."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Guts CLI")
+    parser.add_argument("--token", help="API token")
+    # Add subcommands...
+
+    args = parser.parse_args()
+    # Handle commands...
+```
+
+### Phase 3: IDE Integrations
+
+#### 3.1 VS Code Extension
+
+```typescript
+// extensions/vscode-guts/src/extension.ts
+
+import * as vscode from 'vscode';
+import { GutsClient } from 'guts-sdk';
+
+export function activate(context: vscode.ExtensionContext) {
+  const client = new GutsClient({
+    token: vscode.workspace.getConfiguration('guts').get('token'),
+  });
+
+  // Repository explorer
+  const repoProvider = new GutsRepoProvider(client);
+  vscode.window.registerTreeDataProvider('gutsRepos', repoProvider);
+
+  // Pull request view
+  const prProvider = new GutsPullRequestProvider(client);
+  vscode.window.registerTreeDataProvider('gutsPullRequests', prProvider);
+
+  // Issue view
+  const issueProvider = new GutsIssueProvider(client);
+  vscode.window.registerTreeDataProvider('gutsIssues', issueProvider);
+
+  // Commands
+  context.subscriptions.push(
+    vscode.commands.registerCommand('guts.cloneRepo', async () => {
+      const repo = await vscode.window.showInputBox({
+        prompt: 'Enter repository (owner/name)',
+        placeHolder: 'owner/repo',
+      });
+
+      if (repo) {
+        const uri = vscode.Uri.parse(`guts://${repo}`);
+        await vscode.commands.executeCommand('git.clone', uri);
       }
-    ]
+    }),
+
+    vscode.commands.registerCommand('guts.createPullRequest', async () => {
+      const repo = await getCurrentRepo();
+      if (!repo) {
+        vscode.window.showErrorMessage('No Guts repository found');
+        return;
+      }
+
+      const title = await vscode.window.showInputBox({
+        prompt: 'Pull request title',
+      });
+
+      if (title) {
+        const pr = await client.pulls.create(repo.owner, repo.name, {
+          title,
+          source_branch: await getCurrentBranch(),
+          target_branch: 'main',
+        });
+
+        vscode.window.showInformationMessage(
+          `Created PR #${pr.number}`,
+          'Open in Browser'
+        ).then((action) => {
+          if (action === 'Open in Browser') {
+            vscode.env.openExternal(vscode.Uri.parse(pr.html_url));
+          }
+        });
+      }
+    }),
+
+    vscode.commands.registerCommand('guts.createIssue', async () => {
+      // Similar implementation
+    }),
+  );
+
+  // Status bar
+  const statusBar = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Left,
+    100
+  );
+  statusBar.text = '$(git-branch) Guts';
+  statusBar.command = 'guts.showMenu';
+  statusBar.show();
+
+  // Git credential helper registration
+  registerGitCredentialHelper(context);
+}
+
+class GutsRepoProvider implements vscode.TreeDataProvider<RepoItem> {
+  private _onDidChangeTreeData = new vscode.EventEmitter<RepoItem | undefined>();
+  readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+
+  constructor(private client: GutsClient) {}
+
+  async getChildren(element?: RepoItem): Promise<RepoItem[]> {
+    if (!element) {
+      const repos = await this.client.repos.list();
+      return repos.map((r) => new RepoItem(r));
+    }
+    return [];
+  }
+
+  getTreeItem(element: RepoItem): vscode.TreeItem {
+    return element;
   }
 }
 ```
 
-#### 3.2 Alert Rules
+#### 3.2 Git Credential Helper
+
+```rust
+// tools/git-credential-guts/src/main.rs
+
+use std::io::{self, BufRead, Write};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args: Vec<String> = std::env::args().collect();
+    let operation = args.get(1).map(|s| s.as_str()).unwrap_or("");
+
+    match operation {
+        "get" => handle_get()?,
+        "store" => handle_store()?,
+        "erase" => handle_erase()?,
+        _ => {
+            eprintln!("Usage: git-credential-guts <get|store|erase>");
+            std::process::exit(1);
+        }
+    }
+
+    Ok(())
+}
+
+fn handle_get() -> Result<(), Box<dyn std::error::Error>> {
+    let mut protocol = String::new();
+    let mut host = String::new();
+
+    // Read input from Git
+    for line in io::stdin().lock().lines() {
+        let line = line?;
+        if line.is_empty() {
+            break;
+        }
+
+        let mut parts = line.splitn(2, '=');
+        let key = parts.next().unwrap_or("");
+        let value = parts.next().unwrap_or("");
+
+        match key {
+            "protocol" => protocol = value.to_string(),
+            "host" => host = value.to_string(),
+            _ => {}
+        }
+    }
+
+    // Check if this is a Guts host
+    if !is_guts_host(&host) {
+        return Ok(());
+    }
+
+    // Get token from secure storage
+    if let Some(token) = get_stored_token(&host)? {
+        println!("protocol={}", protocol);
+        println!("host={}", host);
+        println!("username=token");
+        println!("password={}", token);
+    }
+
+    Ok(())
+}
+
+fn handle_store() -> Result<(), Box<dyn std::error::Error>> {
+    let mut host = String::new();
+    let mut password = String::new();
+
+    for line in io::stdin().lock().lines() {
+        let line = line?;
+        if line.is_empty() {
+            break;
+        }
+
+        let mut parts = line.splitn(2, '=');
+        let key = parts.next().unwrap_or("");
+        let value = parts.next().unwrap_or("");
+
+        match key {
+            "host" => host = value.to_string(),
+            "password" => password = value.to_string(),
+            _ => {}
+        }
+    }
+
+    if is_guts_host(&host) && !password.is_empty() {
+        store_token(&host, &password)?;
+    }
+
+    Ok(())
+}
+
+fn is_guts_host(host: &str) -> bool {
+    host.ends_with(".guts.network") || host == "guts.network" || host == "localhost"
+}
+
+fn get_stored_token(host: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    // Use system keychain (keyring crate)
+    let entry = keyring::Entry::new("git-credential-guts", host)?;
+    match entry.get_password() {
+        Ok(token) => Ok(Some(token)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(e) => Err(e.into()),
+    }
+}
+
+fn store_token(host: &str, token: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let entry = keyring::Entry::new("git-credential-guts", host)?;
+    entry.set_password(token)?;
+    Ok(())
+}
+```
+
+### Phase 4: SSH Support
+
+#### 4.1 SSH Key Management
+
+```rust
+// crates/guts-compat/src/ssh.rs
+
+use ssh_key::{PublicKey, Algorithm};
+
+pub struct SshKeyManager {
+    keys: HashMap<UserId, Vec<SshKey>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SshKey {
+    pub id: Uuid,
+    pub user_id: UserId,
+    pub title: String,
+    pub key_type: KeyType,
+    pub public_key: String,
+    pub fingerprint: String,
+    pub created_at: DateTime<Utc>,
+    pub last_used: Option<DateTime<Utc>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub enum KeyType {
+    Ed25519,
+    EcdsaSha2Nistp256,
+    EcdsaSha2Nistp384,
+    Rsa,
+}
+
+impl SshKeyManager {
+    /// Add SSH key for user
+    pub fn add_key(&mut self, user_id: UserId, title: String, public_key: String) -> Result<SshKey> {
+        // Parse and validate key
+        let parsed = PublicKey::from_openssh(&public_key)?;
+
+        let key_type = match parsed.algorithm() {
+            Algorithm::Ed25519 => KeyType::Ed25519,
+            Algorithm::EcdsaSha2NistP256 => KeyType::EcdsaSha2Nistp256,
+            Algorithm::EcdsaSha2NistP384 => KeyType::EcdsaSha2Nistp384,
+            Algorithm::Rsa { .. } => KeyType::Rsa,
+            _ => return Err(Error::UnsupportedKeyType),
+        };
+
+        let fingerprint = parsed.fingerprint(ssh_key::HashAlg::Sha256).to_string();
+
+        let key = SshKey {
+            id: Uuid::new_v4(),
+            user_id,
+            title,
+            key_type,
+            public_key,
+            fingerprint,
+            created_at: Utc::now(),
+            last_used: None,
+        };
+
+        self.keys.entry(user_id).or_default().push(key.clone());
+
+        Ok(key)
+    }
+
+    /// Authenticate by SSH key
+    pub fn authenticate(&self, fingerprint: &str) -> Option<UserId> {
+        for (user_id, keys) in &self.keys {
+            for key in keys {
+                if key.fingerprint == fingerprint {
+                    return Some(*user_id);
+                }
+            }
+        }
+        None
+    }
+}
+```
+
+#### 4.2 SSH Server
+
+```rust
+// crates/guts-node/src/ssh_server.rs
+
+use russh::*;
+use russh_keys::*;
+
+pub struct GutsSshServer {
+    git_service: Arc<GitService>,
+    auth: Arc<AuthService>,
+}
+
+impl server::Server for GutsSshServer {
+    type Handler = GutsSshHandler;
+
+    fn new_client(&mut self, _: Option<SocketAddr>) -> Self::Handler {
+        GutsSshHandler {
+            git_service: self.git_service.clone(),
+            auth: self.auth.clone(),
+            authenticated_user: None,
+        }
+    }
+}
+
+pub struct GutsSshHandler {
+    git_service: Arc<GitService>,
+    auth: Arc<AuthService>,
+    authenticated_user: Option<UserId>,
+}
+
+impl server::Handler for GutsSshHandler {
+    type Error = anyhow::Error;
+
+    async fn auth_publickey(
+        &mut self,
+        user: &str,
+        public_key: &key::PublicKey,
+    ) -> Result<server::Auth, Self::Error> {
+        let fingerprint = public_key.fingerprint();
+
+        if let Some(user_id) = self.auth.authenticate_ssh(&fingerprint).await? {
+            self.authenticated_user = Some(user_id);
+            Ok(server::Auth::Accept)
+        } else {
+            Ok(server::Auth::Reject)
+        }
+    }
+
+    async fn exec_request(
+        &mut self,
+        channel: ChannelId,
+        command: &[u8],
+        session: &mut Session,
+    ) -> Result<(), Self::Error> {
+        let command = String::from_utf8_lossy(command);
+
+        // Parse git command
+        if command.starts_with("git-upload-pack") || command.starts_with("git-receive-pack") {
+            let repo_path = extract_repo_path(&command)?;
+
+            // Check permissions
+            let user = self.authenticated_user.ok_or(Error::NotAuthenticated)?;
+            self.auth.check_permission(user, &repo_path, Permission::Read).await?;
+
+            // Handle git operation
+            self.handle_git_command(channel, &command, session).await?;
+        }
+
+        Ok(())
+    }
+}
+```
+
+### Phase 5: Developer Documentation
+
+#### 5.1 Documentation Site Structure
+
+```
+docs/developer/
+├── index.md                  # Developer guide overview
+├── quickstart/
+│   ├── first-repo.md         # Create first repository
+│   ├── first-pr.md           # Create first PR
+│   └── first-issue.md        # Create first issue
+├── guides/
+│   ├── authentication.md     # Auth methods
+│   ├── webhooks.md           # Setting up webhooks
+│   ├── ci-cd.md              # CI/CD integration
+│   ├── migration.md          # Migration from GitHub
+│   └── best-practices.md     # Best practices
+├── api/
+│   ├── overview.md           # API overview
+│   ├── authentication.md     # API authentication
+│   ├── repositories.md       # Repository endpoints
+│   ├── pull-requests.md      # PR endpoints
+│   ├── issues.md             # Issue endpoints
+│   ├── webhooks.md           # Webhook events
+│   └── rate-limits.md        # Rate limiting
+├── sdks/
+│   ├── typescript.md         # TypeScript SDK
+│   ├── python.md             # Python SDK
+│   ├── go.md                 # Go SDK
+│   └── rust.md               # Rust SDK
+├── integrations/
+│   ├── vscode.md             # VS Code extension
+│   ├── jetbrains.md          # JetBrains plugin
+│   ├── github-actions.md     # GitHub Actions adapter
+│   └── gitlab-ci.md          # GitLab CI adapter
+└── reference/
+    ├── git-protocol.md       # Git protocol details
+    ├── openapi.yaml          # OpenAPI spec
+    └── errors.md             # Error codes
+```
+
+### Phase 6: Community Platform
+
+#### 6.1 Community Infrastructure
 
 ```yaml
-# infra/monitoring/alerts/guts-alerts.yml
-groups:
-  - name: guts-node
-    rules:
-      # Node availability
-      - alert: GutsNodeDown
-        expr: up{job="guts-node"} == 0
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Guts node is down"
-          description: "Node {{ $labels.instance }} has been down for more than 1 minute"
-          runbook_url: "https://docs.guts.network/runbooks/node-down"
-
-      # Sync issues
-      - alert: GutsNodeNotSyncing
-        expr: time() - guts_last_block_time > 60
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Guts node not syncing"
-          description: "Node {{ $labels.instance }} hasn't received a block in 60 seconds"
-          runbook_url: "https://docs.guts.network/runbooks/node-not-syncing"
-
-      # Peer connectivity
-      - alert: GutsLowPeerCount
-        expr: guts_p2p_peers_connected < 3
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Low peer count"
-          description: "Node {{ $labels.instance }} has fewer than 3 peers"
-          runbook_url: "https://docs.guts.network/runbooks/low-peers"
-
-      # API latency
-      - alert: GutsHighAPILatency
-        expr: histogram_quantile(0.99, rate(guts_http_request_duration_seconds_bucket[5m])) > 1
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "High API latency"
-          description: "API p99 latency is above 1 second"
-          runbook_url: "https://docs.guts.network/runbooks/high-latency"
-
-      # Resource usage
-      - alert: GutsHighMemoryUsage
-        expr: guts_process_resident_memory_bytes / guts_config_max_memory > 0.9
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "High memory usage"
-          description: "Memory usage is above 90%"
-          runbook_url: "https://docs.guts.network/runbooks/high-memory"
-
-      # Disk space
-      - alert: GutsDiskSpaceLow
-        expr: guts_storage_available_bytes / guts_storage_total_bytes < 0.1
-        for: 5m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Disk space critically low"
-          description: "Less than 10% disk space remaining"
-          runbook_url: "https://docs.guts.network/runbooks/disk-full"
-
-      # Consensus
-      - alert: GutsConsensusStalled
-        expr: rate(guts_consensus_commits_total[5m]) == 0
-        for: 10m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Consensus stalled"
-          description: "No consensus commits in 10 minutes"
-          runbook_url: "https://docs.guts.network/runbooks/consensus-stuck"
-```
-
-### Phase 4: Disaster Recovery
-
-#### 4.1 Backup Procedures
-
-```markdown
-# Backup Procedures
-
-## Overview
-
-Guts nodes should be backed up regularly to enable recovery from:
-- Hardware failures
-- Data corruption
-- Accidental deletion
-- Ransomware attacks
-
-## What to Backup
-
-| Component | Location | Frequency | Retention |
-|-----------|----------|-----------|-----------|
-| Node key | `/etc/guts/node.key` | Once (after creation) | Forever |
-| Configuration | `/etc/guts/config.toml` | On change | 30 days |
-| Data directory | `/var/lib/guts/data` | Daily | 7 days |
-| Consensus state | `/var/lib/guts/consensus` | Hourly | 24 hours |
-
-## Backup Methods
-
-### Method 1: Snapshot (Recommended)
-
-\`\`\`bash
-# Create consistent snapshot
-guts-node backup create --output /backup/guts-$(date +%Y%m%d).tar.gz
-
-# Upload to S3
-aws s3 cp /backup/guts-$(date +%Y%m%d).tar.gz s3://guts-backups/
-\`\`\`
-
-### Method 2: Filesystem Snapshot (LVM/ZFS)
-
-\`\`\`bash
-# Pause writes
-guts-node maintenance enter
-
-# Create LVM snapshot
-lvcreate -L 10G -s -n guts-snap /dev/vg0/guts-data
-
-# Resume writes
-guts-node maintenance exit
-
-# Backup snapshot
-tar -czf /backup/guts-$(date +%Y%m%d).tar.gz /mnt/snap
-\`\`\`
-
-### Method 3: Continuous Replication
-
-\`\`\`bash
-# Set up WAL archiving to S3
-guts-node config set wal.archive_command "aws s3 cp %f s3://guts-wal/"
-guts-node config set wal.restore_command "aws s3 cp s3://guts-wal/%f %p"
-\`\`\`
-
-## Backup Verification
-
-\`\`\`bash
-# Verify backup integrity
-guts-node backup verify /backup/guts-20250101.tar.gz
-
-# Test restore to temporary location
-guts-node backup restore /backup/guts-20250101.tar.gz --target /tmp/guts-test
-\`\`\`
-
-## Automation
-
-\`\`\`yaml
-# /etc/cron.d/guts-backup
-0 */6 * * * root /usr/local/bin/guts-backup.sh >> /var/log/guts-backup.log 2>&1
-\`\`\`
-```
-
-#### 4.2 Restore Procedures
-
-```markdown
-# Restore Procedures
-
-## Prerequisites
-
-- Fresh server meeting [system requirements](../requirements.md)
-- Access to backup files
-- Node key backup (if restoring identity)
-
-## Restore Scenarios
-
-### Scenario 1: Same Server, New Disk
-
-\`\`\`bash
-# Install Guts
-curl -sSL https://get.guts.network | sh
-
-# Restore from backup
-guts-node backup restore /backup/guts-latest.tar.gz
-
-# Start node
-systemctl start guts-node
-
-# Verify
-guts-node status
-\`\`\`
-
-### Scenario 2: New Server, Same Identity
-
-\`\`\`bash
-# Install Guts
-curl -sSL https://get.guts.network | sh
-
-# Restore node key
-cp /backup/node.key /etc/guts/node.key
-chmod 600 /etc/guts/node.key
-
-# Restore configuration
-cp /backup/config.toml /etc/guts/config.toml
-
-# Restore data
-guts-node backup restore /backup/guts-latest.tar.gz
-
-# Update DNS/IP as needed
-# ...
-
-# Start node
-systemctl start guts-node
-\`\`\`
-
-### Scenario 3: New Server, New Identity
-
-\`\`\`bash
-# Install Guts
-curl -sSL https://get.guts.network | sh
-
-# Generate new identity
-guts-node keygen > /etc/guts/node.key
-
-# Configure
-guts-node config init
-
-# Start fresh (will sync from network)
-systemctl start guts-node
-\`\`\`
-
-## Recovery Time Objectives
-
-| Scenario | RTO Target | Notes |
-|----------|------------|-------|
-| Restart after crash | < 5 min | Automatic |
-| Restore from snapshot | < 30 min | Depends on data size |
-| Full resync | < 4 hours | Depends on network |
-
-## Validation After Restore
-
-\`\`\`bash
-# Check sync status
-guts-node status
-
-# Verify data integrity
-guts-node verify --full
-
-# Check peer connectivity
-guts-node peers list
-
-# Verify API functionality
-curl http://localhost:8080/api/repos
-\`\`\`
-```
-
-### Phase 5: Upgrade Procedures
-
-#### 5.1 Zero-Downtime Upgrades
-
-```markdown
-# Upgrade Procedures
-
-## Pre-Upgrade Checklist
-
-- [ ] Review release notes for breaking changes
-- [ ] Backup current installation
-- [ ] Verify new version compatibility
-- [ ] Test upgrade in staging environment
-- [ ] Schedule maintenance window (for major upgrades)
-
-## Upgrade Methods
-
-### Method 1: Rolling Upgrade (Kubernetes)
-
-\`\`\`bash
-# Update Helm values
-helm upgrade guts-node guts/guts-node --set image.tag=v1.2.0
-
-# Monitor rollout
-kubectl rollout status statefulset/guts-node
-\`\`\`
-
-### Method 2: Blue-Green Deployment
-
-\`\`\`bash
-# Deploy new version alongside old
-docker run -d --name guts-node-new -p 8081:8080 guts/node:v1.2.0
-
-# Verify new version
-curl http://localhost:8081/health/ready
-
-# Switch traffic
-# (Update load balancer or DNS)
-
-# Stop old version
-docker stop guts-node-old
-\`\`\`
-
-### Method 3: In-Place Upgrade (Single Node)
-
-\`\`\`bash
-# Stop node
-systemctl stop guts-node
-
-# Backup current binary
-cp /usr/local/bin/guts-node /usr/local/bin/guts-node.bak
-
-# Download new version
-curl -sSL https://get.guts.network/v1.2.0 | sh
-
-# Start node
-systemctl start guts-node
-
-# Verify
-guts-node version
-\`\`\`
-
-## Rollback Procedures
-
-If upgrade fails:
-
-\`\`\`bash
-# Stop node
-systemctl stop guts-node
-
-# Restore previous binary
-cp /usr/local/bin/guts-node.bak /usr/local/bin/guts-node
-
-# Restore data if needed
-guts-node backup restore /backup/pre-upgrade.tar.gz
-
-# Start node
-systemctl start guts-node
-\`\`\`
-
-## Version Compatibility
-
-| Upgrade Path | Compatible | Notes |
-|--------------|------------|-------|
-| 1.0.x → 1.0.y | Yes | Patch upgrades always compatible |
-| 1.x.0 → 1.y.0 | Yes | Minor upgrades compatible |
-| 1.x.x → 2.0.0 | Check | Major upgrades may require migration |
-```
-
-### Phase 6: Cloud Deployment Guides
-
-#### 6.1 AWS Terraform Module
-
-```hcl
-# infra/terraform/aws/modules/guts-node/main.tf
-
-variable "instance_type" {
-  default = "c6i.2xlarge"
-}
-
-variable "volume_size" {
-  default = 500
-}
-
-variable "vpc_id" {
-  type = string
-}
-
-variable "subnet_id" {
-  type = string
-}
-
-resource "aws_security_group" "guts_node" {
-  name        = "guts-node"
-  description = "Security group for Guts node"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTP API"
-  }
-
-  ingress {
-    from_port   = 9000
-    to_port     = 9000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "P2P TCP"
-  }
-
-  ingress {
-    from_port   = 9000
-    to_port     = 9000
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "P2P QUIC"
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_instance" "guts_node" {
-  ami           = data.aws_ami.ubuntu.id
-  instance_type = var.instance_type
-  subnet_id     = var.subnet_id
-
-  vpc_security_group_ids = [aws_security_group.guts_node.id]
-
-  root_block_device {
-    volume_size = var.volume_size
-    volume_type = "gp3"
-    iops        = 3000
-    throughput  = 125
-  }
-
-  user_data = <<-EOF
-    #!/bin/bash
-    curl -sSL https://get.guts.network | sh
-    systemctl enable guts-node
-    systemctl start guts-node
-  EOF
-
-  tags = {
-    Name = "guts-node"
-  }
-}
-
-output "public_ip" {
-  value = aws_instance.guts_node.public_ip
-}
-
-output "api_endpoint" {
-  value = "http://${aws_instance.guts_node.public_ip}:8080"
-}
+# Community platform components
+community:
+  forum:
+    platform: discourse
+    url: https://forum.guts.network
+    categories:
+      - General Discussion
+      - Help & Support
+      - Feature Requests
+      - Show & Tell
+      - Development
+
+  discord:
+    invite: https://discord.gg/guts
+    channels:
+      - "#general"
+      - "#help"
+      - "#development"
+      - "#operators"
+      - "#governance"
+
+  documentation:
+    platform: docusaurus
+    url: https://docs.guts.network
+
+  status:
+    platform: statuspage
+    url: https://status.guts.network
 ```
 
 ## Implementation Plan
 
-### Phase 1: Core Documentation (Week 1-3)
-- [ ] Create documentation structure
-- [ ] Write quickstart guide
-- [ ] Document requirements
-- [ ] Write installation guides (Docker, K8s, bare metal)
-- [ ] Create configuration reference
+### Phase 1: Migration Tools (Week 1-4)
+- [ ] Implement GitHub migration CLI
+- [ ] Add GitLab migration support
+- [ ] Add Bitbucket migration support
+- [ ] Create web-based migration wizard
+- [ ] Write migration documentation
 
-### Phase 2: Runbooks (Week 3-5)
-- [ ] Create runbook template
-- [ ] Write 15+ operational runbooks
-- [ ] Link runbooks to alerts
-- [ ] Create troubleshooting guides
-- [ ] Document diagnostic procedures
+### Phase 2: SDKs (Week 4-7)
+- [ ] Develop TypeScript SDK
+- [ ] Develop Python SDK
+- [ ] Develop Go SDK
+- [ ] Update Rust client library
+- [ ] Create SDK documentation
 
-### Phase 3: Monitoring (Week 5-7)
-- [ ] Create Grafana dashboards
-- [ ] Define alert rules
-- [ ] Set up PagerDuty/OpsGenie integration
-- [ ] Create SLO/SLI documentation
-- [ ] Document metrics
+### Phase 3: IDE Integrations (Week 7-10)
+- [ ] Build VS Code extension
+- [ ] Build JetBrains plugin
+- [ ] Implement Git credential helper
+- [ ] Create integration guides
 
-### Phase 4: Disaster Recovery (Week 7-8)
-- [ ] Document backup procedures
-- [ ] Document restore procedures
-- [ ] Test and validate procedures
-- [ ] Create automation scripts
-- [ ] Define RTO/RPO
+### Phase 4: SSH Support (Week 10-11)
+- [ ] Implement SSH key management
+- [ ] Build SSH server
+- [ ] Test with standard Git clients
+- [ ] Document SSH setup
 
-### Phase 5: Upgrades (Week 8-9)
-- [ ] Document upgrade procedures
-- [ ] Create rollback procedures
-- [ ] Test zero-downtime upgrades
-- [ ] Document version compatibility
-
-### Phase 6: Cloud Guides (Week 9-11)
-- [ ] Create AWS deployment guide
-- [ ] Create GCP deployment guide
-- [ ] Create Azure deployment guide
-- [ ] Create Terraform modules
-- [ ] Create Helm charts
-
-### Phase 7: Validation (Week 11-12)
-- [ ] User testing with operators
-- [ ] Incorporate feedback
+### Phase 5: Documentation (Week 11-13)
+- [ ] Write developer quickstart
+- [ ] Create API documentation
+- [ ] Write integration guides
 - [ ] Create video tutorials
+
+### Phase 6: Community (Week 13-14)
+- [ ] Set up forum
+- [ ] Create Discord server
 - [ ] Launch documentation site
+- [ ] Establish support processes
 
 ## Success Criteria
 
-- [ ] Complete operator documentation covering all scenarios
-- [ ] 15+ operational runbooks with step-by-step procedures
-- [ ] Pre-built Grafana dashboards for key metrics
-- [ ] Alert rules with runbook links
-- [ ] Tested backup/restore procedures with documented RTO
-- [ ] Zero-downtime upgrade procedure validated
-- [ ] Terraform modules for AWS, GCP, Azure
-- [ ] Helm charts published to public repository
-- [ ] 5+ operators successfully deploy using documentation
+- [ ] One-click migration from GitHub works for 95% of repositories
+- [ ] SDKs available for TypeScript, Python, Go, Rust
+- [ ] VS Code extension published with 100+ installs
+- [ ] Git credential helper works seamlessly
+- [ ] SSH clone/push works with standard Git
+- [ ] Documentation site live with 50+ pages
+- [ ] Community forum active with 100+ members
+- [ ] 10+ repositories migrated from GitHub
 
 ## Dependencies
 
-- Documentation hosting (GitHub Pages, Docusaurus)
-- Grafana Cloud or self-hosted Grafana
-- Alertmanager configuration
-- Cloud provider accounts for testing
-- Helm chart repository
+- GitHub API access for migration
+- VS Code extension marketplace account
+- JetBrains plugin marketplace account
+- Documentation hosting (Vercel, Netlify)
+- Discourse hosting
+- Discord server setup
 
 ## References
 
-- [Google SRE Book](https://sre.google/sre-book/table-of-contents/)
-- [Kubernetes Documentation Best Practices](https://kubernetes.io/docs/contribute/style/)
-- [Terraform Module Best Practices](https://www.terraform.io/language/modules/develop)
-- [Grafana Dashboard Best Practices](https://grafana.com/docs/grafana/latest/best-practices/)
+- [GitHub REST API](https://docs.github.com/en/rest)
+- [VS Code Extension API](https://code.visualstudio.com/api)
+- [Git Credential Helper Protocol](https://git-scm.com/docs/git-credential)
+- [russh Library](https://github.com/warp-tech/russh)
+- [Docusaurus](https://docusaurus.io/)
