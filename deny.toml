@@ -2,13 +2,13 @@
 # https://embarkstudios.github.io/cargo-deny/
 
 [advisories]
-vulnerability = "deny"
-unmaintained = "warn"
-yanked = "warn"
-notice = "warn"
+# List of advisory IDs to ignore
+ignore = []
 
 [licenses]
-unlicensed = "deny"
+# Confidence threshold for detecting license
+confidence-threshold = 0.8
+# List of allowed licenses
 allow = [
     "MIT",
     "Apache-2.0",
@@ -19,21 +19,27 @@ allow = [
     "Zlib",
     "MPL-2.0",
     "Unicode-DFS-2016",
+    "Unicode-3.0",
+    "BSL-1.0",
+    "CC0-1.0",
 ]
-copyleft = "warn"
 
 [bans]
+# How to handle multiple versions of the same crate
 multiple-versions = "warn"
+# Allow wildcard dependencies
 wildcards = "allow"
+# Highlight which crates cause duplicates
 highlight = "all"
-
 # Deny specific crates
 deny = []
-
 # Skip certain crates from duplicate detection
 skip = []
 
 [sources]
+# Deny unknown registries
 unknown-registry = "deny"
+# Warn about unknown git sources
 unknown-git = "warn"
+# List of allowed registries
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
