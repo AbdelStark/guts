@@ -1,0 +1,202 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--space-3);
+  background: var(--surface-0);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  transition:
+    border-color var(--duration-micro) var(--ease-micro),
+    box-shadow var(--duration-micro) var(--ease-micro);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.input:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent-cipher);
+  box-shadow: 0 0 0 3px rgba(106, 228, 255, 0.15);
+}
+
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hasLeftIcon {
+  padding-left: 40px;
+}
+
+.hasRightIcon {
+  padding-right: 40px;
+}
+
+.leftIcon,
+.rightIcon {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 100%;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.leftIcon {
+  left: 0;
+}
+
+.rightIcon {
+  right: 0;
+}
+
+.leftIcon svg,
+.rightIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.errorText {
+  color: var(--status-danger);
+}
+
+.hasError .input {
+  border-color: var(--status-danger);
+}
+
+.hasError .input:focus {
+  box-shadow: 0 0 0 3px rgba(255, 59, 46, 0.15);
+}
+
+/* Search Input */
+.searchWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 400px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: var(--space-3);
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  height: 44px;
+  padding: 0 var(--space-7) 0 42px;
+  background: var(--surface-0);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  transition:
+    border-color var(--duration-micro) var(--ease-micro),
+    box-shadow var(--duration-micro) var(--ease-micro);
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
+
+.searchInput:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--accent-cipher);
+  box-shadow: 0 0 0 3px rgba(106, 228, 255, 0.15);
+}
+
+/* Remove default search styling */
+.searchInput::-webkit-search-cancel-button {
+  display: none;
+}
+
+.clearButton {
+  position: absolute;
+  right: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--surface-1);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-micro) var(--ease-micro);
+}
+
+.clearButton:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.clearButton svg {
+  width: 14px;
+  height: 14px;
+}
+
+.shortcut {
+  position: absolute;
+  right: var(--space-3);
+  display: flex;
+  align-items: center;
+}
+
+.shortcut kbd {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 var(--space-2);
+  background: var(--surface-1);
+  border: 1px solid var(--border-hairline);
+  border-radius: 6px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+}

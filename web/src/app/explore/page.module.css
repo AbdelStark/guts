@@ -1,0 +1,139 @@
+.content {
+  padding: var(--space-5);
+}
+
+.searchSection {
+  max-width: 600px;
+  margin: 0 auto var(--space-6);
+}
+
+.sectionTitle {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.featured {
+  margin-bottom: var(--space-6);
+}
+
+.repoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+.repoLink {
+  display: block;
+  text-decoration: none;
+}
+
+.repoOwner {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.repoSeparator {
+  color: var(--text-muted);
+  margin: 0 2px;
+}
+
+.repoName {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.repoMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.language {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.languageDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.repoStats {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* Trending */
+.trending {
+  background: var(--surface-0);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.trendingList {
+  display: flex;
+  flex-direction: column;
+}
+
+.trendingItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3);
+  margin: 0 calc(-1 * var(--space-3));
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: background-color var(--duration-micro) var(--ease-micro);
+}
+
+.trendingItem:hover {
+  background: var(--surface-1);
+}
+
+.trendingRank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--surface-1);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.trendingInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.trendingName {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.trendingDesc {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1024px) {
+  .repoGrid {
+    grid-template-columns: 1fr;
+  }
+}

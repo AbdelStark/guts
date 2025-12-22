@@ -1,0 +1,160 @@
+.content {
+  padding: var(--space-5);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.repoInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  background: var(--surface-0);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+}
+
+.stats {
+  display: flex;
+  gap: var(--space-5);
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.statItem svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+}
+
+/* Code View */
+.codeView {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: var(--space-4);
+}
+
+.fileTree {
+  background: var(--surface-0);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.fileTreeHeader {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.fileList {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2);
+}
+
+.fileItem {
+  margin: 0;
+}
+
+.fileButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--duration-micro) var(--ease-micro);
+}
+
+.fileButton:hover {
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+
+.fileIcon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+}
+
+.fileName {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Code Panel */
+.codePanel {
+  overflow: hidden;
+}
+
+.codeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-hairline);
+  background: var(--surface-0);
+}
+
+.codeHeader .fileName {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.codeActions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.code {
+  margin: 0;
+  padding: var(--space-4);
+  background: var(--bg-ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  overflow-x: auto;
+  tab-size: 4;
+}
+
+.code code {
+  font-family: inherit;
+}
+
+.placeholder {
+  text-align: center;
+  color: var(--text-muted);
+  padding: var(--space-6);
+}
+
+@media (max-width: 1024px) {
+  .codeView {
+    grid-template-columns: 1fr;
+  }
+
+  .fileTree {
+    display: none;
+  }
+}

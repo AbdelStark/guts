@@ -1,0 +1,185 @@
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-ink);
+  border-right: 1px solid var(--border-hairline);
+  z-index: 100;
+}
+
+/* Header with logo */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+}
+
+.logoMark {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--accent-ember) 0%, #c42f24 100%);
+  border-radius: 8px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: white;
+}
+
+.logoSlash {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 16px;
+  background: linear-gradient(
+    168deg,
+    rgba(255, 255, 255, 0.3) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 50%
+  );
+  border-radius: 0 8px 0 0;
+}
+
+.logoText {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-lg);
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+}
+
+/* Navigation */
+.nav {
+  flex: 1;
+  padding: var(--space-3);
+  overflow-y: auto;
+}
+
+.navList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.navItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all var(--duration-micro) var(--ease-micro);
+}
+
+.navItem:hover {
+  background: var(--surface-0);
+  color: var(--text-primary);
+}
+
+.navItem.active {
+  background: var(--surface-0);
+  color: var(--text-primary);
+}
+
+.navItem.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: var(--accent-ember);
+  border-radius: 0 2px 2px 0;
+}
+
+/* The Slash notch on active nav item */
+.slashNotch {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 12px;
+  background: linear-gradient(
+    168deg,
+    var(--accent-ember) 0%,
+    var(--accent-ember) 50%,
+    transparent 50%
+  );
+  border-radius: 0 var(--radius-md) 0 0;
+  opacity: 0;
+  transition: opacity var(--duration-micro) var(--ease-micro);
+}
+
+.navItem.active .slashNotch {
+  opacity: 1;
+}
+
+.navIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.navIcon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.navLabel {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+/* Bottom section */
+.bottom {
+  padding: var(--space-3);
+  border-top: 1px solid var(--border-hairline);
+}
+
+.helpLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin-top: var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  text-decoration: none;
+  transition: all var(--duration-micro) var(--ease-micro);
+}
+
+.helpLink:hover {
+  background: var(--surface-0);
+  color: var(--text-secondary);
+}
+
+.helpLink svg {
+  width: 16px;
+  height: 16px;
+}

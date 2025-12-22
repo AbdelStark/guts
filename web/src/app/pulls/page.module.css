@@ -1,0 +1,56 @@
+.content {
+  padding: var(--space-5);
+}
+
+.row {
+  cursor: pointer;
+}
+
+.row:hover {
+  background: var(--surface-1);
+}
+
+.prInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.prNumber {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.prTitle {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.labels {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+}
+
+.branches {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.arrow {
+  color: var(--text-muted);
+}
+
+.time {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}

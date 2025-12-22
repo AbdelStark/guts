@@ -1,0 +1,99 @@
+/* GUTS Design Tokens - Obsidian Minimalism */
+@import url("https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&f[]=clash-display@500,600,700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fragment+Mono:ital,wght@0,400;1,400&display=swap");
+
+:root {
+  /* Typography */
+  --font-ui: "Satoshi", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Clash Display", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Fragment Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+  /* Typography Scale */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 20px;
+  --text-xl: 28px;
+  --text-2xl: 40px;
+
+  /* Line Heights */
+  --leading-xs: 16px;
+  --leading-sm: 20px;
+  --leading-base: 24px;
+  --leading-lg: 28px;
+  --leading-xl: 34px;
+  --leading-2xl: 44px;
+
+  /* Background Colors */
+  --bg-ink: #07080b;
+  --bg-obsidian: #0b0d12;
+
+  /* Surface Colors */
+  --surface-0: #111521;
+  --surface-1: #161c2c;
+  --surface-2: #232b41;
+
+  /* Text Colors */
+  --text-primary: #f2f5ff;
+  --text-secondary: #a8b1c7;
+  --text-muted: #707a93;
+
+  /* Border Colors */
+  --border-hairline: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  /* Accent Colors */
+  --accent-ember: #ff3b2e;
+  --accent-ember-hover: #ff5246;
+  --accent-cipher: #6ae4ff;
+  --accent-cipher-hover: #8aebff;
+
+  /* Status Colors */
+  --status-success: #35d07f;
+  --status-warning: #ffb020;
+  --status-danger: #ff3b2e;
+
+  /* Semantic Colors */
+  --diff-add-bg: rgba(53, 208, 127, 0.12);
+  --diff-add-border: rgba(53, 208, 127, 0.4);
+  --diff-remove-bg: rgba(255, 59, 46, 0.12);
+  --diff-remove-border: rgba(255, 59, 46, 0.4);
+
+  /* Border Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pop: 14px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Layout */
+  --sidebar-width: 252px;
+  --topbar-height: 56px;
+  --inspector-width: 320px;
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-micro: cubic-bezier(0.2, 0.9, 0.2, 1);
+  --duration-micro: 120ms;
+  --duration-standard: 180ms;
+  --duration-large: 260ms;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-float: 0 12px 48px rgba(0, 0, 0, 0.6);
+
+  /* Focus Ring */
+  --focus-ring: 0 0 0 2px var(--accent-cipher), 0 0 0 4px rgba(106, 228, 255, 0.2);
+}
