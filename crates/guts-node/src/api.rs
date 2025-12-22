@@ -136,6 +136,8 @@ impl axum::extract::FromRef<AppState> for guts_web::WebState {
             collaboration: app_state.collaboration.clone(),
             auth: app_state.auth.clone(),
             ci: app_state.ci.clone(),
+            consensus: app_state.consensus.clone(),
+            mempool: app_state.mempool.clone(),
         }
     }
 }

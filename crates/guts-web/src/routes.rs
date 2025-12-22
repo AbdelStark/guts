@@ -22,6 +22,10 @@ pub struct WebState {
     pub collaboration: Arc<guts_collaboration::CollaborationStore>,
     pub auth: Arc<guts_auth::AuthStore>,
     pub ci: Arc<guts_ci::CiStore>,
+    /// Optional consensus engine for displaying consensus status.
+    pub consensus: Option<Arc<guts_consensus::ConsensusEngine>>,
+    /// Optional mempool for displaying pending transactions.
+    pub mempool: Option<Arc<guts_consensus::Mempool>>,
 }
 
 /// Create the web router.
@@ -62,6 +66,8 @@ where
         // Actions (CI/CD)
         .route("/{owner}/{repo}/actions", get(actions_list))
         .route("/{owner}/{repo}/actions/runs/{run_id}", get(actions_run))
+        // Consensus
+        .route("/consensus", get(consensus_dashboard))
 }
 
 /// Query parameters for list endpoints.
@@ -1474,6 +1480,82 @@ fn search_tree_for_code(
     }
 
     Ok(())
+}
+
+// ==================== Consensus Dashboard ====================
+
+/// Consensus dashboard page.
+async fn consensus_dashboard(State(state): State<WebState>) -> Result<impl IntoResponse, WebError> {
+    // Get consensus status
+    let (enabled, consensus_state, view, finalized_height, epoch, validator_count, validators) =
+        if let Some(consensus) = &state.consensus {
+            let engine_state = consensus.state();
+            let view = consensus.view();
+            let finalized_height = consensus.finalized_height();
+            let validators_lock = consensus.validators();
+            let validators_guard = validators_lock.read();
+            let epoch = validators_guard.epoch();
+            let validator_count = validators_guard.len();
+
+            let validators: Vec<ValidatorSummary> = validators_guard
+                .validators()
+                .iter()
+                .map(|v| {
+                    let pk_hex = hex::encode(&v.pubkey.0);
+                    ValidatorSummary {
+                        name: v.name.clone(),
+                        public_key: if pk_hex.len() > 16 {
+                            format!("{}...", &pk_hex[..16])
+                        } else {
+                            pk_hex
+                        },
+                        stake: v.weight,
+                        address: v.addr.to_string(),
+                    }
+                })
+                .collect();
+
+            (
+                true,
+                format!("{:?}", engine_state),
+                view,
+                finalized_height,
+                epoch,
+                validator_count,
+                validators,
+            )
+        } else {
+            (false, "Disabled".to_string(), 0, 0, 0, 0, Vec::new())
+        };
+
+    // Get mempool stats
+    let (mempool_tx_count, mempool_oldest_age_secs) = if let Some(mempool) = &state.mempool {
+        let stats = mempool.stats();
+        (
+            stats.transaction_count,
+            stats.oldest_transaction_age.as_secs_f64(),
+        )
+    } else {
+        (0, 0.0)
+    };
+
+    // Get recent blocks (placeholder - would need block store)
+    let recent_blocks: Vec<BlockSummary> = Vec::new();
+
+    let template = ConsensusDashboardTemplate {
+        enabled,
+        state: consensus_state,
+        view,
+        finalized_height,
+        epoch,
+        validator_count,
+        mempool_tx_count,
+        mempool_oldest_age_secs,
+        validators,
+        recent_blocks,
+    };
+
+    Ok(Html(template.render()?))
 }
 
 // ==================== API Documentation ====================

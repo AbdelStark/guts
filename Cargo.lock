@@ -1847,6 +1847,7 @@ dependencies = [
  "guts-auth",
  "guts-ci",
  "guts-collaboration",
+ "guts-consensus",
  "guts-storage",
  "guts-types",
  "hex",

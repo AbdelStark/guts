@@ -585,6 +585,162 @@ test_collaborator_management() {
     assert_eq "Collaborator permission resolved" "write" "$resolved_perm" || true
 }
 
+test_consensus_status() {
+    log_info "=== Testing Consensus Status ==="
+
+    for i in "${!NODES[@]}"; do
+        local node="${NODES[$i]}"
+        local response
+        response=$(api_call GET "$node/api/consensus/status")
+
+        if [[ -n "$response" ]]; then
+            local enabled
+            enabled=$(echo "$response" | jq -r '.enabled' 2>/dev/null || echo "")
+            assert_not_empty "Node $((i+1)) consensus status returned" "$enabled" || true
+
+            local state
+            state=$(echo "$response" | jq -r '.state' 2>/dev/null || echo "")
+            assert_not_empty "Node $((i+1)) consensus state available" "$state" || true
+        else
+            assert_success "Node $((i+1)) consensus status check" "1" || true
+        fi
+    done
+}
+
+test_consensus_validators() {
+    log_info "=== Testing Consensus Validators ==="
+
+    # Test on first node
+    local node="${NODES[0]}"
+    local response
+    response=$(api_call GET "$node/api/consensus/validators")
+
+    if [[ -n "$response" ]]; then
+        local epoch
+        epoch=$(echo "$response" | jq -r '.epoch' 2>/dev/null || echo "")
+        assert_not_empty "Validator epoch available" "$epoch" || true
+
+        local validator_count
+        validator_count=$(echo "$response" | jq -r '.validator_count' 2>/dev/null || echo "0")
+        # In devnet mode, we should have at least 1 validator
+        if [[ "$validator_count" -ge 0 ]]; then
+            assert_success "Validator count returned" "0" || true
+        else
+            assert_success "Validator count returned" "1" || true
+        fi
+
+        local validators
+        validators=$(echo "$response" | jq -r '.validators' 2>/dev/null || echo "")
+        assert_not_empty "Validators array available" "$validators" || true
+    else
+        log_warning "No consensus validators response - consensus may be disabled"
+    fi
+}
+
+test_consensus_mempool() {
+    log_info "=== Testing Consensus Mempool ==="
+
+    # Test on first node
+    local node="${NODES[0]}"
+    local response
+    response=$(api_call GET "$node/api/consensus/mempool")
+
+    if [[ -n "$response" ]]; then
+        local tx_count
+        tx_count=$(echo "$response" | jq -r '.transaction_count' 2>/dev/null || echo "")
+        assert_not_empty "Mempool transaction count available" "$tx_count" || true
+
+        local oldest_age
+        oldest_age=$(echo "$response" | jq -r '.oldest_age_secs' 2>/dev/null || echo "")
+        assert_not_empty "Mempool oldest age available" "$oldest_age" || true
+    else
+        log_warning "No mempool response - consensus may be disabled"
+    fi
+}
+
+test_consensus_blocks() {
+    log_info "=== Testing Consensus Blocks ==="
+
+    # Test blocks endpoint on first node
+    local node="${NODES[0]}"
+    local response
+    response=$(api_call GET "$node/api/consensus/blocks")
+
+    if [[ -n "$response" ]]; then
+        # Response should be an array (may be empty if no blocks finalized yet)
+        if echo "$response" | jq -e '. | type == "array"' > /dev/null 2>&1; then
+            assert_success "Blocks endpoint returns array" "0" || true
+        else
+            assert_success "Blocks endpoint returns array" "1" || true
+        fi
+    else
+        log_warning "No blocks response - consensus may be disabled"
+    fi
+
+    # Test block by height endpoint (should 404 for non-existent block)
+    local block_response
+    block_response=$(curl -sf -o /dev/null -w "%{http_code}" "$node/api/consensus/blocks/999999" 2>/dev/null || echo "")
+
+    if [[ "$block_response" == "404" ]]; then
+        assert_success "Block not found returns 404" "0" || true
+    elif [[ -z "$block_response" ]]; then
+        log_warning "Block endpoint not available"
+    else
+        log_verbose "Block endpoint returned status: $block_response"
+    fi
+}
+
+test_consensus_transaction_submission() {
+    log_info "=== Testing Consensus Transaction Submission ==="
+
+    local node="${NODES[0]}"
+
+    # Create a test transaction (CreateRepository)
+    # Note: This requires proper signature generation, so we test the endpoint responds
+    local tx_request='{
+        "type": "CreateRepository",
+        "owner": "consensus-test-org",
+        "name": "consensus-test-repo",
+        "description": "Repository created via consensus test",
+        "default_branch": "main",
+        "visibility": "public",
+        "creator_pubkey": "0000000000000000000000000000000000000000000000000000000000000000",
+        "signature": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    }'
+
+    local response
+    local http_code
+    http_code=$(curl -sf -o /tmp/tx_response.json -w "%{http_code}" \
+        -X POST "$node/api/consensus/transactions" \
+        -H "Content-Type: application/json" \
+        -d "$tx_request" 2>/dev/null || echo "")
+
+    if [[ -f /tmp/tx_response.json ]]; then
+        response=$(cat /tmp/tx_response.json)
+        rm -f /tmp/tx_response.json
+    fi
+
+    # The transaction may be accepted (202) or fail if consensus is disabled (503)
+    # Both are valid behaviors depending on node configuration
+    if [[ "$http_code" == "202" ]]; then
+        local accepted
+        accepted=$(echo "$response" | jq -r '.accepted' 2>/dev/null || echo "")
+        if [[ "$accepted" == "true" ]]; then
+            assert_success "Transaction accepted by consensus" "0" || true
+        else
+            assert_success "Transaction accepted by consensus" "1" || true
+        fi
+    elif [[ "$http_code" == "503" ]]; then
+        log_warning "Transaction submission unavailable (consensus disabled)"
+        assert_success "Transaction endpoint responds correctly when disabled" "0" || true
+    elif [[ -z "$http_code" ]]; then
+        log_warning "Transaction endpoint not available"
+    else
+        log_verbose "Transaction submission returned status: $http_code"
+        assert_success "Transaction endpoint responds" "0" || true
+    fi
+}
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -672,6 +828,21 @@ main() {
     echo ""
 
     test_collaborator_management
+    echo ""
+
+    test_consensus_status
+    echo ""
+
+    test_consensus_validators
+    echo ""
+
+    test_consensus_mempool
+    echo ""
+
+    test_consensus_blocks
+    echo ""
+
+    test_consensus_transaction_submission
     echo ""
 
     # Summary

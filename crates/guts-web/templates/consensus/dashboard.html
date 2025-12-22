@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Consensus Dashboard - Guts{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold">Consensus Dashboard</h1>
+            <p class="text-gray-400 mt-1">Network consensus status and validator information</p>
+        </div>
+        <div class="flex items-center space-x-2">
+            {% if enabled %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-900 text-green-300">
+                <span class="w-2 h-2 mr-2 rounded-full bg-green-400"></span>
+                Enabled
+            </span>
+            {% else %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-700 text-gray-300">
+                <span class="w-2 h-2 mr-2 rounded-full bg-gray-500"></span>
+                Disabled
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Status Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Consensus State -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-sm">State</p>
+                    <p class="text-2xl font-bold mt-1">{{ state }}</p>
+                </div>
+                <div class="text-green-500">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current View -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-sm">Current View</p>
+                    <p class="text-2xl font-bold mt-1">{{ view }}</p>
+                </div>
+                <div class="text-blue-500">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Finalized Height -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-sm">Finalized Height</p>
+                    <p class="text-2xl font-bold mt-1">{{ finalized_height }}</p>
+                </div>
+                <div class="text-purple-500">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Validator Count -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-sm">Validators</p>
+                    <p class="text-2xl font-bold mt-1">{{ validator_count }}</p>
+                </div>
+                <div class="text-yellow-500">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mempool & Network Info -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Mempool Stats -->
+        <div class="bg-gray-800 rounded-lg border border-gray-700">
+            <div class="px-6 py-4 border-b border-gray-700">
+                <h2 class="text-lg font-semibold">Mempool</h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Pending Transactions</span>
+                    <span class="text-xl font-bold">{{ mempool_tx_count }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Oldest Transaction Age</span>
+                    <span class="text-xl font-bold">{{ mempool_oldest_age_secs }}s</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Current Epoch</span>
+                    <span class="text-xl font-bold">{{ epoch }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Status -->
+        <div class="bg-gray-800 rounded-lg border border-gray-700">
+            <div class="px-6 py-4 border-b border-gray-700">
+                <h2 class="text-lg font-semibold">Network Status</h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Consensus Protocol</span>
+                    <span class="font-medium">Simplex BFT</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Block Finality</span>
+                    <span class="font-medium">3 Network Hops</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Quorum Threshold</span>
+                    <span class="font-medium">2/3 + 1</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Validators Table -->
+    <div class="bg-gray-800 rounded-lg border border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-700">
+            <h2 class="text-lg font-semibold">Validators</h2>
+        </div>
+        {% if validators.is_empty() %}
+        <div class="p-6 text-center text-gray-500">
+            No validators registered. Consensus may be running in single-node mode.
+        </div>
+        {% else %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-750">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Public Key</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Stake</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Address</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-700">
+                    {% for validator in validators %}
+                    <tr class="hover:bg-gray-750">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 rounded-full bg-green-400 mr-3"></div>
+                                <span class="font-medium">{{ validator.name }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <code class="text-sm text-gray-400">{{ validator.public_key }}</code>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-yellow-400">{{ validator.stake }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-gray-400">
+                            {{ validator.address }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Blocks -->
+    <div class="bg-gray-800 rounded-lg border border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-700">
+            <h2 class="text-lg font-semibold">Recent Blocks</h2>
+        </div>
+        {% if recent_blocks.is_empty() %}
+        <div class="p-6 text-center text-gray-500">
+            No blocks finalized yet. The network is starting up.
+        </div>
+        {% else %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-750">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Height</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Block ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Transactions</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Producer</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Time</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-700">
+                    {% for block in recent_blocks %}
+                    <tr class="hover:bg-gray-750">
+                        <td class="px-6 py-4 whitespace-nowrap font-medium">{{ block.height }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <code class="text-sm text-gray-400">{{ block.id }}</code>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">{{ block.tx_count }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-gray-400">{{ block.producer }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-gray-400">{{ block.timestamp }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- API Reference -->
+    <div class="bg-gray-800 rounded-lg border border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-700">
+            <h2 class="text-lg font-semibold">Consensus API</h2>
+        </div>
+        <div class="p-6 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <p class="text-sm font-medium text-gray-300">GET /api/consensus/status</p>
+                    <p class="text-sm text-gray-500">Get current consensus status</p>
+                </div>
+                <div class="space-y-2">
+                    <p class="text-sm font-medium text-gray-300">GET /api/consensus/validators</p>
+                    <p class="text-sm text-gray-500">List all validators</p>
+                </div>
+                <div class="space-y-2">
+                    <p class="text-sm font-medium text-gray-300">GET /api/consensus/mempool</p>
+                    <p class="text-sm text-gray-500">Get mempool statistics</p>
+                </div>
+                <div class="space-y-2">
+                    <p class="text-sm font-medium text-gray-300">GET /api/consensus/blocks</p>
+                    <p class="text-sm text-gray-500">List recent finalized blocks</p>
+                </div>
+                <div class="space-y-2">
+                    <p class="text-sm font-medium text-gray-300">POST /api/consensus/transactions</p>
+                    <p class="text-sm text-gray-500">Submit a new transaction</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

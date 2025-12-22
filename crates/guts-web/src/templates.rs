@@ -475,3 +475,40 @@ pub struct ActionsRunTemplate {
     pub run: RunDetailView,
     pub jobs: Vec<JobView>,
 }
+
+// ==================== Consensus Templates ====================
+
+/// Validator summary for lists.
+#[derive(Debug, Clone, Serialize)]
+pub struct ValidatorSummary {
+    pub name: String,
+    pub public_key: String,
+    pub stake: u64,
+    pub address: String,
+}
+
+/// Block summary for lists.
+#[derive(Debug, Clone, Serialize)]
+pub struct BlockSummary {
+    pub height: u64,
+    pub id: String,
+    pub tx_count: usize,
+    pub producer: String,
+    pub timestamp: String,
+}
+
+/// Consensus dashboard page.
+#[derive(Template)]
+#[template(path = "consensus/dashboard.html")]
+pub struct ConsensusDashboardTemplate {
+    pub enabled: bool,
+    pub state: String,
+    pub view: u64,
+    pub finalized_height: u64,
+    pub epoch: u64,
+    pub validator_count: usize,
+    pub mempool_tx_count: usize,
+    pub mempool_oldest_age_secs: f64,
+    pub validators: Vec<ValidatorSummary>,
+    pub recent_blocks: Vec<BlockSummary>,
+}
