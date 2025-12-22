@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, ReactNode } from "react";
-import { motion, MotionProps } from "framer-motion";
+import { motion } from "framer-motion";
 import clsx from "clsx";
 import styles from "./Button.module.css";
 

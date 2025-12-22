@@ -389,7 +389,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
                   {filteredCommands.length === 0 && (
                     <div className={styles.empty}>
-                      <span>No results found for "{query}"</span>
+                      <span>No results found for &ldquo;{query}&rdquo;</span>
                     </div>
                   )}
                 </div>

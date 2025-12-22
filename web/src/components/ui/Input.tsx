@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, InputHTMLAttributes } from "react";
+import { forwardRef, InputHTMLAttributes, useId } from "react";
 import clsx from "clsx";
 import styles from "./Input.module.css";
 
@@ -17,7 +17,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     { label, error, hint, leftIcon, rightIcon, className, id, ...props },
     ref
   ) => {
-    const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+    const generatedId = useId();
+    const inputId = id || generatedId;
 
     return (
       <div className={clsx(styles.wrapper, className)}>
