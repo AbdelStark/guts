@@ -1250,6 +1250,7 @@ dependencies = [
  "curve25519-dalek-ng",
  "hex",
  "rand_core 0.6.4",
+ "serde",
  "sha2 0.9.9",
  "thiserror 1.0.69",
  "zeroize",
@@ -1663,6 +1664,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "guts-consensus"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "commonware-consensus",
+ "commonware-cryptography",
+ "commonware-runtime",
+ "commonware-utils",
+ "ed25519-consensus",
+ "futures",
+ "guts-auth",
+ "guts-collaboration",
+ "guts-storage",
+ "guts-types",
+ "hex",
+ "parking_lot",
+ "proptest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 2.0.17",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "guts-git"
 version = "0.1.0"
 dependencies = [
@@ -1705,6 +1735,7 @@ dependencies = [
  "guts-ci",
  "guts-collaboration",
  "guts-compat",
+ "guts-consensus",
  "guts-git",
  "guts-p2p",
  "guts-realtime",

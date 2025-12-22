@@ -10,6 +10,7 @@ members = [
     "crates/guts-realtime",
     "crates/guts-ci",
     "crates/guts-compat",
+    "crates/guts-consensus",
     "crates/guts-node",
     "crates/guts-cli",
 ]
@@ -35,6 +36,7 @@ guts-web = { version = "0.1.0", path = "crates/guts-web" }
 guts-realtime = { version = "0.1.0", path = "crates/guts-realtime" }
 guts-ci = { version = "0.1.0", path = "crates/guts-ci" }
 guts-compat = { version = "0.1.0", path = "crates/guts-compat" }
+guts-consensus = { version = "0.1.0", path = "crates/guts-consensus" }
 
 # Commonware dependencies (matching Alto's versions)
 commonware-broadcast = "0.0.63"
@@ -77,6 +79,9 @@ async-trait = "0.1"
 # Logging & Tracing
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+
+# Cryptography
+ed25519-consensus = "2.1"
 
 # Utilities
 bytes = "1.7.1"

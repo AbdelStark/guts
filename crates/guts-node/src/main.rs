@@ -146,7 +146,9 @@ async fn main() -> anyhow::Result<()> {
     // Create application state
     let state = AppState {
         repos: Arc::new(RepoStore::new()),
-        p2p: None, // P2P is optional, enabled via configuration
+        p2p: None,       // P2P is optional, enabled via configuration
+        consensus: None, // Consensus is optional, enabled via configuration
+        mempool: None,   // Mempool is created with consensus
         collaboration: Arc::new(CollaborationStore::new()),
         auth: Arc::new(AuthStore::new()),
         realtime: Arc::new(EventHub::new()),

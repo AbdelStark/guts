@@ -12,6 +12,7 @@ guts-types = { workspace = true }
 guts-storage = { workspace = true }
 guts-git = { workspace = true }
 guts-p2p = { workspace = true }
+guts-consensus = { workspace = true }
 guts-collaboration = { workspace = true }
 guts-auth = { workspace = true }
 guts-web = { workspace = true }

@@ -100,6 +100,7 @@ use crate::realtime_api::realtime_routes;
 use crate::validation::validate_name;
 use guts_ci::CiStore;
 use guts_compat::CompatStore;
+use guts_consensus::{ConsensusEngine, Mempool};
 
 /// Re-export RepoStore for external use.
 pub use guts_storage::RepoStore;
@@ -111,6 +112,10 @@ pub struct AppState {
     pub repos: Arc<RepoStore>,
     /// Optional P2P manager for replication.
     pub p2p: Option<Arc<P2PManager>>,
+    /// Optional consensus engine for BFT consensus.
+    pub consensus: Option<Arc<ConsensusEngine>>,
+    /// Optional mempool for pending transactions.
+    pub mempool: Option<Arc<Mempool>>,
     /// Collaboration store for PRs, Issues, etc.
     pub collaboration: Arc<CollaborationStore>,
     /// Authorization store for permissions, organizations, etc.

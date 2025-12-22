@@ -88,6 +88,8 @@
 //! let state = AppState {
 //!     repos,
 //!     p2p: None, // Optional P2P manager
+//!     consensus: None, // Optional consensus engine
+//!     mempool: None, // Optional transaction mempool
 //!     collaboration,
 //!     auth,
 //!     realtime,
