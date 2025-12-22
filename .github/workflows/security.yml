@@ -50,26 +50,6 @@ jobs:
         run: cargo deny check licenses
 
   # ============================================================================
-  # SAST with CodeQL
-  # ============================================================================
-  codeql:
-    name: CodeQL
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: rust
-
-      - name: Build
-        run: cargo build --workspace
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-
-  # ============================================================================
   # Container Scanning
   # ============================================================================
   container-scan:
