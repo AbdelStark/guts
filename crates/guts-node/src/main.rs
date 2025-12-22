@@ -18,8 +18,12 @@ use guts_auth::AuthStore;
 use guts_ci::CiStore;
 use guts_collaboration::CollaborationStore;
 use guts_compat::CompatStore;
+use guts_consensus::{
+    ConsensusEngine, EngineConfig, Mempool, MempoolConfig, ValidatorConfig, ValidatorSet,
+};
 use guts_node::api::{create_router, AppState};
 use guts_node::config::NodeConfig;
+use guts_node::consensus_app::GutsApplication;
 use guts_node::health::HealthState;
 use guts_node::observability::{init_logging, LogFormat};
 use guts_realtime::EventHub;
@@ -27,6 +31,7 @@ use guts_storage::RepoStore;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
 /// Guts Node - Decentralized code collaboration infrastructure
 #[derive(Parser, Debug)]
@@ -143,22 +148,131 @@ async fn main() -> anyhow::Result<()> {
     // Initialize health state
     let health_state = HealthState::new();
 
+    // Create shared stores
+    let repos = Arc::new(RepoStore::new());
+    let collaboration = Arc::new(CollaborationStore::new());
+    let auth = Arc::new(AuthStore::new());
+    let realtime = Arc::new(EventHub::new());
+    let ci = Arc::new(CiStore::new());
+    let compat = Arc::new(CompatStore::new());
+
+    // Initialize consensus if enabled
+    let (consensus, mempool, guts_app) = if config.consensus.enabled {
+        tracing::info!("Initializing consensus engine");
+
+        // Create mempool
+        let mempool_config = MempoolConfig {
+            max_transactions: config.consensus.mempool_max_txs,
+            max_transaction_age: Duration::from_secs(config.consensus.mempool_ttl_secs),
+            max_transactions_per_block: config.consensus.max_txs_per_block,
+        };
+        let mempool = Arc::new(Mempool::new(mempool_config));
+
+        // Create consensus engine config
+        let engine_config = EngineConfig {
+            block_time: Duration::from_millis(config.consensus.block_time_ms),
+            max_txs_per_block: config.consensus.max_txs_per_block,
+            max_block_size: config.consensus.max_block_size,
+            view_timeout_multiplier: config.consensus.view_timeout_multiplier,
+            consensus_enabled: config.consensus.enabled,
+        };
+
+        // Parse validator key from P2P config using PrivateKeyExt
+        use commonware_cryptography::PrivateKeyExt;
+        let validator_key = config.p2p.private_key.as_ref().and_then(|key_hex| {
+            let key_hex = key_hex.strip_prefix("0x").unwrap_or(key_hex);
+            hex::decode(key_hex).ok().and_then(|bytes| {
+                if bytes.len() >= 8 {
+                    // Use the first 8 bytes as a seed
+                    let seed = u64::from_le_bytes(bytes[..8].try_into().unwrap());
+                    Some(commonware_cryptography::ed25519::PrivateKey::from_seed(
+                        seed,
+                    ))
+                } else {
+                    None
+                }
+            })
+        });
+
+        // Create validator set (single node for now, genesis-based in future)
+        // Use permissive config for single-node mode (min_validators = 0)
+        let validator_config = ValidatorConfig {
+            min_validators: 0, // Allow single-node mode
+            max_validators: 100,
+            quorum_threshold: 2.0 / 3.0,
+            block_time_ms: config.consensus.block_time_ms,
+        };
+
+        let validators = if let Some(ref key) = validator_key {
+            use guts_consensus::{SerializablePublicKey, Validator};
+            let pubkey = SerializablePublicKey::from_pubkey(
+                &commonware_cryptography::Signer::public_key(key),
+            );
+            let validator = Validator::new(pubkey, "local", 1, config.p2p.addr);
+            ValidatorSet::new(vec![validator], 0, validator_config)
+                .expect("Failed to create validator set")
+        } else {
+            ValidatorSet::new(vec![], 0, validator_config)
+                .expect("Failed to create empty validator set")
+        };
+
+        // Create consensus engine
+        let consensus = Arc::new(ConsensusEngine::new(
+            engine_config,
+            validator_key,
+            validators,
+            mempool.clone(),
+        ));
+
+        // Create the Guts application that applies finalized blocks to state
+        let guts_app = Arc::new(GutsApplication::new(
+            repos.clone(),
+            collaboration.clone(),
+            auth.clone(),
+            realtime.clone(),
+        ));
+
+        tracing::info!(
+            enabled = config.consensus.enabled,
+            block_time_ms = config.consensus.block_time_ms,
+            max_txs_per_block = config.consensus.max_txs_per_block,
+            "Consensus engine initialized"
+        );
+
+        (Some(consensus), Some(mempool), Some(guts_app))
+    } else {
+        tracing::info!("Consensus disabled, running in single-node mode");
+        (None, None, None)
+    };
+
     // Create application state
     let state = AppState {
-        repos: Arc::new(RepoStore::new()),
-        p2p: None,       // P2P is optional, enabled via configuration
-        consensus: None, // Consensus is optional, enabled via configuration
-        mempool: None,   // Mempool is created with consensus
-        collaboration: Arc::new(CollaborationStore::new()),
-        auth: Arc::new(AuthStore::new()),
-        realtime: Arc::new(EventHub::new()),
-        ci: Arc::new(CiStore::new()),
-        compat: Arc::new(CompatStore::new()),
+        repos,
+        p2p: None, // P2P is optional, enabled via configuration
+        consensus,
+        mempool,
+        collaboration,
+        auth,
+        realtime,
+        ci,
+        compat,
     };
 
     // Mark storage and realtime as healthy
     health_state.set_storage_healthy(true);
     health_state.set_realtime_healthy(true, 0);
+
+    // Spawn consensus engine task if enabled
+    if let (Some(ref consensus), Some(ref app)) = (&state.consensus, &guts_app) {
+        let consensus = consensus.clone();
+        let app = app.clone();
+        tokio::spawn(async move {
+            if let Err(e) = consensus.run(app).await {
+                tracing::error!(error = %e, "Consensus engine error");
+            }
+        });
+        tracing::info!("Consensus engine started");
+    }
 
     // Create router with health state
     let app = create_router(state, health_state.clone());

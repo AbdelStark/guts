@@ -81,6 +81,7 @@ mod engine;
 mod error;
 mod genesis;
 mod mempool;
+mod message;
 mod transaction;
 mod validator;
 
@@ -94,6 +95,11 @@ pub use genesis::{
     generate_devnet_genesis, ConsensusParams, Genesis, GenesisRepository, GenesisValidator,
 };
 pub use mempool::{Mempool, MempoolConfig, MempoolStats};
+pub use message::{
+    ConsensusMessage, FinalizeMessage, NotarizeMessage, NullifyMessage, ProposeMessage,
+    SyncRequestMessage, SyncResponseMessage, TransactionMessage, VoteCollector, CONSENSUS_CHANNEL,
+    SYNC_CHANNEL, TRANSACTION_CHANNEL,
+};
 pub use transaction::{
     BranchProtectionSpec, CommentTargetSpec, IssueUpdate, OrgUpdate, PullRequestUpdate,
     SerializablePublicKey, SerializableSignature, TeamSpec, Transaction, TransactionId,

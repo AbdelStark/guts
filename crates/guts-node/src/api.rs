@@ -91,6 +91,7 @@ use crate::auth_api::auth_routes;
 use crate::ci_api::ci_routes;
 use crate::collaboration_api::collaboration_routes;
 use crate::compat_api::compat_routes;
+use crate::consensus_api::consensus_routes;
 use crate::health::{health_routes, HealthState};
 use crate::observability::middleware::{
     metrics_handler, metrics_middleware, request_id_middleware,
@@ -232,6 +233,8 @@ pub fn create_router(state: AppState, health_state: HealthState) -> Router {
         .merge(ci_routes())
         // Compatibility API (Users, Tokens, SSH Keys, Releases, Contents, Archives)
         .merge(compat_routes())
+        // Consensus API (Blocks, Validators, Transactions)
+        .merge(consensus_routes())
         // Real-time WebSocket API
         .merge(realtime_routes())
         // Health check routes

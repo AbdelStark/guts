@@ -38,9 +38,14 @@ impl SerializablePublicKey {
         Ok(commonware_cryptography::ed25519::PublicKey::from(vk))
     }
 
-    /// Returns the hex string.
+    /// Returns the hex string as a reference.
     pub fn as_hex(&self) -> &str {
         &self.0
+    }
+
+    /// Returns the hex string as an owned String.
+    pub fn to_hex(&self) -> String {
+        self.0.clone()
     }
 }
 

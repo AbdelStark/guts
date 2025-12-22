@@ -161,6 +161,47 @@ impl NodeConfig {
             config.storage.data_dir = PathBuf::from(dir);
         }
 
+        // Consensus configuration
+        if let Ok(enabled) = std::env::var("GUTS_CONSENSUS_ENABLED") {
+            config.consensus.enabled = enabled.parse().unwrap_or(false);
+        }
+
+        if let Ok(block_time) = std::env::var("GUTS_CONSENSUS_BLOCK_TIME_MS") {
+            config.consensus.block_time_ms =
+                block_time.parse().map_err(|_| ConfigError::EnvParse {
+                    key: "GUTS_CONSENSUS_BLOCK_TIME_MS".to_string(),
+                    message: "Invalid block time value".to_string(),
+                })?;
+        }
+
+        if let Ok(max_txs) = std::env::var("GUTS_CONSENSUS_MAX_TXS_PER_BLOCK") {
+            config.consensus.max_txs_per_block =
+                max_txs.parse().map_err(|_| ConfigError::EnvParse {
+                    key: "GUTS_CONSENSUS_MAX_TXS_PER_BLOCK".to_string(),
+                    message: "Invalid max transactions value".to_string(),
+                })?;
+        }
+
+        if let Ok(mempool_max) = std::env::var("GUTS_CONSENSUS_MEMPOOL_MAX_TXS") {
+            config.consensus.mempool_max_txs =
+                mempool_max.parse().map_err(|_| ConfigError::EnvParse {
+                    key: "GUTS_CONSENSUS_MEMPOOL_MAX_TXS".to_string(),
+                    message: "Invalid mempool max transactions value".to_string(),
+                })?;
+        }
+
+        if let Ok(mempool_ttl) = std::env::var("GUTS_CONSENSUS_MEMPOOL_TTL_SECS") {
+            config.consensus.mempool_ttl_secs =
+                mempool_ttl.parse().map_err(|_| ConfigError::EnvParse {
+                    key: "GUTS_CONSENSUS_MEMPOOL_TTL_SECS".to_string(),
+                    message: "Invalid mempool TTL value".to_string(),
+                })?;
+        }
+
+        if let Ok(genesis_file) = std::env::var("GUTS_CONSENSUS_GENESIS_FILE") {
+            config.consensus.genesis_file = Some(PathBuf::from(genesis_file));
+        }
+
         Ok(config)
     }
 
@@ -197,6 +238,26 @@ impl NodeConfig {
         }
         if std::env::var("GUTS_DATA_DIR").is_ok() {
             self.storage.data_dir = env_config.storage.data_dir;
+        }
+
+        // Consensus environment variables
+        if std::env::var("GUTS_CONSENSUS_ENABLED").is_ok() {
+            self.consensus.enabled = env_config.consensus.enabled;
+        }
+        if std::env::var("GUTS_CONSENSUS_BLOCK_TIME_MS").is_ok() {
+            self.consensus.block_time_ms = env_config.consensus.block_time_ms;
+        }
+        if std::env::var("GUTS_CONSENSUS_MAX_TXS_PER_BLOCK").is_ok() {
+            self.consensus.max_txs_per_block = env_config.consensus.max_txs_per_block;
+        }
+        if std::env::var("GUTS_CONSENSUS_MEMPOOL_MAX_TXS").is_ok() {
+            self.consensus.mempool_max_txs = env_config.consensus.mempool_max_txs;
+        }
+        if std::env::var("GUTS_CONSENSUS_MEMPOOL_TTL_SECS").is_ok() {
+            self.consensus.mempool_ttl_secs = env_config.consensus.mempool_ttl_secs;
+        }
+        if std::env::var("GUTS_CONSENSUS_GENESIS_FILE").is_ok() {
+            self.consensus.genesis_file = env_config.consensus.genesis_file;
         }
 
         Ok(())
