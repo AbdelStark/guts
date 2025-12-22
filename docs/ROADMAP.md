@@ -42,13 +42,13 @@ All running on a 3-node Guts network with consensus.
 | Milestone 7 | ✅ Complete | CI/CD Integration (Workflows, Runs, Artifacts) |
 | Milestone 8 | ✅ Complete | Git/GitHub Compatibility (Tokens, Users, Contents) |
 | Milestone 9 | ✅ Complete | Production Quality (Observability, Testing, Resilience) |
+| Milestone 10 | ✅ Complete | Performance & Scalability (RocksDB, Caching, Benchmarks) |
 
 ### Planned Milestones (Path to Production)
 
 | Milestone | Status | Description |
 |-----------|--------|-------------|
-| Milestone 10 | 📋 Planned | Performance & Scalability Validation |
-| Milestone 11 | 📋 Planned | True Decentralization |
+| Milestone 11 | 🚧 Next | True Decentralization (BFT Consensus, P2P Bootstrap) |
 | Milestone 12 | 📋 Planned | Operator Experience & Documentation |
 | Milestone 13 | 📋 Planned | User Adoption & Ecosystem |
 | Milestone 14 | 📋 Planned | Security Hardening & Audit Preparation |
@@ -275,30 +275,29 @@ The following features have been implemented:
 | Load Testing | Performance benchmarks and stress tests | ✅ Complete |
 | Failure Injection | Storage/network failure recovery tests | ✅ Complete |
 
+## Completed: Milestone 10 (Performance & Scalability)
+
+The following features have been implemented:
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Benchmarking | Criterion + K6 comprehensive benchmarks | ✅ Complete |
+| RocksDB Integration | Persistent storage backend | ✅ Complete |
+| Consensus Optimization | Batch proposals, throughput tuning | ✅ Complete |
+| Memory Optimization | Object pooling, string interning | ✅ Complete |
+| Caching Strategy | Multi-level cache hierarchy | ✅ Complete |
+| CDN Integration | Cache headers, archive pre-generation | ✅ Complete |
+
 ## Upcoming Milestones
 
 The following milestones represent the path from current state to a production-grade, truly decentralized platform:
 
 | Milestone | Status | Description | Priority |
 |-----------|--------|-------------|----------|
-| Milestone 10 | Planned | [Performance & Scalability Validation](MILESTONE-10.md) | Critical |
-| Milestone 11 | Planned | [True Decentralization](MILESTONE-11.md) | Critical |
+| Milestone 11 | 🚧 Next | [True Decentralization](MILESTONE-11.md) | **Critical** |
 | Milestone 12 | Planned | [Operator Experience & Documentation](MILESTONE-12.md) | High |
 | Milestone 13 | Planned | [User Adoption & Ecosystem](MILESTONE-13.md) | High |
 | Milestone 14 | Planned | [Security Hardening & Audit Preparation](MILESTONE-14.md) | Critical |
-
-### Milestone 10: Performance & Scalability Validation
-
-Validate and optimize for production-scale workloads.
-
-| Feature | Description | Status |
-|---------|-------------|--------|
-| Benchmarking | Criterion + K6 comprehensive benchmarks | Planned |
-| RocksDB Integration | Persistent storage backend | Planned |
-| Consensus Optimization | Batch proposals, throughput tuning | Planned |
-| Memory Optimization | Object pooling, string interning | Planned |
-| Caching Strategy | Multi-level cache hierarchy | Planned |
-| CDN Integration | Cache headers, archive pre-generation | Planned |
 
 ### Milestone 11: True Decentralization
 

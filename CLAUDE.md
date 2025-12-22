@@ -117,7 +117,7 @@ guts/
 
 | Milestone | Status | Description | Priority |
 |-----------|--------|-------------|----------|
-| Milestone 11 | 📋 Planned | True Decentralization (DHT, Governance) | Critical |
+| Milestone 11 | 🚧 Next | True Decentralization (BFT Consensus, P2P Bootstrap) | **Critical** |
 | Milestone 12 | 📋 Planned | Operator Experience & Documentation | High |
 | Milestone 13 | 📋 Planned | User Adoption & Ecosystem | High |
 | Milestone 14 | 📋 Planned | Security Hardening & Audit Preparation | Critical |
