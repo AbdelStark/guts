@@ -7,8 +7,7 @@
 use crate::{GitObject, ObjectId, ObjectType, Result, StorageError};
 use bytes::Bytes;
 use rocksdb::{
-    BlockBasedOptions, ColumnFamily, ColumnFamilyDescriptor, DBWithThreadMode, MultiThreaded,
-    Options, WriteBatch, WriteOptions, DB,
+    BlockBasedOptions, ColumnFamily, ColumnFamilyDescriptor, Options, WriteBatch, WriteOptions, DB,
 };
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -68,7 +67,7 @@ const CF_METADATA: &str = "metadata";
 /// RocksDB persistent storage.
 pub struct RocksDbStorage {
     /// The RocksDB instance.
-    db: DBWithThreadMode<MultiThreaded>,
+    db: DB,
 
     /// Configuration.
     #[allow(dead_code)]
