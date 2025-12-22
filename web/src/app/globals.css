@@ -1,0 +1,202 @@
+@import "../styles/tokens.css";
+
+/* Reset & Base */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(1200px 800px at 12% -10%, rgba(106, 228, 255, 0.08), transparent 55%),
+    radial-gradient(1000px 700px at 85% 0%, rgba(255, 59, 46, 0.05), transparent 50%),
+    linear-gradient(180deg, var(--bg-ink), var(--bg-obsidian));
+  background-attachment: fixed;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  letter-spacing: -0.01em;
+}
+
+/* Noise overlay */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Selection */
+::selection {
+  background: rgba(106, 228, 255, 0.22);
+}
+
+/* Focus visible */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Links */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Typography utilities */
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Text colors */
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+/* The Slash - brand motif (12° diagonal) */
+.slash-accent {
+  position: relative;
+}
+
+.slash-accent::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -2px;
+  width: 2px;
+  height: 100%;
+  background: linear-gradient(
+    168deg,
+    var(--accent-ember) 0%,
+    var(--accent-ember) 40%,
+    transparent 40%
+  );
+}
+
+/* Diagonal shimmer for loading */
+@keyframes diagonal-shimmer {
+  0% {
+    background-position: -200% 200%;
+  }
+  100% {
+    background-position: 200% -200%;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    168deg,
+    var(--surface-0) 0%,
+    var(--surface-1) 25%,
+    var(--surface-2) 50%,
+    var(--surface-1) 75%,
+    var(--surface-0) 100%
+  );
+  background-size: 400% 400%;
+  animation: diagonal-shimmer 1.8s ease infinite;
+  border-radius: var(--radius-md);
+}
+
+/* Page transitions */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in-up var(--duration-standard) var(--ease-standard) forwards;
+}
+
+/* Stagger delays */
+.stagger-1 { animation-delay: 0ms; }
+.stagger-2 { animation-delay: 40ms; }
+.stagger-3 { animation-delay: 80ms; }
+.stagger-4 { animation-delay: 120ms; }
+.stagger-5 { animation-delay: 160ms; }
+
+/* Cipher glow effect */
+.cipher-glow {
+  box-shadow: 0 0 20px rgba(106, 228, 255, 0.15),
+              0 0 40px rgba(106, 228, 255, 0.08);
+}
+
+/* Surface materials */
+.surface-glass {
+  background: rgba(17, 21, 33, 0.85);
+  backdrop-filter: blur(12px) saturate(1.2);
+  border: 1px solid var(--border-hairline);
+}
+
+@supports not (backdrop-filter: blur(12px)) {
+  .surface-glass {
+    background: var(--surface-0);
+    border: 1px solid var(--border-strong);
+  }
+}

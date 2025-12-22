@@ -1,0 +1,134 @@
+.content {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--space-5);
+  padding: var(--space-5);
+}
+
+.main {
+  min-width: 0;
+}
+
+.repoGrid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.repoLink {
+  display: block;
+  text-decoration: none;
+}
+
+.repoOwner {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.repoSeparator {
+  color: var(--text-muted);
+  margin: 0 2px;
+}
+
+.repoName {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.repoMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.language {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.languageDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.repoStats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* Sidebar */
+.sidebar {
+  min-width: 0;
+}
+
+.activitySection {
+  background: var(--surface-0);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.sectionTitle {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.activityList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.activityItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  margin: calc(-1 * var(--space-2));
+  border-radius: var(--radius-md);
+  transition: background-color var(--duration-micro) var(--ease-micro);
+}
+
+.activityItem:hover {
+  background: var(--surface-1);
+}
+
+.activityContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.activityTitle {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activityMeta {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: none;
+  }
+}

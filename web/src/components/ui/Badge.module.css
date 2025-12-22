@@ -1,0 +1,144 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-ui);
+  font-weight: 500;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+
+/* Sizes */
+.sm {
+  height: 22px;
+  padding: 0 var(--space-2);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.md {
+  height: 26px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-xs);
+}
+
+/* Variants */
+.default {
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-hairline);
+}
+
+.success {
+  background: rgba(53, 208, 127, 0.12);
+  color: var(--status-success);
+  border: 1px solid rgba(53, 208, 127, 0.25);
+}
+
+.warning {
+  background: rgba(255, 176, 32, 0.12);
+  color: var(--status-warning);
+  border: 1px solid rgba(255, 176, 32, 0.25);
+}
+
+.danger {
+  background: rgba(255, 59, 46, 0.12);
+  color: var(--status-danger);
+  border: 1px solid rgba(255, 59, 46, 0.25);
+}
+
+.cipher {
+  background: rgba(106, 228, 255, 0.12);
+  color: var(--accent-cipher);
+  border: 1px solid rgba(106, 228, 255, 0.25);
+}
+
+.muted {
+  background: var(--surface-0);
+  color: var(--text-muted);
+  border: 1px solid var(--border-hairline);
+}
+
+/* Dot */
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 2s ease infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Icon */
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Consensus Seal */
+.consensusSeal {
+  position: relative;
+  display: inline-flex;
+}
+
+.sealTooltip {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface-0);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--duration-micro) var(--ease-micro);
+  z-index: 100;
+  min-width: 180px;
+}
+
+.consensusSeal:hover .sealTooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.sealTooltipRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.sealTooltipRow + .sealTooltipRow {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-hairline);
+}
+
+.sealTooltipLabel {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.sealTooltipValue {
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}

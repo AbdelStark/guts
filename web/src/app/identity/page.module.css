@@ -1,0 +1,133 @@
+.content {
+  padding: var(--space-5);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+.keyDisplay {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface-1);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+}
+
+.keyCode {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+.keyMeta {
+  display: flex;
+  gap: var(--space-5);
+}
+
+.keyMetaItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.keyMetaLabel {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.keyMetaValue {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.warning {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: rgba(255, 176, 32, 0.08);
+  border: 1px solid rgba(255, 176, 32, 0.2);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+}
+
+.warning svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--status-warning);
+}
+
+.warningTitle {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--status-warning);
+}
+
+.warningText {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.privateKeyDisplay {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface-1);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+}
+
+.privateKey {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+}
+
+.dangerActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.dangerItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: rgba(255, 59, 46, 0.05);
+  border: 1px solid rgba(255, 59, 46, 0.15);
+  border-radius: var(--radius-md);
+}
+
+.dangerTitle {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.dangerText {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

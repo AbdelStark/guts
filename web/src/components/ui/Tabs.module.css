@@ -1,0 +1,98 @@
+.root {
+  display: flex;
+  flex-direction: column;
+}
+
+.list {
+  display: flex;
+  gap: var(--space-1);
+  padding: 0 var(--space-1);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-micro) var(--ease-micro);
+}
+
+.trigger:hover {
+  color: var(--text-primary);
+}
+
+.trigger[data-state="active"] {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent-ember);
+}
+
+/* The Slash notch on active tab */
+.slashNotch {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  transition: all var(--duration-micro) var(--ease-micro);
+}
+
+.trigger[data-state="active"] .slashNotch {
+  width: 8px;
+  height: 12px;
+  background: linear-gradient(
+    168deg,
+    var(--accent-ember) 0%,
+    var(--accent-ember) 50%,
+    transparent 50%
+  );
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 var(--space-1);
+  background: var(--surface-1);
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.trigger[data-state="active"] .count {
+  background: var(--accent-ember);
+  color: white;
+}
+
+.content {
+  padding-top: var(--space-4);
+}
+
+.content:focus-visible {
+  outline: none;
+}

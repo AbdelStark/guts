@@ -1,0 +1,136 @@
+.content {
+  padding: var(--space-5);
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 720px;
+}
+
+.formGroup {
+  margin-bottom: var(--space-4);
+}
+
+.formGroup:last-child {
+  margin-bottom: 0;
+}
+
+.settingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.settingRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.settingRow:first-child {
+  padding-top: 0;
+}
+
+.settingInfo {
+  flex: 1;
+}
+
+.settingLabel {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.settingDesc {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.themeButtons {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.themeButton,
+.themeButtonActive {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-0);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-micro) var(--ease-micro);
+}
+
+.themeButton:hover {
+  background: var(--surface-1);
+  border-color: var(--border-strong);
+}
+
+.themeButtonActive {
+  background: var(--surface-1);
+  border-color: var(--accent-cipher);
+  color: var(--text-primary);
+}
+
+.themeDark,
+.themeLight,
+.themeSystem {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+}
+
+.themeDark {
+  background: var(--bg-ink);
+}
+
+.themeLight {
+  background: #f5f5f5;
+}
+
+.themeSystem {
+  background: linear-gradient(135deg, var(--bg-ink) 50%, #f5f5f5 50%);
+}
+
+/* About */
+.aboutGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+.aboutItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.aboutLabel {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.aboutValue {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.aboutValueMono {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
