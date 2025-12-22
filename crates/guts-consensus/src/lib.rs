@@ -19,32 +19,29 @@
 //! - [`Mempool`]: Pending transaction pool
 //! - [`ValidatorSet`]: Set of validators participating in consensus
 //! - [`Genesis`]: Initial network configuration
-//! - [`ConsensusEngine`]: Main consensus engine implementation
+//! - [`simplex`]: Real Simplex BFT consensus engine (production)
 //!
-//! # Example
+//! # Real Simplex BFT Consensus
 //!
-//! ```rust,no_run
-//! use guts_consensus::{
-//!     ConsensusEngine, EngineConfig, Genesis, Mempool, MempoolConfig,
-//!     Transaction, ValidatorSet,
-//! };
-//! use commonware_cryptography::PrivateKeyExt;
-//! use std::sync::Arc;
+//! The [`simplex`] module provides a production-ready BFT consensus implementation
+//! using the commonware-consensus library. This is the recommended way to run
+//! Guts in a multi-validator network.
 //!
-//! // Load genesis configuration
-//! let genesis = Genesis::load_json("genesis.json").unwrap();
-//! let validators = genesis.into_validator_set().unwrap();
+//! ```ignore
+//! use guts_consensus::simplex::{Engine, Config};
+//! use commonware_p2p::authenticated::discovery;
 //!
-//! // Create mempool
-//! let mempool = Arc::new(Mempool::new(MempoolConfig::default()));
+//! // Create configuration
+//! let config = Config::new(
+//!     blocker,
+//!     my_public_key,
+//!     my_private_key,
+//!     validator_public_keys,
+//! );
 //!
-//! // Create consensus engine
-//! let config = EngineConfig::default();
-//! let validator_key = commonware_cryptography::ed25519::PrivateKey::from_seed(0);
-//! let engine = ConsensusEngine::new(config, Some(validator_key), validators, mempool);
-//!
-//! // Subscribe to events
-//! let mut events = engine.subscribe();
+//! // Create and start engine with P2P channels
+//! let engine = Engine::new(context, config).await;
+//! engine.start(pending, recovered, resolver, broadcast, marshal);
 //! ```
 //!
 //! # Transaction Flow
@@ -82,6 +79,7 @@ mod error;
 mod genesis;
 mod mempool;
 mod message;
+pub mod simplex;
 mod transaction;
 mod validator;
 

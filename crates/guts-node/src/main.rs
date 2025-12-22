@@ -156,115 +156,165 @@ async fn main() -> anyhow::Result<()> {
     let ci = Arc::new(CiStore::new());
     let compat = Arc::new(CompatStore::new());
 
-    // Initialize consensus if enabled
-    let (consensus, mempool, guts_app) = if config.consensus.enabled {
-        tracing::info!("Initializing consensus engine");
+    // Initialize real Simplex BFT consensus if enabled
+    let simplex_handle = if config.consensus.enabled && config.consensus.use_simplex_bft {
+        tracing::info!("Initializing real Simplex BFT consensus");
 
-        // Create mempool
-        let mempool_config = MempoolConfig {
-            max_transactions: config.consensus.mempool_max_txs,
-            max_transaction_age: Duration::from_secs(config.consensus.mempool_ttl_secs),
-            max_transactions_per_block: config.consensus.max_txs_per_block,
+        // Validate required configuration
+        let private_key_hex = config.p2p.private_key.clone().ok_or_else(|| {
+            anyhow::anyhow!("GUTS_PRIVATE_KEY is required for Simplex BFT consensus")
+        })?;
+
+        // Build simplex config
+        let simplex_config = guts_node::consensus_simplex::SimplexConsensusConfig {
+            private_key_hex,
+            p2p_addr: config.p2p.addr,
+            external_addr: None, // Will be set from config if needed
+            bootstrappers: config.p2p.bootstrappers.clone(),
+            participants: config.p2p.allowed_peers.clone(),
+            data_dir: config.storage.data_dir.clone(),
+            local: true, // Local mode for development
+            mailbox_size: config.p2p.mailbox_size,
+            message_backlog: config.p2p.message_backlog,
+            worker_threads: 4,
         };
-        let mempool = Arc::new(Mempool::new(mempool_config));
 
-        // Create consensus engine config
-        let engine_config = EngineConfig {
-            block_time: Duration::from_millis(config.consensus.block_time_ms),
-            max_txs_per_block: config.consensus.max_txs_per_block,
-            max_block_size: config.consensus.max_block_size,
-            view_timeout_multiplier: config.consensus.view_timeout_multiplier,
-            consensus_enabled: config.consensus.enabled,
-        };
-
-        // Parse validator key from P2P config using PrivateKeyExt
-        use commonware_cryptography::PrivateKeyExt;
-        let validator_key = config.p2p.private_key.as_ref().and_then(|key_hex| {
-            let key_hex = key_hex.strip_prefix("0x").unwrap_or(key_hex);
-            hex::decode(key_hex).ok().and_then(|bytes| {
-                if bytes.len() >= 8 {
-                    // Use the first 8 bytes as a seed
-                    let seed = u64::from_le_bytes(bytes[..8].try_into().unwrap());
-                    Some(commonware_cryptography::ed25519::PrivateKey::from_seed(
-                        seed,
-                    ))
-                } else {
-                    None
-                }
-            })
-        });
-
-        // Load validator set from genesis file if available, otherwise single-node mode
-        let validators = if let Some(ref genesis_path) = config.consensus.genesis_file {
-            tracing::info!(path = %genesis_path.display(), "Loading genesis file");
-            match Genesis::load_json(genesis_path) {
-                Ok(genesis) => {
-                    tracing::info!(
-                        chain_id = %genesis.chain_id,
-                        validator_count = genesis.validators.len(),
-                        "Genesis loaded successfully"
-                    );
-                    genesis
-                        .into_validator_set()
-                        .expect("Failed to create validator set from genesis")
-                }
-                Err(e) => {
-                    tracing::error!(error = %e, "Failed to load genesis file");
-                    return Err(anyhow::anyhow!("Failed to load genesis: {}", e));
-                }
+        // Start the simplex consensus engine
+        match guts_node::consensus_simplex::start_simplex_consensus(simplex_config) {
+            Ok(handle) => {
+                tracing::info!(
+                    public_key = hex::encode(handle.public_key.as_ref()),
+                    "Simplex BFT consensus started"
+                );
+                Some(handle)
             }
-        } else {
-            // Fallback to single-node mode
-            tracing::info!("No genesis file, using single-node mode");
-            let validator_config = ValidatorConfig {
-                min_validators: 0, // Allow single-node mode
-                max_validators: 100,
-                quorum_threshold: 2.0 / 3.0,
-                block_time_ms: config.consensus.block_time_ms,
+            Err(e) => {
+                tracing::error!(error = %e, "Failed to start Simplex BFT consensus");
+                return Err(anyhow::anyhow!("Failed to start Simplex BFT: {}", e));
+            }
+        }
+    } else {
+        None
+    };
+
+    // Initialize simulation-based consensus if enabled (fallback when simplex is not used)
+    let (consensus, mempool, guts_app) =
+        if config.consensus.enabled && !config.consensus.use_simplex_bft {
+            tracing::info!("Initializing simulation-based consensus engine");
+
+            // Create mempool
+            let mempool_config = MempoolConfig {
+                max_transactions: config.consensus.mempool_max_txs,
+                max_transaction_age: Duration::from_secs(config.consensus.mempool_ttl_secs),
+                max_transactions_per_block: config.consensus.max_txs_per_block,
+            };
+            let mempool = Arc::new(Mempool::new(mempool_config));
+
+            // Create consensus engine config
+            let engine_config = EngineConfig {
+                block_time: Duration::from_millis(config.consensus.block_time_ms),
+                max_txs_per_block: config.consensus.max_txs_per_block,
+                max_block_size: config.consensus.max_block_size,
+                view_timeout_multiplier: config.consensus.view_timeout_multiplier,
+                consensus_enabled: config.consensus.enabled,
             };
 
-            if let Some(ref key) = validator_key {
-                use guts_consensus::{SerializablePublicKey, Validator};
-                let pubkey = SerializablePublicKey::from_pubkey(
-                    &commonware_cryptography::Signer::public_key(key),
-                );
-                let validator = Validator::new(pubkey, "local", 1, config.p2p.addr);
-                ValidatorSet::new(vec![validator], 0, validator_config)
-                    .expect("Failed to create validator set")
+            // Parse validator key from P2P config using PrivateKeyExt
+            use commonware_cryptography::PrivateKeyExt;
+            let validator_key = config.p2p.private_key.as_ref().and_then(|key_hex| {
+                let key_hex = key_hex.strip_prefix("0x").unwrap_or(key_hex);
+                hex::decode(key_hex).ok().and_then(|bytes| {
+                    if bytes.len() >= 8 {
+                        // Use the first 8 bytes as a seed
+                        let seed = u64::from_le_bytes(bytes[..8].try_into().unwrap());
+                        Some(commonware_cryptography::ed25519::PrivateKey::from_seed(
+                            seed,
+                        ))
+                    } else {
+                        None
+                    }
+                })
+            });
+
+            // Load validator set from genesis file if available, otherwise single-node mode
+            let validators = if let Some(ref genesis_path) = config.consensus.genesis_file {
+                tracing::info!(path = %genesis_path.display(), "Loading genesis file");
+                match Genesis::load_json(genesis_path) {
+                    Ok(genesis) => {
+                        tracing::info!(
+                            chain_id = %genesis.chain_id,
+                            validator_count = genesis.validators.len(),
+                            "Genesis loaded successfully"
+                        );
+                        genesis
+                            .into_validator_set()
+                            .expect("Failed to create validator set from genesis")
+                    }
+                    Err(e) => {
+                        tracing::error!(error = %e, "Failed to load genesis file");
+                        return Err(anyhow::anyhow!("Failed to load genesis: {}", e));
+                    }
+                }
             } else {
-                ValidatorSet::new(vec![], 0, validator_config)
-                    .expect("Failed to create empty validator set")
-            }
+                // Fallback to single-node mode
+                tracing::info!("No genesis file, using single-node mode");
+                let validator_config = ValidatorConfig {
+                    min_validators: 0, // Allow single-node mode
+                    max_validators: 100,
+                    quorum_threshold: 2.0 / 3.0,
+                    block_time_ms: config.consensus.block_time_ms,
+                };
+
+                if let Some(ref key) = validator_key {
+                    use guts_consensus::{SerializablePublicKey, Validator};
+                    let pubkey = SerializablePublicKey::from_pubkey(
+                        &commonware_cryptography::Signer::public_key(key),
+                    );
+                    let validator = Validator::new(pubkey, "local", 1, config.p2p.addr);
+                    ValidatorSet::new(vec![validator], 0, validator_config)
+                        .expect("Failed to create validator set")
+                } else {
+                    ValidatorSet::new(vec![], 0, validator_config)
+                        .expect("Failed to create empty validator set")
+                }
+            };
+
+            // Create consensus engine
+            let consensus = Arc::new(ConsensusEngine::new(
+                engine_config,
+                validator_key,
+                validators,
+                mempool.clone(),
+            ));
+
+            // Create the Guts application that applies finalized blocks to state
+            let guts_app = Arc::new(GutsApplication::new(
+                repos.clone(),
+                collaboration.clone(),
+                auth.clone(),
+                realtime.clone(),
+            ));
+
+            tracing::info!(
+                enabled = config.consensus.enabled,
+                block_time_ms = config.consensus.block_time_ms,
+                max_txs_per_block = config.consensus.max_txs_per_block,
+                "Simulation-based consensus engine initialized"
+            );
+
+            (Some(consensus), Some(mempool), Some(guts_app))
+        } else if !config.consensus.enabled {
+            tracing::info!("Consensus disabled, running in single-node mode");
+            (None, None, None)
+        } else {
+            // Simplex BFT is enabled, no simulation consensus needed
+            (None, None, None)
         };
 
-        // Create consensus engine
-        let consensus = Arc::new(ConsensusEngine::new(
-            engine_config,
-            validator_key,
-            validators,
-            mempool.clone(),
-        ));
-
-        // Create the Guts application that applies finalized blocks to state
-        let guts_app = Arc::new(GutsApplication::new(
-            repos.clone(),
-            collaboration.clone(),
-            auth.clone(),
-            realtime.clone(),
-        ));
-
-        tracing::info!(
-            enabled = config.consensus.enabled,
-            block_time_ms = config.consensus.block_time_ms,
-            max_txs_per_block = config.consensus.max_txs_per_block,
-            "Consensus engine initialized"
-        );
-
-        (Some(consensus), Some(mempool), Some(guts_app))
-    } else {
-        tracing::info!("Consensus disabled, running in single-node mode");
-        (None, None, None)
-    };
+    // Log simplex consensus status
+    if simplex_handle.is_some() {
+        tracing::info!("Using real Simplex BFT consensus");
+    }
 
     // Create application state
     let state = AppState {

@@ -47,8 +47,11 @@ cargo run --bin guts-node -- --api-addr 127.0.0.1:8080
 # Run CLI
 cargo run --bin guts -- --help
 
-# Run local devnet (5 nodes)
-cd infra/docker && docker compose -f docker-compose.devnet.yml up
+# Run Simplex BFT devnet (4 validators, real consensus)
+cd infra/docker && docker compose up --build
+
+# Run E2E tests against devnet
+./infra/scripts/e2e-test.sh
 ```
 
 ## Project Structure
@@ -304,13 +307,29 @@ let protection = BranchProtection::new(id, "owner/repo", "main")
 ### Local Development
 
 ```bash
-# Single node
+# Single node (no consensus)
 cargo run --bin guts-node -- --api-addr 127.0.0.1:8080
 
-# Local devnet (5 nodes + tests)
+# Simplex BFT devnet (4 validators with real BFT consensus)
 cd infra/docker
-docker compose -f docker-compose.devnet.yml up
+docker compose up --build
+
+# Run E2E tests against devnet
+./infra/scripts/e2e-test.sh --skip-setup
 ```
+
+### Simplex BFT Devnet
+
+The canonical devnet runs **real Simplex BFT consensus** with 4 validators:
+
+| Validator | API Port | P2P Port | Public Key (seed) |
+|-----------|----------|----------|-------------------|
+| validator1 | 8091 | 9091 | seed=0 |
+| validator2 | 8092 | 9092 | seed=1 |
+| validator3 | 8093 | 9093 | seed=2 |
+| validator4 | 8094 | 9094 | seed=3 |
+
+Byzantine fault tolerance: f=1 (network continues with 3/4 validators)
 
 ### Docker
 
@@ -344,7 +363,7 @@ terraform apply
 | `ci.yml` | PR, push | Build, test, lint, security audit |
 | `release.yml` | Tags | Multi-platform builds, Docker push |
 | `security.yml` | Weekly, PR | cargo-audit, cargo-deny, CodeQL, Trivy |
-| `devnet-e2e-extensive.yml` | PR, manual | 5-node devnet with extensive E2E tests |
+| `devnet-e2e-extensive.yml` | PR, push, nightly | Simplex BFT E2E tests (4 validators, real consensus) |
 
 ## Available Skills
 
@@ -378,15 +397,21 @@ The following Claude skills are configured:
 ### Running the Devnet
 
 ```bash
-# Start 5-node devnet
+# Start Simplex BFT devnet (4 validators with real consensus)
 cd infra/docker
-docker compose -f docker-compose.devnet.yml up -d
+docker compose up -d --build
 
-# Run E2E tests against devnet
-./infra/scripts/devnet-e2e-test.sh
+# Run full E2E test suite
+./infra/scripts/e2e-test.sh --skip-setup --verbose
+
+# Run only BFT consensus tests
+./infra/scripts/e2e-test.sh --skip-setup --bft-only
 
 # Stop devnet
-docker compose -f docker-compose.devnet.yml down
+docker compose down -v
+
+# Check validator logs
+docker logs guts-validator1 | grep "finalized block"
 ```
 
 ## Security Requirements
