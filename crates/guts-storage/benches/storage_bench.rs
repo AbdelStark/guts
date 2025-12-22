@@ -8,8 +8,8 @@
 
 use bytes::Bytes;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use std::hint::black_box;
 use guts_storage::{GitObject, ObjectStore, ObjectType, RepoStore};
+use std::hint::black_box;
 
 /// Generate test data of specified size
 fn generate_data(size: usize) -> Vec<u8> {

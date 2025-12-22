@@ -4,8 +4,8 @@
 //! to validate storage layer scalability.
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use std::hint::black_box;
 use guts_storage::{GitObject, ObjectStore};
+use std::hint::black_box;
 use std::sync::Arc;
 use std::thread;
 
