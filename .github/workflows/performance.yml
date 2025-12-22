@@ -53,7 +53,8 @@ jobs:
 
       - name: Run Criterion benchmarks
         run: |
-          cargo bench --workspace --features "full" -- --noplot
+          cargo bench -p guts-storage --bench storage_bench -- --noplot
+          cargo bench -p guts-storage --bench concurrent_bench -- --noplot
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
