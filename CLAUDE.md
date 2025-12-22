@@ -1,7 +1,7 @@
 # Guts - AI Agent Development Guide
 
 > This file provides context for AI agents (Claude, Codex, etc.) working on the Guts codebase.
-> Last updated: 2025-12-21
+> Last updated: 2025-12-22
 
 ## Project Overview
 
@@ -58,11 +58,12 @@ cd infra/docker && docker compose up --build
 
 ```
 guts/
-├── crates/                     # Rust workspace crates (12 crates)
+├── crates/                     # Rust workspace crates (13 crates)
 │   ├── guts-types/             # Core types and primitives
 │   ├── guts-storage/           # Git object storage (content-addressed)
 │   ├── guts-git/               # Git protocol (pack files, smart HTTP)
 │   ├── guts-p2p/               # P2P networking and replication
+│   ├── guts-consensus/         # Simplex BFT consensus engine
 │   ├── guts-collaboration/     # PRs, Issues, Comments, Reviews, Labels
 │   ├── guts-auth/              # Organizations, Teams, Permissions, Webhooks
 │   ├── guts-web/               # Web gateway (HTML views, Markdown rendering)
@@ -101,7 +102,7 @@ guts/
 
 ## Current Status
 
-### Completed Milestones (MVP Phase)
+### Completed Milestones
 
 | Milestone | Status | Description |
 |-----------|--------|-------------|
@@ -115,19 +116,19 @@ guts/
 | Milestone 8 | ✅ Complete | Git/GitHub Compatibility (Users, Tokens, Releases, Contents) |
 | Milestone 9 | ✅ Complete | Production Quality (Observability, Testing, Resilience) |
 | Milestone 10 | ✅ Complete | Performance & Scalability (RocksDB, Caching, Benchmarks) |
+| Milestone 11 | ✅ Complete | True Decentralization (Simplex BFT Consensus, Validators) |
 
 ### Planned Milestones (Production Readiness)
 
 | Milestone | Status | Description | Priority |
 |-----------|--------|-------------|----------|
-| Milestone 11 | 🚧 Next | True Decentralization (BFT Consensus, P2P Bootstrap) | **Critical** |
-| Milestone 12 | 📋 Planned | Operator Experience & Documentation | High |
+| Milestone 12 | 🚧 Next | Operator Experience & Documentation | High |
 | Milestone 13 | 📋 Planned | User Adoption & Ecosystem | High |
 | Milestone 14 | 📋 Planned | Security Hardening & Audit Preparation | Critical |
 
 ### Test Coverage
 
-- **450+ tests** across all crates
+- **500+ tests** across all crates
 - Unit tests, E2E tests, integration tests
 - Multi-node P2P replication tests
 - Collaboration and governance scenario tests
@@ -136,6 +137,7 @@ guts/
 - Chaos testing for P2P layer resilience
 - Load testing for performance benchmarks
 - Failure injection tests for recovery patterns
+- **Simplex BFT consensus E2E tests** (4-validator devnet, Byzantine tolerance)
 
 ## Crate Dependency Graph
 
@@ -144,7 +146,7 @@ guts-types (foundation)
     ↓
 guts-storage + guts-git
     ↓
-guts-p2p + guts-collaboration + guts-auth + guts-realtime
+guts-consensus + guts-p2p + guts-collaboration + guts-auth + guts-realtime
     ↓
 guts-node + guts-web
     ↓
@@ -268,6 +270,17 @@ test(identity): add signature verification tests
 | PUT/DELETE | `/api/repos/{owner}/{name}/collaborators/{user}` | Manage access |
 | GET/PUT/DELETE | `/api/repos/{owner}/{name}/branches/{branch}/protection` | Branch protection |
 | GET/POST | `/api/repos/{owner}/{name}/hooks` | Webhooks |
+
+### Consensus Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/consensus/status` | Consensus engine status |
+| GET | `/api/consensus/blocks` | List recent finalized blocks |
+| GET | `/api/consensus/blocks/{height}` | Get block by height |
+| GET | `/api/consensus/validators` | Current validator set |
+| GET | `/api/consensus/mempool` | Mempool statistics |
+| POST | `/api/consensus/transactions` | Submit a transaction |
 
 ## Key Abstractions
 
