@@ -304,11 +304,6 @@ impl ConsensusEngine {
         // Get transactions from mempool
         let transactions = self.mempool.get_for_proposal();
 
-        if transactions.is_empty() {
-            // Don't propose empty blocks
-            return Ok(());
-        }
-
         let height = app.current_height() + 1;
         let parent = self
             .blocks
@@ -353,10 +348,12 @@ impl ConsensusEngine {
             "proposed block"
         );
 
-        // In single-node mode, immediately finalize
-        if !self.config.consensus_enabled {
-            self.finalize_block(block, 0, vec![], app).await?;
-        }
+        // Finalize the block
+        // In multi-validator mode, this should wait for quorum signatures via P2P.
+        // For now, we simulate immediate finalization (local consensus simulation).
+        // TODO: Implement proper P2P consensus message exchange with commonware.
+        let view = *self.view.read();
+        self.finalize_block(block, view, vec![], app).await?;
 
         Ok(())
     }

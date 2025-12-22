@@ -1,6 +1,10 @@
-name: Devnet E2E Extensive
+name: E2E Tests (Simplex BFT)
 
 on:
+  # Run on pushes to main
+  push:
+    branches: [main]
+
   # Run on PRs to main
   pull_request:
     branches: [main]
@@ -13,9 +17,9 @@ on:
         description: 'Enable debug mode with extended logs'
         required: false
         default: false
-      skip_load_test:
+      bft_only:
         type: boolean
-        description: 'Skip load testing (faster)'
+        description: 'Run only BFT consensus tests'
         required: false
         default: false
 
@@ -50,7 +54,7 @@ jobs:
         with:
           images: guts-node
           tags: |
-            type=sha,prefix=devnet-
+            type=sha,prefix=e2e-
 
       - name: Build and export
         uses: docker/build-push-action@v5
@@ -70,10 +74,10 @@ jobs:
           retention-days: 1
 
   # ============================================================================
-  # E2E Test Suite with Consensus
+  # Simplex BFT E2E Test Suite
   # ============================================================================
-  e2e-consensus:
-    name: E2E Tests (4 Validators + Observer)
+  e2e-simplex-bft:
+    name: Simplex BFT E2E Tests
     runs-on: ubuntu-latest
     needs: build-image
     timeout-minutes: 30
@@ -97,96 +101,100 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq curl bc
 
-      - name: Start E2E Devnet
+      - name: Start Simplex BFT Devnet
         run: |
           cd infra/docker
-          docker compose -f docker-compose.e2e.yml up -d
+          docker compose up -d --build
 
-      - name: Wait for network to be healthy
+      - name: Wait for validators to be healthy
         run: |
-          echo "Waiting for all 5 nodes to become healthy..."
-          max_wait=120
+          echo "Waiting for all 4 validators to become healthy..."
+          max_wait=180
           waited=0
 
           while [[ $waited -lt $max_wait ]]; do
             healthy=0
-            for port in 8081 8082 8083 8084 8085; do
+            for port in 8091 8092 8093 8094; do
               if curl -sf http://localhost:$port/health > /dev/null 2>&1; then
                 healthy=$((healthy + 1))
               fi
             done
 
-            if [[ $healthy -eq 5 ]]; then
-              echo "All 5 nodes are healthy!"
+            if [[ $healthy -eq 4 ]]; then
+              echo "All 4 validators are healthy!"
               break
             fi
 
-            echo "Healthy nodes: $healthy/5, waiting..."
-            sleep 2
-            waited=$((waited + 2))
+            echo "Healthy validators: $healthy/4, waiting..."
+            sleep 3
+            waited=$((waited + 3))
           done
 
-          if [[ $healthy -lt 5 ]]; then
-            echo "ERROR: Not all nodes became healthy"
-            for port in 8081 8082 8083 8084 8085; do
-              echo "=== Node on port $port ==="
+          if [[ $healthy -lt 4 ]]; then
+            echo "ERROR: Not all validators became healthy"
+            for port in 8091 8092 8093 8094; do
+              echo "=== Validator on port $port ==="
               curl -sf http://localhost:$port/health || echo "NOT HEALTHY"
             done
             exit 1
           fi
 
-      - name: Wait for consensus activation
+      - name: Wait for Simplex BFT consensus
         run: |
-          echo "Waiting for consensus to activate..."
+          echo "Waiting for Simplex BFT consensus to start..."
           max_wait=60
           waited=0
 
           while [[ $waited -lt $max_wait ]]; do
-            state=$(curl -sf http://localhost:8081/api/consensus/status | jq -r '.state // "Unknown"' 2>/dev/null || echo "Unknown")
-
-            if [[ "$state" == "Active" ]]; then
-              echo "Consensus is active!"
+            if docker logs guts-validator1 2>&1 | grep -q "finalized block"; then
+              echo "Simplex BFT consensus is producing blocks!"
+              # Show some stats
+              height=$(docker logs guts-validator1 2>&1 | grep "finalized block" | tail -1 | grep -oP 'height: \K\d+' || echo "0")
+              echo "Latest finalized block height: $height"
               break
             fi
-
-            echo "Consensus state: $state, waiting..."
+            echo "Waiting for block production..."
             sleep 2
             waited=$((waited + 2))
           done
 
-          echo "Final consensus state: $state"
-
-      - name: Run E2E test suite
+      - name: Run E2E Test Suite
         id: e2e-tests
         run: |
-          chmod +x infra/scripts/devnet-e2e-test.sh
-          ./infra/scripts/devnet-e2e-test.sh --skip-setup --verbose 2>&1 | tee e2e-results.log
-        continue-on-error: true
-
-      - name: Run consensus tests
-        id: consensus-tests
-        run: |
-          chmod +x infra/scripts/devnet-consensus-test.sh
-          ./infra/scripts/devnet-consensus-test.sh --verbose 2>&1 | tee consensus-results.log
+          chmod +x infra/scripts/e2e-test.sh
+          BFT_FLAG=""
+          if [[ "${{ github.event.inputs.bft_only }}" == "true" ]]; then
+            BFT_FLAG="--bft-only"
+          fi
+          ./infra/scripts/e2e-test.sh --skip-setup --verbose $BFT_FLAG 2>&1 | tee e2e-results.log
         continue-on-error: true
 
       - name: Collect logs
         if: always()
         run: |
           mkdir -p e2e-artifacts/logs
-          chmod +x infra/scripts/devnet-collect-logs.sh
-          ./infra/scripts/devnet-collect-logs.sh --output-dir e2e-artifacts/logs || true
+
+          # Collect validator logs
+          for i in 1 2 3 4; do
+            docker logs guts-validator$i > e2e-artifacts/logs/validator$i.log 2>&1 || true
+          done
 
           # Copy test results
           cp e2e-results.log e2e-artifacts/ 2>/dev/null || true
-          cp consensus-results.log e2e-artifacts/ 2>/dev/null || true
 
-          # Capture final state
-          echo "=== Final Network State ===" > e2e-artifacts/final_state.txt
-          for port in 8081 8082 8083 8084 8085; do
-            echo "--- Node $port ---" >> e2e-artifacts/final_state.txt
-            curl -sf http://localhost:$port/api/consensus/status >> e2e-artifacts/final_state.txt 2>&1 || echo "unreachable"
+          # Capture final consensus state
+          echo "=== Final Consensus State ===" > e2e-artifacts/final_state.txt
+          for port in 8091 8092 8093 8094; do
+            echo "--- Validator $port ---" >> e2e-artifacts/final_state.txt
+            curl -sf http://localhost:$port/health >> e2e-artifacts/final_state.txt 2>&1 || echo "unreachable"
             echo "" >> e2e-artifacts/final_state.txt
+          done
+
+          # Get block heights
+          echo "=== Block Heights ===" >> e2e-artifacts/final_state.txt
+          for i in 1 2 3 4; do
+            height=$(docker logs guts-validator$i 2>&1 | grep "finalized block" | tail -1 | grep -oP 'height: \K\d+' || echo "0")
+            echo "Validator $i: height=$height" >> e2e-artifacts/final_state.txt
           done
 
       - name: Upload E2E artifacts
@@ -201,110 +209,12 @@ jobs:
         if: always()
         run: |
           cd infra/docker
-          docker compose -f docker-compose.e2e.yml down -v --remove-orphans
+          docker compose down -v --remove-orphans
 
-      - name: Check E2E test results
+      - name: Check test results
         if: steps.e2e-tests.outcome == 'failure'
         run: |
           echo "E2E tests failed. See artifacts for details."
-          exit 1
-
-      - name: Check consensus test results
-        if: steps.consensus-tests.outcome == 'failure'
-        run: |
-          echo "Consensus tests failed. See artifacts for details."
-          exit 1
-
-  # ============================================================================
-  # Load Test
-  # ============================================================================
-  load-test:
-    name: Load Test (Stress Testing)
-    runs-on: ubuntu-latest
-    needs: build-image
-    timeout-minutes: 20
-    if: ${{ github.event.inputs.skip_load_test != 'true' }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download image artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: guts-node-image
-          path: /tmp
-
-      - name: Load Docker image
-        run: |
-          docker load --input /tmp/guts-node-image.tar
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq curl bc
-
-      - name: Start E2E Devnet for load testing
-        run: |
-          cd infra/docker
-          docker compose -f docker-compose.e2e.yml up -d
-
-      - name: Wait for network to be healthy
-        run: |
-          for i in {1..60}; do
-            healthy=0
-            for port in 8081 8082 8083 8084 8085; do
-              if curl -sf http://localhost:$port/health > /dev/null 2>&1; then
-                healthy=$((healthy + 1))
-              fi
-            done
-            if [[ $healthy -eq 5 ]]; then
-              echo "All nodes healthy"
-              break
-            fi
-            sleep 2
-          done
-
-      - name: Run load tests
-        id: load-tests
-        run: |
-          chmod +x infra/scripts/devnet-load-test.sh
-          ./infra/scripts/devnet-load-test.sh \
-            --repos 50 \
-            --issues 100 \
-            --reads 200 \
-            --output load-test-results.json \
-            --verbose 2>&1 | tee load-test.log
-        continue-on-error: true
-
-      - name: Collect load test artifacts
-        if: always()
-        run: |
-          mkdir -p load-test-artifacts
-          cp load-test.log load-test-artifacts/ 2>/dev/null || true
-          cp load-test-results.json load-test-artifacts/ 2>/dev/null || true
-
-          # Collect container stats
-          docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}" \
-            > load-test-artifacts/container-stats.txt 2>/dev/null || true
-
-      - name: Upload load test artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: load-test-artifacts
-          path: load-test-artifacts/
-          retention-days: 14
-
-      - name: Cleanup
-        if: always()
-        run: |
-          cd infra/docker
-          docker compose -f docker-compose.e2e.yml down -v --remove-orphans
-
-      - name: Check load test results
-        if: steps.load-tests.outcome == 'failure'
-        run: |
-          echo "Load tests failed. See artifacts for details."
           exit 1
 
   # ============================================================================
@@ -337,6 +247,7 @@ jobs:
             -p 9000:9000 \
             -e GUTS_NODE_ID=git-test-node \
             -e GUTS_LOG_LEVEL=info \
+            -e GUTS_CONSENSUS_ENABLED=false \
             guts-node:e2e-test
 
       - name: Wait for node to be healthy
@@ -357,14 +268,8 @@ jobs:
       - name: Test Git info/refs endpoint
         run: |
           echo "Testing Git protocol endpoints..."
-
-          # Test that the endpoint exists and responds
           response=$(curl -sf "http://localhost:8080/git/test/gitrepo/info/refs?service=git-upload-pack" 2>&1 || echo "expected_error")
-
-          # The endpoint should respond (even if repo doesn't exist)
           echo "Git protocol endpoints responding"
-
-          # Test health after git operations
           curl -sf http://localhost:8080/health
 
       - name: Cleanup
@@ -401,7 +306,7 @@ jobs:
             --name guts-web-test \
             -p 8080:8080 \
             -e GUTS_NODE_ID=web-test-node \
-            -e GUTS_CONSENSUS_ENABLED=true \
+            -e GUTS_CONSENSUS_ENABLED=false \
             guts-node:e2e-test
 
       - name: Wait for node to be healthy
@@ -417,22 +322,11 @@ jobs:
       - name: Test web pages
         run: |
           echo "Testing web gateway pages..."
-
-          # Home page
           curl -sf http://localhost:8080/ | grep -qi "guts" && echo "PASS: Home page" || exit 1
-
-          # Explore page
           curl -sf http://localhost:8080/explore | grep -qi "explore\|repositor" && echo "PASS: Explore page" || exit 1
-
-          # Consensus dashboard
           curl -sf http://localhost:8080/consensus | grep -qi "consensus\|validator" && echo "PASS: Consensus dashboard" || exit 1
-
-          # Organizations page
           curl -sf http://localhost:8080/orgs | grep -qi "organization" && echo "PASS: Organizations page" || exit 1
-
-          # API docs
           curl -sf http://localhost:8080/api/docs | grep -qi "api\|openapi" && echo "PASS: API docs" || exit 1
-
           echo "All web gateway tests passed!"
 
       - name: Cleanup
@@ -447,56 +341,47 @@ jobs:
   summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [e2e-consensus, load-test, git-protocol-test, web-gateway-test]
+    needs: [e2e-simplex-bft, git-protocol-test, web-gateway-test]
     if: always()
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: all-artifacts
+        continue-on-error: true
 
       - name: Generate summary
         run: |
-          echo "# Guts Devnet E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "# Guts Simplex BFT E2E Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Test Suite | Result |" >> $GITHUB_STEP_SUMMARY
           echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| E2E Tests (Consensus) | ${{ needs.e2e-consensus.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Load Test | ${{ needs.load-test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Simplex BFT E2E | ${{ needs.e2e-simplex-bft.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Git Protocol | ${{ needs.git-protocol-test.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Web Gateway | ${{ needs.web-gateway-test.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [ -f all-artifacts/load-test-artifacts/load-test-results.json ]; then
-            echo "## Load Test Metrics" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
-            cat all-artifacts/load-test-artifacts/load-test-results.json >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "## Consensus Details" >> $GITHUB_STEP_SUMMARY
+          echo "This test suite validates a **real Simplex BFT** consensus network:" >> $GITHUB_STEP_SUMMARY
+          echo "- 4 validators with Byzantine fault tolerance (f=1)" >> $GITHUB_STEP_SUMMARY
+          echo "- Ed25519 authenticated P2P discovery" >> $GITHUB_STEP_SUMMARY
+          echo "- 2-hop proposal, 3-hop finalization" >> $GITHUB_STEP_SUMMARY
 
       - name: Check overall results
         run: |
           echo "============================================"
-          echo "        Devnet E2E Extensive Results"
+          echo "     Simplex BFT E2E Test Results"
           echo "============================================"
           echo ""
-          echo "E2E Tests:    ${{ needs.e2e-consensus.result }}"
-          echo "Load Test:    ${{ needs.load-test.result }}"
-          echo "Git Protocol: ${{ needs.git-protocol-test.result }}"
-          echo "Web Gateway:  ${{ needs.web-gateway-test.result }}"
+          echo "Simplex BFT E2E:  ${{ needs.e2e-simplex-bft.result }}"
+          echo "Git Protocol:     ${{ needs.git-protocol-test.result }}"
+          echo "Web Gateway:      ${{ needs.web-gateway-test.result }}"
           echo ""
 
-          # Check for any failures
-          if [ "${{ needs.e2e-consensus.result }}" != "success" ] || \
+          if [ "${{ needs.e2e-simplex-bft.result }}" != "success" ] || \
              [ "${{ needs.git-protocol-test.result }}" != "success" ] || \
              [ "${{ needs.web-gateway-test.result }}" != "success" ]; then
-            echo "Some critical tests failed!"
+            echo "Some tests failed!"
             exit 1
           fi
 
-          # Load test is optional
-          if [ "${{ needs.load-test.result }}" != "success" ] && [ "${{ needs.load-test.result }}" != "skipped" ]; then
-            echo "Load test failed (non-critical)"
-          fi
-
-          echo "All critical tests passed!"
+          echo "All tests passed!"

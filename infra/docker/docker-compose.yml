@@ -1,78 +1,199 @@
-# Guts Development Environment
-# Usage: docker-compose up -d
+# =============================================================================
+# Guts Simplex BFT Devnet - Canonical E2E Testing Network
+# =============================================================================
+#
+# This is the CANONICAL configuration for all E2E testing. It runs a real
+# Simplex BFT consensus network with Byzantine fault tolerance.
+#
+# Network Configuration:
+#   - 4 Validators: Form BFT consensus quorum (tolerates f=1 Byzantine node)
+#   - Real Simplex BFT protocol from commonware
+#   - Authenticated P2P discovery with Ed25519 signing
+#   - 2-hop proposal, 3-hop finalization
+#
+# Usage:
+#   docker compose up --build              # Start network
+#   docker compose logs -f                 # Follow logs
+#   docker compose down -v                 # Stop and clean up
+#
+# E2E Testing:
+#   ../scripts/e2e-test.sh                 # Run full E2E test suite
+#   ../scripts/e2e-test.sh --skip-setup    # Run tests (devnet already running)
+#
+# Endpoints:
+#   Validator 1: API=8091, P2P=9091 (Bootstrap)
+#   Validator 2: API=8092, P2P=9092
+#   Validator 3: API=8093, P2P=9093
+#   Validator 4: API=8094, P2P=9094
+#
+# Validator Public Keys (derived from deterministic seeds):
+#   Seed 0: 478b8e507e0bb2b18c0f9e0824769e8562d10df9abe2e774896f82b4b4405266
+#   Seed 1: 5925ba86e2189444a6c3b437b25d2ef35daecd1abf82c5fb36060f9fc0af428c
+#   Seed 2: ec8924090e507c2d8371d2fb0bf965d553e6e5756aeec6c274df3801cf2b49b9
+#   Seed 3: 1c0c1c72c52dbd38c741a2c1989e02a41b388348011566b914a1ed6932b8f880
+#
+# =============================================================================
 
-version: '3.8'
+name: guts-devnet
+
+# Common configuration for all validators
+x-validator-common: &validator-common
+  build:
+    context: ../..
+    dockerfile: infra/docker/Dockerfile
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "50m"
+      max-file: "3"
+
+# Common environment variables
+x-common-env: &common-env
+  GUTS_LOG_LEVEL: info
+  GUTS_LOG_FORMAT: pretty
+  RUST_LOG: guts=info,commonware=info,tower_http=info
+  # Enable REAL Simplex BFT consensus
+  GUTS_CONSENSUS_ENABLED: "true"
+  GUTS_CONSENSUS_USE_SIMPLEX_BFT: "true"
+  GUTS_CONSENSUS_BLOCK_TIME_MS: "2000"
+  GUTS_CONSENSUS_MAX_TXS_PER_BLOCK: "100"
+  GUTS_CONSENSUS_MEMPOOL_MAX_TXS: "1000"
+  GUTS_CONSENSUS_MEMPOOL_TTL_SECS: "600"
+  # P2P configuration
+  GUTS_P2P_ENABLED: "true"
+  GUTS_P2P_ADDR: "0.0.0.0:9000"
+
+# Common healthcheck
+x-healthcheck: &healthcheck
+  test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+  interval: 10s
+  timeout: 5s
+  retries: 10
+  start_period: 30s
 
 services:
-  # Node 1 - Bootstrap node
-  node1:
-    build:
-      context: ../..
-      dockerfile: infra/docker/Dockerfile
-    container_name: guts-node1
+  # ==========================================================================
+  # Validator 1 - Bootstrap Node
+  # ==========================================================================
+  validator1:
+    <<: *validator-common
+    container_name: guts-validator1
+    hostname: validator1
     ports:
-      - "8081:8080"   # API
-      - "9001:9000"   # P2P
+      - "8091:8080"   # HTTP API
+      - "9091:9000"   # P2P
     environment:
-      - GUTS_NODE_ID=node1
-      - GUTS_LOG_LEVEL=info
-      - RUST_LOG=guts=info
+      <<: *common-env
+      GUTS_NODE_ID: validator1
+      # Ed25519 private key (seed=0)
+      GUTS_PRIVATE_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
     volumes:
-      - node1-data:/data
+      - validator1-data:/data
     networks:
-      - guts-network
-    restart: unless-stopped
+      guts-network:
+        ipv4_address: 172.30.0.11
+        aliases:
+          - validator1
+    healthcheck: *healthcheck
 
-  # Node 2
-  node2:
-    build:
-      context: ../..
-      dockerfile: infra/docker/Dockerfile
-    container_name: guts-node2
+  # ==========================================================================
+  # Validator 2
+  # ==========================================================================
+  validator2:
+    <<: *validator-common
+    container_name: guts-validator2
+    hostname: validator2
     ports:
-      - "8082:8080"
-      - "9002:9000"
+      - "8092:8080"
+      - "9092:9000"
     environment:
-      - GUTS_NODE_ID=node2
-      - GUTS_BOOTSTRAP_NODES=node1:9000
-      - GUTS_LOG_LEVEL=info
-      - RUST_LOG=guts=info
+      <<: *common-env
+      GUTS_NODE_ID: validator2
+      # Ed25519 private key (seed=1)
+      GUTS_PRIVATE_KEY: "0100000000000000000000000000000000000000000000000000000000000000"
     volumes:
-      - node2-data:/data
+      - validator2-data:/data
     networks:
-      - guts-network
+      guts-network:
+        ipv4_address: 172.30.0.12
+        aliases:
+          - validator2
+    healthcheck: *healthcheck
     depends_on:
-      - node1
-    restart: unless-stopped
+      validator1:
+        condition: service_healthy
 
-  # Node 3
-  node3:
-    build:
-      context: ../..
-      dockerfile: infra/docker/Dockerfile
-    container_name: guts-node3
+  # ==========================================================================
+  # Validator 3
+  # ==========================================================================
+  validator3:
+    <<: *validator-common
+    container_name: guts-validator3
+    hostname: validator3
     ports:
-      - "8083:8080"
-      - "9003:9000"
+      - "8093:8080"
+      - "9093:9000"
     environment:
-      - GUTS_NODE_ID=node3
-      - GUTS_BOOTSTRAP_NODES=node1:9000,node2:9000
-      - GUTS_LOG_LEVEL=info
-      - RUST_LOG=guts=info
+      <<: *common-env
+      GUTS_NODE_ID: validator3
+      # Ed25519 private key (seed=2)
+      GUTS_PRIVATE_KEY: "0200000000000000000000000000000000000000000000000000000000000000"
     volumes:
-      - node3-data:/data
+      - validator3-data:/data
     networks:
-      - guts-network
+      guts-network:
+        ipv4_address: 172.30.0.13
+        aliases:
+          - validator3
+    healthcheck: *healthcheck
     depends_on:
-      - node1
-      - node2
-    restart: unless-stopped
+      validator1:
+        condition: service_healthy
+      validator2:
+        condition: service_healthy
+
+  # ==========================================================================
+  # Validator 4
+  # ==========================================================================
+  validator4:
+    <<: *validator-common
+    container_name: guts-validator4
+    hostname: validator4
+    ports:
+      - "8094:8080"
+      - "9094:9000"
+    environment:
+      <<: *common-env
+      GUTS_NODE_ID: validator4
+      # Ed25519 private key (seed=3)
+      GUTS_PRIVATE_KEY: "0300000000000000000000000000000000000000000000000000000000000000"
+    volumes:
+      - validator4-data:/data
+    networks:
+      guts-network:
+        ipv4_address: 172.30.0.14
+        aliases:
+          - validator4
+    healthcheck: *healthcheck
+    depends_on:
+      validator1:
+        condition: service_healthy
+      validator2:
+        condition: service_healthy
+      validator3:
+        condition: service_healthy
 
 networks:
   guts-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+          gateway: 172.30.0.1
 
 volumes:
-  node1-data:
-  node2-data:
-  node3-data:
+  validator1-data:
+  validator2-data:
+  validator3-data:
+  validator4-data:

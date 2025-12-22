@@ -106,6 +106,7 @@ pub mod compat_api;
 pub mod config;
 pub mod consensus_api;
 pub mod consensus_app;
+pub mod consensus_simplex;
 pub mod health;
 pub mod observability;
 pub mod p2p;

@@ -166,6 +166,10 @@ impl NodeConfig {
             config.consensus.enabled = enabled.parse().unwrap_or(false);
         }
 
+        if let Ok(use_simplex) = std::env::var("GUTS_CONSENSUS_USE_SIMPLEX_BFT") {
+            config.consensus.use_simplex_bft = use_simplex.parse().unwrap_or(false);
+        }
+
         if let Ok(block_time) = std::env::var("GUTS_CONSENSUS_BLOCK_TIME_MS") {
             config.consensus.block_time_ms =
                 block_time.parse().map_err(|_| ConfigError::EnvParse {
@@ -243,6 +247,9 @@ impl NodeConfig {
         // Consensus environment variables
         if std::env::var("GUTS_CONSENSUS_ENABLED").is_ok() {
             self.consensus.enabled = env_config.consensus.enabled;
+        }
+        if std::env::var("GUTS_CONSENSUS_USE_SIMPLEX_BFT").is_ok() {
+            self.consensus.use_simplex_bft = env_config.consensus.use_simplex_bft;
         }
         if std::env::var("GUTS_CONSENSUS_BLOCK_TIME_MS").is_ok() {
             self.consensus.block_time_ms = env_config.consensus.block_time_ms;
@@ -402,6 +409,10 @@ pub struct ConsensusConfig {
     /// Whether consensus is enabled (false = single-node mode).
     pub enabled: bool,
 
+    /// Use real Simplex BFT consensus (requires P2P to be enabled).
+    /// When false, uses the simulation-based consensus for development.
+    pub use_simplex_bft: bool,
+
     /// Path to genesis file.
     pub genesis_file: Option<PathBuf>,
 
@@ -433,6 +444,7 @@ impl Default for ConsensusConfig {
     fn default() -> Self {
         Self {
             enabled: false,
+            use_simplex_bft: false,
             genesis_file: None,
             block_time_ms: 2000,
             max_txs_per_block: 1000,

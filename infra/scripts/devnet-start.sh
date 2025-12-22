@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Start Guts Devnet
+# Start Guts Simplex BFT Devnet
 # =============================================================================
 #
-# Starts a 5-node Guts devnet for local development and testing.
+# Starts a 4-validator Simplex BFT devnet with real consensus.
 #
 # Usage:
 #   ./devnet-start.sh [--build] [--detach]
@@ -46,7 +46,7 @@ done
 
 cd "$DOCKER_DIR"
 
-COMPOSE_ARGS="-f docker-compose.devnet.yml up"
+COMPOSE_ARGS="up"
 
 if [[ "$BUILD" == "true" ]]; then
     COMPOSE_ARGS="$COMPOSE_ARGS --build"
@@ -56,14 +56,15 @@ if [[ "$DETACH" == "true" ]]; then
     COMPOSE_ARGS="$COMPOSE_ARGS -d"
 fi
 
-echo "Starting Guts devnet (5 nodes)..."
+echo "Starting Guts Simplex BFT devnet (4 validators)..."
 echo ""
-echo "Node endpoints:"
-echo "  Node 1: http://localhost:8081"
-echo "  Node 2: http://localhost:8082"
-echo "  Node 3: http://localhost:8083"
-echo "  Node 4: http://localhost:8084"
-echo "  Node 5: http://localhost:8085"
+echo "Validator endpoints:"
+echo "  Validator 1: http://localhost:8091 (bootstrap)"
+echo "  Validator 2: http://localhost:8092"
+echo "  Validator 3: http://localhost:8093"
+echo "  Validator 4: http://localhost:8094"
+echo ""
+echo "Consensus: Real Simplex BFT (f=1 Byzantine tolerance)"
 echo ""
 
 docker compose $COMPOSE_ARGS

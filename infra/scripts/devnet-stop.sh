@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Stop Guts Devnet
+# Stop Guts Simplex BFT Devnet
 # =============================================================================
 #
-# Stops the 5-node Guts devnet and optionally removes volumes.
+# Stops the Simplex BFT devnet and optionally removes volumes.
 #
 # Usage:
 #   ./devnet-stop.sh [--volumes]
@@ -40,12 +40,12 @@ done
 
 cd "$DOCKER_DIR"
 
-echo "Stopping Guts devnet..."
+echo "Stopping Guts Simplex BFT devnet..."
 
 if [[ "$REMOVE_VOLUMES" == "true" ]]; then
-    docker compose -f docker-compose.devnet.yml down -v
+    docker compose down -v --remove-orphans
     echo "Devnet stopped and volumes removed."
 else
-    docker compose -f docker-compose.devnet.yml down
+    docker compose down --remove-orphans
     echo "Devnet stopped. Use --volumes to remove data."
 fi
