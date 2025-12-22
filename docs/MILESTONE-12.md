@@ -1,1164 +1,1014 @@
-# Milestone 12: True Decentralization
+# Milestone 12: Operator Experience & Documentation
 
 > **Status:** Planned
-> **Target:** Q2 2025
-> **Priority:** Critical
+> **Target:** Q2-Q3 2025
+> **Priority:** High
 
 ## Overview
 
-Milestone 12 transforms Guts from a replicated system into a truly decentralized, permissionless network. Currently, Guts requires pre-configured bootstrap nodes and has no mechanism for independent operators to join the network. This milestone implements trustless peer discovery, validator governance, Sybil resistance, and launches a public testnet with independent operators.
+Milestone 13 focuses on making Guts easy to deploy, operate, and maintain in production environments. A decentralized network is only as strong as its operators. This milestone provides comprehensive documentation, operational runbooks, monitoring dashboards, disaster recovery procedures, and automation tools that enable anyone to run a reliable Guts node.
 
 ## Goals
 
-1. **Permissionless Node Discovery**: DHT-based peer discovery without centralized bootstrap
-2. **Validator Governance**: On-chain mechanisms for validator set management
-3. **Sybil Resistance**: Stake-based or proof-of-work based protection
-4. **Gossip Protocol**: Efficient message propagation at scale
-5. **Network Partitioning**: Graceful handling and recovery from network splits
-6. **Public Testnet**: Launch with 20+ independent operators
-7. **Multi-Region**: Demonstrate global network operation
+1. **Operator Documentation**: Comprehensive guides for deploying and operating Guts nodes
+2. **Operational Runbooks**: Step-by-step procedures for common operational scenarios
+3. **Monitoring & Alerting**: Pre-built dashboards and alert rules
+4. **Disaster Recovery**: Documented and tested backup/restore procedures
+5. **Upgrade Procedures**: Zero-downtime upgrade paths
+6. **Multi-Cloud Support**: Deployment guides for AWS, GCP, Azure, and bare metal
+7. **Automation Tools**: Ansible/Terraform modules for infrastructure
 
-## Current Limitations
-
-| Aspect | Current State | Target State |
-|--------|---------------|--------------|
-| Node Discovery | Static bootstrap list | DHT-based discovery |
-| Validator Set | Fixed configuration | Dynamic governance |
-| Sybil Protection | None | Stake or PoW |
-| Message Propagation | Direct broadcast | Gossip protocol |
-| Partition Handling | Untested | Automatic recovery |
-| Network Type | Private/permissioned | Public/permissionless |
-
-## Architecture
-
-### New Components
+## Documentation Structure
 
 ```
-crates/guts-p2p/
-├── src/
-│   ├── discovery/
-│   │   ├── mod.rs           # Discovery module
-│   │   ├── dht.rs           # Kademlia DHT implementation
-│   │   ├── bootstrap.rs     # Bootstrap node handling
-│   │   └── mdns.rs          # Local network discovery
-│   ├── gossip/
-│   │   ├── mod.rs           # Gossip module
-│   │   ├── epidemic.rs      # Epidemic broadcast
-│   │   ├── plumtree.rs      # Plumtree hybrid gossip
-│   │   └── mesh.rs          # Mesh-based gossip
-│   ├── governance/
-│   │   ├── mod.rs           # Governance module
-│   │   ├── validator_set.rs # Validator set management
-│   │   ├── staking.rs       # Stake management
-│   │   └── voting.rs        # On-chain voting
-│   └── sybil/
-│       ├── mod.rs           # Sybil resistance
-│       ├── stake.rs         # Proof of stake
-│       └── pow.rs           # Proof of work (optional)
-```
-
-### Network Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Guts Decentralized Network                   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│   ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐  │
-│   │ Region 1│     │ Region 2│     │ Region 3│     │ Region 4│  │
-│   │ (US-E)  │     │ (EU-W)  │     │ (APAC)  │     │ (SA)    │  │
-│   └────┬────┘     └────┬────┘     └────┬────┘     └────┬────┘  │
-│        │               │               │               │        │
-│        └───────────────┼───────────────┼───────────────┘        │
-│                        │               │                         │
-│              ┌─────────┴───────────────┴─────────┐              │
-│              │       Kademlia DHT Network         │              │
-│              │   (Peer Discovery & Routing)       │              │
-│              └─────────────────────────────────────┘              │
-│                                                                  │
-│   ┌─────────────────────────────────────────────────────────┐   │
-│   │                   Gossip Layer                           │   │
-│   │   Plumtree for consensus messages, epidemic for data    │   │
-│   └─────────────────────────────────────────────────────────┘   │
-│                                                                  │
-│   ┌─────────────────────────────────────────────────────────┐   │
-│   │              BFT Consensus (Validators Only)            │   │
-│   │        Stake-weighted voting, dynamic validator set     │   │
-│   └─────────────────────────────────────────────────────────┘   │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+docs/
+├── operator/
+│   ├── README.md                    # Operator guide overview
+│   ├── quickstart.md                # 5-minute deployment
+│   ├── architecture.md              # System architecture for operators
+│   ├── requirements.md              # Hardware and network requirements
+│   ├── installation/
+│   │   ├── docker.md                # Docker deployment
+│   │   ├── kubernetes.md            # Kubernetes deployment
+│   │   ├── bare-metal.md            # Bare metal deployment
+│   │   └── systemd.md               # Systemd service setup
+│   ├── configuration/
+│   │   ├── reference.md             # Full configuration reference
+│   │   ├── networking.md            # Network configuration
+│   │   ├── storage.md               # Storage configuration
+│   │   ├── security.md              # Security hardening
+│   │   └── performance.md           # Performance tuning
+│   ├── operations/
+│   │   ├── monitoring.md            # Monitoring setup
+│   │   ├── alerting.md              # Alert configuration
+│   │   ├── logging.md               # Log management
+│   │   ├── backup.md                # Backup procedures
+│   │   └── upgrades.md              # Upgrade procedures
+│   ├── runbooks/
+│   │   ├── README.md                # Runbook index
+│   │   ├── node-not-syncing.md      # Node sync issues
+│   │   ├── high-memory.md           # Memory problems
+│   │   ├── disk-full.md             # Storage issues
+│   │   ├── consensus-stuck.md       # Consensus problems
+│   │   ├── network-partition.md     # Network issues
+│   │   ├── data-corruption.md       # Data recovery
+│   │   ├── key-rotation.md          # Key management
+│   │   └── emergency-shutdown.md    # Emergency procedures
+│   ├── troubleshooting/
+│   │   ├── common-issues.md         # FAQ and common problems
+│   │   ├── diagnostics.md           # Diagnostic procedures
+│   │   └── support.md               # Getting help
+│   └── reference/
+│       ├── cli.md                   # CLI reference
+│       ├── api.md                   # API reference
+│       └── metrics.md               # Metrics reference
+├── cloud/
+│   ├── aws/
+│   │   ├── quickstart.md            # AWS quickstart
+│   │   ├── architecture.md          # AWS architecture
+│   │   └── terraform/               # Terraform modules
+│   ├── gcp/
+│   │   ├── quickstart.md            # GCP quickstart
+│   │   └── terraform/               # Terraform modules
+│   ├── azure/
+│   │   ├── quickstart.md            # Azure quickstart
+│   │   └── terraform/               # Terraform modules
+│   └── multi-cloud/
+│       └── federation.md            # Multi-cloud setup
+└── monitoring/
+    ├── dashboards/                  # Grafana dashboards
+    ├── alerts/                      # Alert rules
+    └── runbook-links/               # Dashboard to runbook links
 ```
 
 ## Detailed Implementation
 
-### Phase 1: DHT-Based Peer Discovery
+### Phase 1: Core Documentation
 
-#### 1.1 Kademlia Implementation
+#### 1.1 Quickstart Guide
 
-```rust
-// crates/guts-p2p/src/discovery/dht.rs
+```markdown
+# Guts Node Quickstart
 
-use libp2p::kad::{Kademlia, KademliaConfig, QueryResult};
+Deploy a Guts node in 5 minutes.
 
-pub struct DhtDiscovery {
-    /// Kademlia DHT instance
-    kademlia: Kademlia<MemoryStore>,
+## Prerequisites
 
-    /// Our peer ID
-    local_peer_id: PeerId,
+- Docker 24+ or Kubernetes 1.28+
+- 4 CPU cores, 8GB RAM, 100GB SSD
+- Public IP with ports 8080 (HTTP), 9000 (P2P)
 
-    /// Bootstrap nodes (used only on first start)
-    bootstrap_nodes: Vec<Multiaddr>,
+## Option 1: Docker (Simplest)
 
-    /// Discovery configuration
-    config: DhtConfig,
-}
+\`\`\`bash
+# Generate node identity
+docker run --rm guts/node:latest guts-node keygen > node.key
 
-pub struct DhtConfig {
-    /// Bucket size (k parameter)
-    pub k: usize,
+# Start node
+docker run -d \
+  --name guts-node \
+  -p 8080:8080 \
+  -p 9000:9000 \
+  -v $(pwd)/data:/data \
+  -v $(pwd)/node.key:/etc/guts/node.key \
+  guts/node:latest
 
-    /// Parallelism factor (alpha parameter)
-    pub alpha: usize,
+# Verify node is running
+curl http://localhost:8080/health/ready
+\`\`\`
 
-    /// Record TTL
-    pub record_ttl: Duration,
+## Option 2: Kubernetes (Production)
 
-    /// Provider record TTL
-    pub provider_ttl: Duration,
+\`\`\`bash
+# Add Helm repository
+helm repo add guts https://charts.guts.network
 
-    /// Replication interval
-    pub replication_interval: Duration,
-}
+# Install
+helm install guts-node guts/guts-node \
+  --set persistence.size=100Gi \
+  --set resources.requests.memory=8Gi
 
-impl Default for DhtConfig {
-    fn default() -> Self {
-        Self {
-            k: 20,
-            alpha: 3,
-            record_ttl: Duration::from_secs(36 * 3600),  // 36 hours
-            provider_ttl: Duration::from_secs(24 * 3600), // 24 hours
-            replication_interval: Duration::from_secs(3600), // 1 hour
-        }
-    }
-}
+# Check status
+kubectl get pods -l app=guts-node
+\`\`\`
 
-impl DhtDiscovery {
-    pub async fn new(
-        local_key: identity::Keypair,
-        bootstrap_nodes: Vec<Multiaddr>,
-        config: DhtConfig,
-    ) -> Result<Self> {
-        let local_peer_id = PeerId::from(local_key.public());
+## Next Steps
 
-        let mut kad_config = KademliaConfig::default();
-        kad_config.set_kbucket_inserts(KademliaBucketInserts::OnConnected);
-        kad_config.set_record_ttl(Some(config.record_ttl));
-        kad_config.set_provider_record_ttl(Some(config.provider_ttl));
-        kad_config.set_replication_interval(Some(config.replication_interval));
-
-        let store = MemoryStore::new(local_peer_id);
-        let kademlia = Kademlia::with_config(local_peer_id, store, kad_config);
-
-        Ok(Self {
-            kademlia,
-            local_peer_id,
-            bootstrap_nodes,
-            config,
-        })
-    }
-
-    /// Bootstrap the DHT by connecting to known nodes
-    pub async fn bootstrap(&mut self) -> Result<()> {
-        // Add bootstrap nodes to routing table
-        for addr in &self.bootstrap_nodes {
-            if let Some(peer_id) = extract_peer_id(addr) {
-                self.kademlia.add_address(&peer_id, addr.clone());
-            }
-        }
-
-        // Perform bootstrap query
-        self.kademlia.bootstrap()?;
-
-        Ok(())
-    }
-
-    /// Announce ourselves as a Guts node
-    pub async fn announce(&mut self) -> Result<()> {
-        // Announce as provider for "guts-network" key
-        let key = Key::new(&b"guts-network");
-        self.kademlia.start_providing(key)?;
-
-        // Announce our services
-        self.announce_services().await?;
-
-        Ok(())
-    }
-
-    /// Find other Guts nodes
-    pub async fn find_peers(&mut self) -> Result<Vec<PeerInfo>> {
-        let key = Key::new(&b"guts-network");
-        self.kademlia.get_providers(key);
-
-        // Wait for providers
-        let providers = self.collect_providers().await?;
-
-        Ok(providers)
-    }
-
-    /// Find nodes providing a specific repository
-    pub async fn find_repo_providers(&mut self, repo_key: &RepoKey) -> Result<Vec<PeerInfo>> {
-        let key = Key::new(repo_key.as_bytes());
-        self.kademlia.get_providers(key);
-
-        self.collect_providers().await
-    }
-
-    /// Announce that we have a repository
-    pub async fn announce_repo(&mut self, repo_key: &RepoKey) -> Result<()> {
-        let key = Key::new(repo_key.as_bytes());
-        self.kademlia.start_providing(key)?;
-        Ok(())
-    }
-}
+- [Configure networking](configuration/networking.md)
+- [Set up monitoring](operations/monitoring.md)
+- [Join the network](../guides/joining-network.md)
 ```
 
-#### 1.2 Multi-Address Support
+#### 1.2 Requirements Documentation
 
-```rust
-/// Support multiple network transports
-pub struct MultiTransport {
-    /// TCP transport
-    tcp: TcpTransport,
+```markdown
+# System Requirements
 
-    /// QUIC transport (preferred)
-    quic: QuicTransport,
+## Hardware Requirements
 
-    /// WebSocket transport (for browser nodes)
-    websocket: WebSocketTransport,
+### Minimum (Development/Testing)
+
+| Component | Minimum | Notes |
+|-----------|---------|-------|
+| CPU | 2 cores | x86_64 or ARM64 |
+| RAM | 4 GB | |
+| Storage | 50 GB SSD | NVMe preferred |
+| Network | 10 Mbps | |
+
+### Recommended (Production)
+
+| Component | Recommended | Notes |
+|-----------|-------------|-------|
+| CPU | 8 cores | Dedicated, not shared |
+| RAM | 32 GB | ECC preferred |
+| Storage | 500 GB NVMe | RAID-1 for reliability |
+| Network | 1 Gbps | Low latency preferred |
+
+### Validator Requirements
+
+| Component | Required | Notes |
+|-----------|----------|-------|
+| CPU | 16 cores | High single-thread performance |
+| RAM | 64 GB | ECC required |
+| Storage | 2 TB NVMe | RAID-1 required |
+| Network | 1 Gbps | 99.9% uptime required |
+| UPS | Yes | Graceful shutdown support |
+
+## Software Requirements
+
+- Linux kernel 5.10+ (Ubuntu 22.04+, Debian 12+, RHEL 9+)
+- Docker 24+ or containerd 1.7+
+- Kubernetes 1.28+ (for K8s deployment)
+
+## Network Requirements
+
+| Port | Protocol | Purpose | Required |
+|------|----------|---------|----------|
+| 8080 | TCP | HTTP API | Yes |
+| 9000 | TCP/UDP | P2P | Yes |
+| 9090 | TCP | Metrics | Optional |
+| 443 | TCP | HTTPS (with proxy) | Recommended |
+
+### Firewall Rules
+
+\`\`\`bash
+# Required inbound
+ufw allow 8080/tcp  # API
+ufw allow 9000/tcp  # P2P
+ufw allow 9000/udp  # QUIC
+
+# Optional (internal only)
+ufw allow from 10.0.0.0/8 to any port 9090  # Metrics
+\`\`\`
+```
+
+### Phase 2: Operational Runbooks
+
+#### 2.1 Runbook Template
+
+```markdown
+# Runbook: [Issue Name]
+
+**Severity:** P1/P2/P3/P4
+**Impact:** [Description of user/system impact]
+**On-Call Action:** [Immediate action required]
+
+## Symptoms
+
+- [ ] Symptom 1
+- [ ] Symptom 2
+- [ ] Symptom 3
+
+## Detection
+
+**Alert Name:** `guts_[metric]_critical`
+
+**Query:**
+\`\`\`promql
+[Prometheus query that triggers this alert]
+\`\`\`
+
+## Diagnosis
+
+### Step 1: Verify the Issue
+
+\`\`\`bash
+# Command to verify
+guts-node status
+\`\`\`
+
+Expected output: [description]
+Actual output if issue present: [description]
+
+### Step 2: Check Related Metrics
+
+\`\`\`bash
+# Check metrics
+curl -s localhost:9090/metrics | grep [relevant_metric]
+\`\`\`
+
+### Step 3: Review Logs
+
+\`\`\`bash
+# Check recent logs
+journalctl -u guts-node --since "10 minutes ago" | grep -i error
+\`\`\`
+
+## Resolution
+
+### Option A: [First Resolution Path]
+
+\`\`\`bash
+# Step-by-step commands
+\`\`\`
+
+**Expected Result:** [What should happen]
+
+### Option B: [Alternative Resolution]
+
+\`\`\`bash
+# Alternative steps
+\`\`\`
+
+## Escalation
+
+If the above steps don't resolve the issue:
+
+1. Collect diagnostics: `guts-node diagnostics > diag.tar.gz`
+2. Contact: [escalation contact]
+3. Include: Node ID, timestamp, diagnostic bundle
+
+## Post-Incident
+
+- [ ] Update monitoring if detection was delayed
+- [ ] Document any new resolution steps
+- [ ] Create follow-up ticket if root cause needs investigation
+
+## Related Runbooks
+
+- [Related Runbook 1](link)
+- [Related Runbook 2](link)
+```
+
+#### 2.2 Node Not Syncing Runbook
+
+```markdown
+# Runbook: Node Not Syncing
+
+**Severity:** P2
+**Impact:** Node cannot serve current data, may serve stale content
+**On-Call Action:** Investigate within 30 minutes
+
+## Symptoms
+
+- [ ] Node reports sync status as "syncing" for extended period
+- [ ] Block height not increasing
+- [ ] API returns stale data
+- [ ] Alert: `guts_sync_lag_seconds > 60`
+
+## Detection
+
+**Alert Name:** `guts_node_sync_stalled`
+
+**Query:**
+\`\`\`promql
+time() - guts_last_block_time > 60
+\`\`\`
+
+## Diagnosis
+
+### Step 1: Check Sync Status
+
+\`\`\`bash
+guts-node status --format json | jq '.sync'
+\`\`\`
+
+Expected:
+\`\`\`json
+{
+  "status": "synced",
+  "current_height": 12345,
+  "highest_known": 12345,
+  "peers": 5
 }
+\`\`\`
 
-impl MultiTransport {
-    pub fn listen_addresses(&self) -> Vec<Multiaddr> {
-        vec![
-            // TCP
-            format!("/ip4/0.0.0.0/tcp/{}", self.tcp_port).parse().unwrap(),
-            // QUIC
-            format!("/ip4/0.0.0.0/udp/{}/quic-v1", self.quic_port).parse().unwrap(),
-            // WebSocket
-            format!("/ip4/0.0.0.0/tcp/{}/ws", self.ws_port).parse().unwrap(),
+### Step 2: Check Peer Connectivity
+
+\`\`\`bash
+guts-node peers list
+\`\`\`
+
+If fewer than 3 peers:
+- Check firewall rules
+- Verify bootstrap nodes are reachable
+- Check for network issues
+
+### Step 3: Check Disk Space
+
+\`\`\`bash
+df -h /var/lib/guts
+\`\`\`
+
+If usage > 90%, see [Disk Full Runbook](disk-full.md)
+
+### Step 4: Check Memory
+
+\`\`\`bash
+free -h
+\`\`\`
+
+If memory exhausted, see [High Memory Runbook](high-memory.md)
+
+### Step 5: Check for Consensus Issues
+
+\`\`\`bash
+guts-node consensus status
+\`\`\`
+
+If consensus is stuck, see [Consensus Stuck Runbook](consensus-stuck.md)
+
+## Resolution
+
+### Option A: Restart Node
+
+\`\`\`bash
+systemctl restart guts-node
+# Wait 2 minutes
+guts-node status
+\`\`\`
+
+### Option B: Force Resync from Peers
+
+\`\`\`bash
+# Stop node
+systemctl stop guts-node
+
+# Clear sync state (preserves data)
+guts-node sync reset
+
+# Restart
+systemctl start guts-node
+\`\`\`
+
+### Option C: Resync from Snapshot
+
+\`\`\`bash
+# Stop node
+systemctl stop guts-node
+
+# Download latest snapshot
+guts-node snapshot download --latest
+
+# Restart
+systemctl start guts-node
+\`\`\`
+
+## Escalation
+
+If none of the above works:
+1. Collect full diagnostics
+2. Check if other nodes in network have same issue
+3. Escalate to core team if network-wide
+
+## Post-Incident
+
+- [ ] Verify node caught up completely
+- [ ] Check for any data inconsistencies
+- [ ] Monitor for recurrence
+```
+
+### Phase 3: Monitoring & Alerting
+
+#### 3.1 Grafana Dashboards
+
+```json
+{
+  "dashboard": {
+    "title": "Guts Node Overview",
+    "panels": [
+      {
+        "title": "Node Health",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "up{job='guts-node'}",
+            "legendFormat": "Node Status"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": 0},
+              {"color": "green", "value": 1}
+            ]
+          }
+        }
+      },
+      {
+        "title": "Sync Status",
+        "type": "gauge",
+        "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "guts_sync_percentage",
+            "legendFormat": "Sync %"
+          }
         ]
-    }
+      },
+      {
+        "title": "Connected Peers",
+        "type": "stat",
+        "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "guts_p2p_peers_connected",
+            "legendFormat": "Peers"
+          }
+        ]
+      },
+      {
+        "title": "Request Rate",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(guts_http_requests_total[5m])",
+            "legendFormat": "{{method}} {{path}}"
+          }
+        ]
+      },
+      {
+        "title": "Request Latency (p99)",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.99, rate(guts_http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p99 Latency"
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
 
-#### 1.3 Local Network Discovery
-
-```rust
-/// mDNS for local network discovery
-pub struct MdnsDiscovery {
-    mdns: Mdns,
-    service_name: String,
-}
-
-impl MdnsDiscovery {
-    pub async fn new() -> Result<Self> {
-        let mdns = Mdns::new(MdnsConfig::default())?;
-
-        Ok(Self {
-            mdns,
-            service_name: "_guts._tcp.local".to_string(),
-        })
-    }
-
-    /// Discover peers on local network
-    pub fn discovered_peers(&self) -> impl Stream<Item = PeerInfo> {
-        self.mdns.discovered()
-    }
-}
-```
-
-### Phase 2: Gossip Protocol
-
-#### 2.1 Plumtree Implementation
-
-```rust
-// crates/guts-p2p/src/gossip/plumtree.rs
-
-/// Plumtree: Epidemic Broadcast Trees
-/// Combines eager push (tree) with lazy push (gossip)
-pub struct Plumtree {
-    /// Eager peers (tree edges)
-    eager_peers: HashSet<PeerId>,
-
-    /// Lazy peers (non-tree edges)
-    lazy_peers: HashSet<PeerId>,
-
-    /// Missing messages (for pull requests)
-    missing: HashMap<MessageId, HashSet<PeerId>>,
-
-    /// Received messages (dedup)
-    received: LruCache<MessageId, ()>,
-
-    /// Configuration
-    config: PlumtreeConfig,
-}
-
-pub struct PlumtreeConfig {
-    /// Threshold for moving peer to lazy
-    pub graft_threshold: Duration,
-
-    /// Missing message timeout
-    pub ihave_timeout: Duration,
-
-    /// Optimization interval
-    pub optimization_interval: Duration,
-}
-
-impl Plumtree {
-    /// Broadcast a message
-    pub async fn broadcast(&mut self, msg: GossipMessage) -> Result<()> {
-        let msg_id = msg.id();
-
-        // Already seen?
-        if self.received.contains(&msg_id) {
-            return Ok(());
-        }
-        self.received.put(msg_id.clone(), ());
-
-        // Eager push to tree neighbors
-        for peer in &self.eager_peers {
-            self.send_eager(peer, &msg).await?;
-        }
-
-        // Lazy push (IHAVE) to others
-        for peer in &self.lazy_peers {
-            self.send_ihave(peer, &msg_id).await?;
-        }
-
-        Ok(())
-    }
-
-    /// Handle received message
-    pub async fn on_message(&mut self, from: PeerId, msg: GossipMessage) -> Result<()> {
-        let msg_id = msg.id();
-
-        // Already seen?
-        if self.received.contains(&msg_id) {
-            // Prune: demote sender to lazy
-            self.eager_peers.remove(&from);
-            self.lazy_peers.insert(from);
-            self.send_prune(&from, &msg_id).await?;
-            return Ok(());
-        }
-
-        // New message: sender becomes eager
-        self.received.put(msg_id.clone(), ());
-        self.lazy_peers.remove(&from);
-        self.eager_peers.insert(from);
-
-        // Cancel any pending requests
-        self.missing.remove(&msg_id);
-
-        // Forward to other eager peers
-        for peer in &self.eager_peers {
-            if *peer != from {
-                self.send_eager(peer, &msg).await?;
-            }
-        }
-
-        // Lazy announce to lazy peers
-        for peer in &self.lazy_peers {
-            self.send_ihave(peer, &msg_id).await?;
-        }
-
-        Ok(())
-    }
-
-    /// Handle IHAVE announcement
-    pub async fn on_ihave(&mut self, from: PeerId, msg_id: MessageId) -> Result<()> {
-        // Already have it?
-        if self.received.contains(&msg_id) {
-            return Ok(());
-        }
-
-        // Track who has this message
-        self.missing
-            .entry(msg_id.clone())
-            .or_default()
-            .insert(from);
-
-        // Start timer for pull request
-        self.schedule_graft(msg_id).await;
-
-        Ok(())
-    }
-
-    /// Handle GRAFT request
-    pub async fn on_graft(&mut self, from: PeerId, msg_id: MessageId) -> Result<()> {
-        // Promote peer to eager
-        self.lazy_peers.remove(&from);
-        self.eager_peers.insert(from);
-
-        // Send the message if we have it
-        if let Some(msg) = self.get_message(&msg_id) {
-            self.send_eager(&from, &msg).await?;
-        }
-
-        Ok(())
-    }
-}
-```
-
-#### 2.2 Message Types
-
-```rust
-#[derive(Clone, Serialize, Deserialize)]
-pub enum GossipMessage {
-    /// New commit/ref update
-    RefUpdate {
-        repo_key: RepoKey,
-        ref_name: String,
-        old_oid: Option<ObjectId>,
-        new_oid: ObjectId,
-        commit_chain: Vec<ObjectId>,
-    },
-
-    /// New collaboration item
-    CollaborationEvent {
-        repo_key: RepoKey,
-        event_type: CollabEventType,
-        item_id: Uuid,
-        content_hash: [u8; 32],
-    },
-
-    /// Consensus proposal
-    ConsensusMessage {
-        epoch: u64,
-        slot: u64,
-        message_type: ConsensusMessageType,
-        payload: Vec<u8>,
-        signature: Signature,
-    },
-
-    /// Validator set change
-    ValidatorChange {
-        epoch: u64,
-        change: ValidatorSetChange,
-        proofs: Vec<ValidatorProof>,
-    },
-}
-```
-
-### Phase 3: Validator Governance
-
-#### 3.1 Stake-Based Validator Set
-
-```rust
-// crates/guts-p2p/src/governance/staking.rs
-
-pub struct StakingModule {
-    /// Current validator set
-    validators: ValidatorSet,
-
-    /// Pending stake changes
-    pending_changes: Vec<StakeChange>,
-
-    /// Stake lock period
-    lock_period: Duration,
-
-    /// Minimum stake to become validator
-    min_stake: u64,
-
-    /// Maximum validators
-    max_validators: usize,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Validator {
-    /// Validator public key
-    pub pubkey: PublicKey,
-
-    /// Staked amount
-    pub stake: u64,
-
-    /// Commission rate (basis points)
-    pub commission: u16,
-
-    /// Joined at epoch
-    pub joined_epoch: u64,
-
-    /// Performance metrics
-    pub uptime: f64,
-    pub blocks_proposed: u64,
-    pub blocks_missed: u64,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum StakeChange {
-    /// Add stake (becomes validator if above minimum)
-    Stake {
-        validator: PublicKey,
-        amount: u64,
-        proof: StakeProof,
-    },
-
-    /// Remove stake (exits validator set if below minimum)
-    Unstake {
-        validator: PublicKey,
-        amount: u64,
-    },
-
-    /// Slash validator for misbehavior
-    Slash {
-        validator: PublicKey,
-        reason: SlashReason,
-        amount: u64,
-        evidence: SlashEvidence,
-    },
-}
-
-impl StakingModule {
-    /// Process stake deposit
-    pub async fn stake(
-        &mut self,
-        validator: PublicKey,
-        amount: u64,
-        proof: StakeProof,
-    ) -> Result<()> {
-        // Verify stake proof
-        self.verify_stake_proof(&proof)?;
-
-        // Add to pending changes
-        self.pending_changes.push(StakeChange::Stake {
-            validator,
-            amount,
-            proof,
-        });
-
-        Ok(())
-    }
-
-    /// Process stake withdrawal
-    pub async fn unstake(&mut self, validator: PublicKey, amount: u64) -> Result<()> {
-        // Check if validator has enough stake
-        let current_stake = self.validators.get_stake(&validator)?;
-        if current_stake < amount {
-            return Err(Error::InsufficientStake);
-        }
-
-        // Check lock period
-        if !self.can_unstake(&validator)? {
-            return Err(Error::StakeLocked);
-        }
-
-        self.pending_changes.push(StakeChange::Unstake { validator, amount });
-
-        Ok(())
-    }
-
-    /// Apply pending changes at epoch boundary
-    pub async fn end_epoch(&mut self, epoch: u64) -> Result<ValidatorSetChange> {
-        let mut changes = ValidatorSetChange::default();
-
-        for change in std::mem::take(&mut self.pending_changes) {
-            match change {
-                StakeChange::Stake { validator, amount, .. } => {
-                    let new_stake = self.validators.add_stake(&validator, amount);
-
-                    if new_stake >= self.min_stake {
-                        if !self.validators.is_validator(&validator) {
-                            changes.added.push(validator);
-                        }
-                    }
-                }
-                StakeChange::Unstake { validator, amount } => {
-                    let new_stake = self.validators.remove_stake(&validator, amount);
-
-                    if new_stake < self.min_stake {
-                        if self.validators.is_validator(&validator) {
-                            changes.removed.push(validator);
-                        }
-                    }
-                }
-                StakeChange::Slash { validator, amount, .. } => {
-                    self.validators.slash(&validator, amount);
-                    changes.slashed.push(validator);
-                }
-            }
-        }
-
-        // Update validator set
-        self.validators.apply_changes(&changes);
-
-        Ok(changes)
-    }
-}
-```
-
-#### 3.2 Validator Voting
-
-```rust
-// crates/guts-p2p/src/governance/voting.rs
-
-pub struct GovernanceVoting {
-    /// Active proposals
-    proposals: HashMap<ProposalId, Proposal>,
-
-    /// Votes by proposal
-    votes: HashMap<ProposalId, HashMap<PublicKey, Vote>>,
-
-    /// Voting parameters
-    params: VotingParams,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Proposal {
-    pub id: ProposalId,
-    pub proposer: PublicKey,
-    pub proposal_type: ProposalType,
-    pub description: String,
-    pub created_at: u64,
-    pub voting_ends: u64,
-    pub execution_delay: u64,
-    pub status: ProposalStatus,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum ProposalType {
-    /// Change protocol parameters
-    ParameterChange {
-        parameter: String,
-        old_value: Value,
-        new_value: Value,
-    },
-
-    /// Upgrade protocol version
-    ProtocolUpgrade {
-        version: String,
-        activation_epoch: u64,
-    },
-
-    /// Emergency action
-    Emergency {
-        action: EmergencyAction,
-        justification: String,
-    },
-
-    /// Spend from treasury
-    TreasurySpend {
-        recipient: String,
-        amount: u64,
-        purpose: String,
-    },
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum Vote {
-    Yes,
-    No,
-    Abstain,
-}
-
-impl GovernanceVoting {
-    /// Submit a new proposal
-    pub async fn submit_proposal(
-        &mut self,
-        proposer: PublicKey,
-        proposal_type: ProposalType,
-        description: String,
-    ) -> Result<ProposalId> {
-        // Check proposer is a validator
-        if !self.is_validator(&proposer) {
-            return Err(Error::NotValidator);
-        }
-
-        // Check proposer has enough stake for proposal
-        if self.get_stake(&proposer) < self.params.proposal_threshold {
-            return Err(Error::InsufficientStakeForProposal);
-        }
-
-        let proposal = Proposal {
-            id: ProposalId::new(),
-            proposer,
-            proposal_type,
-            description,
-            created_at: current_epoch(),
-            voting_ends: current_epoch() + self.params.voting_period,
-            execution_delay: self.params.execution_delay,
-            status: ProposalStatus::Active,
-        };
-
-        let id = proposal.id.clone();
-        self.proposals.insert(id.clone(), proposal);
-
-        Ok(id)
-    }
-
-    /// Cast a vote
-    pub async fn vote(
-        &mut self,
-        proposal_id: &ProposalId,
-        voter: PublicKey,
-        vote: Vote,
-    ) -> Result<()> {
-        // Check proposal exists and is active
-        let proposal = self.proposals.get(proposal_id)
-            .ok_or(Error::ProposalNotFound)?;
-
-        if proposal.status != ProposalStatus::Active {
-            return Err(Error::ProposalNotActive);
-        }
-
-        if current_epoch() > proposal.voting_ends {
-            return Err(Error::VotingEnded);
-        }
-
-        // Check voter is a validator
-        if !self.is_validator(&voter) {
-            return Err(Error::NotValidator);
-        }
-
-        // Record vote
-        self.votes
-            .entry(proposal_id.clone())
-            .or_default()
-            .insert(voter, vote);
-
-        Ok(())
-    }
-
-    /// Tally votes and update proposal status
-    pub async fn tally(&mut self, proposal_id: &ProposalId) -> Result<ProposalStatus> {
-        let proposal = self.proposals.get(proposal_id)
-            .ok_or(Error::ProposalNotFound)?;
-
-        let votes = self.votes.get(proposal_id)
-            .map(|v| v.clone())
-            .unwrap_or_default();
-
-        // Calculate stake-weighted votes
-        let mut yes_stake = 0u64;
-        let mut no_stake = 0u64;
-        let mut abstain_stake = 0u64;
-
-        for (voter, vote) in votes {
-            let stake = self.get_stake(&voter);
-            match vote {
-                Vote::Yes => yes_stake += stake,
-                Vote::No => no_stake += stake,
-                Vote::Abstain => abstain_stake += stake,
-            }
-        }
-
-        let total_stake = self.total_stake();
-        let participation = (yes_stake + no_stake + abstain_stake) as f64 / total_stake as f64;
-
-        // Check quorum
-        if participation < self.params.quorum_threshold {
-            return Ok(ProposalStatus::Rejected { reason: "Quorum not reached".to_string() });
-        }
-
-        // Check approval
-        let approval = yes_stake as f64 / (yes_stake + no_stake) as f64;
-        if approval >= self.params.approval_threshold {
-            Ok(ProposalStatus::Passed {
-                execution_epoch: current_epoch() + proposal.execution_delay,
-            })
-        } else {
-            Ok(ProposalStatus::Rejected { reason: "Not enough support".to_string() })
-        }
-    }
-}
-```
-
-### Phase 4: Sybil Resistance
-
-#### 4.1 Stake-Based Protection
-
-```rust
-// crates/guts-p2p/src/sybil/stake.rs
-
-pub struct StakeBasedSybilResistance {
-    /// Minimum stake for various actions
-    min_stake: StakeRequirements,
-
-    /// Reputation scores
-    reputation: HashMap<PublicKey, ReputationScore>,
-}
-
-#[derive(Clone)]
-pub struct StakeRequirements {
-    /// Minimum to join as validator
-    pub validator: u64,
-
-    /// Minimum to create repository
-    pub create_repo: u64,
-
-    /// Minimum to push to any repo
-    pub push: u64,
-
-    /// Minimum for governance participation
-    pub governance: u64,
-}
-
-impl StakeBasedSybilResistance {
-    /// Check if identity can perform action
-    pub fn can_perform(&self, identity: &PublicKey, action: Action) -> Result<()> {
-        let stake = self.get_stake(identity);
-        let reputation = self.get_reputation(identity);
-
-        let required = match action {
-            Action::CreateRepository => self.min_stake.create_repo,
-            Action::Push { repo, .. } => {
-                if self.is_repo_owner(repo, identity) {
-                    0  // Owners can always push
-                } else {
-                    self.min_stake.push
-                }
-            }
-            Action::BecomeValidator => self.min_stake.validator,
-            Action::Vote => self.min_stake.governance,
-        };
-
-        // Apply reputation discount
-        let effective_required = (required as f64 * (1.0 - reputation.discount())) as u64;
-
-        if stake >= effective_required {
-            Ok(())
-        } else {
-            Err(Error::InsufficientStake {
-                required: effective_required,
-                have: stake,
-            })
-        }
-    }
-}
-```
-
-#### 4.2 Proof of Work (Optional Alternative)
-
-```rust
-// crates/guts-p2p/src/sybil/pow.rs
-
-pub struct PowSybilResistance {
-    /// Difficulty for various actions
-    difficulty: PowDifficulty,
-
-    /// Recent PoW cache
-    recent_pow: LruCache<[u8; 32], ()>,
-}
-
-#[derive(Clone)]
-pub struct PowDifficulty {
-    /// Bits of work for repository creation
-    pub create_repo: u8,
-
-    /// Bits of work per push
-    pub push: u8,
-
-    /// Bits of work for issue/PR creation
-    pub collaboration: u8,
-}
-
-impl PowSybilResistance {
-    /// Verify proof of work
-    pub fn verify_pow(&self, challenge: &[u8], nonce: u64, difficulty: u8) -> bool {
-        let mut hasher = Sha256::new();
-        hasher.update(challenge);
-        hasher.update(&nonce.to_le_bytes());
-        let hash = hasher.finalize();
-
-        // Check leading zero bits
-        leading_zeros(&hash) >= difficulty
-    }
-
-    /// Generate challenge for action
-    pub fn generate_challenge(&self, action: &Action) -> ([u8; 32], u8) {
-        let challenge = rand::random();
-        let difficulty = self.difficulty_for(action);
-        (challenge, difficulty)
-    }
-}
-```
-
-### Phase 5: Network Partition Handling
-
-#### 5.1 Partition Detection
-
-```rust
-pub struct PartitionDetector {
-    /// Known peer connectivity
-    peer_connectivity: HashMap<PeerId, PeerStatus>,
-
-    /// Partition detection threshold
-    threshold: f64,
-
-    /// Check interval
-    check_interval: Duration,
-}
-
-impl PartitionDetector {
-    /// Check for network partition
-    pub async fn check_partition(&self) -> PartitionStatus {
-        let total_peers = self.peer_connectivity.len();
-        let connected_peers = self.peer_connectivity.values()
-            .filter(|s| s.is_connected())
-            .count();
-
-        let connectivity = connected_peers as f64 / total_peers as f64;
-
-        if connectivity < self.threshold {
-            PartitionStatus::Partitioned {
-                connected: connected_peers,
-                total: total_peers,
-            }
-        } else {
-            PartitionStatus::Connected
-        }
-    }
-
-    /// Handle detected partition
-    pub async fn on_partition(&mut self) -> Result<()> {
-        // Pause consensus participation
-        self.pause_consensus().await?;
-
-        // Continue serving read-only requests
-        self.enable_read_only_mode().await?;
-
-        // Start partition healing
-        self.start_healing().await?;
-
-        Ok(())
-    }
-}
-```
-
-#### 5.2 Partition Recovery
-
-```rust
-pub struct PartitionRecovery {
-    /// State snapshot before partition
-    pre_partition_state: Option<StateSnapshot>,
-
-    /// Operations during partition
-    partition_operations: Vec<Operation>,
-
-    /// Recovery strategy
-    strategy: RecoveryStrategy,
-}
-
-#[derive(Clone)]
-pub enum RecoveryStrategy {
-    /// Longest chain wins
-    LongestChain,
-
-    /// Most stake-weighted support wins
-    MostStake,
-
-    /// Manual resolution required
-    Manual,
-}
-
-impl PartitionRecovery {
-    /// Recover from partition
-    pub async fn recover(&mut self, other_partition: &PartitionState) -> Result<()> {
-        match self.strategy {
-            RecoveryStrategy::LongestChain => {
-                self.recover_longest_chain(other_partition).await
-            }
-            RecoveryStrategy::MostStake => {
-                self.recover_most_stake(other_partition).await
-            }
-            RecoveryStrategy::Manual => {
-                self.require_manual_resolution(other_partition).await
-            }
-        }
-    }
-
-    async fn recover_longest_chain(&mut self, other: &PartitionState) -> Result<()> {
-        // Compare chain lengths
-        let our_height = self.partition_operations.len();
-        let their_height = other.operations.len();
-
-        if their_height > our_height {
-            // Rollback and apply their state
-            self.rollback_to(self.pre_partition_state.clone().unwrap()).await?;
-            self.apply_operations(&other.operations).await?;
-        }
-
-        // Resume normal operation
-        self.resume_consensus().await?;
-
-        Ok(())
-    }
-}
-```
-
-### Phase 6: Public Testnet
-
-#### 6.1 Testnet Configuration
+#### 3.2 Alert Rules
 
 ```yaml
-# infra/testnet/config.yml
-network:
-  name: "guts-testnet-1"
-  chain_id: "guts-testnet-1"
+# infra/monitoring/alerts/guts-alerts.yml
+groups:
+  - name: guts-node
+    rules:
+      # Node availability
+      - alert: GutsNodeDown
+        expr: up{job="guts-node"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Guts node is down"
+          description: "Node {{ $labels.instance }} has been down for more than 1 minute"
+          runbook_url: "https://docs.guts.network/runbooks/node-down"
 
-genesis:
-  validators:
-    - pubkey: "ed25519:..."
-      stake: 1000000
-      name: "validator-1"
-    - pubkey: "ed25519:..."
-      stake: 1000000
-      name: "validator-2"
-    # ... 20+ validators
+      # Sync issues
+      - alert: GutsNodeNotSyncing
+        expr: time() - guts_last_block_time > 60
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Guts node not syncing"
+          description: "Node {{ $labels.instance }} hasn't received a block in 60 seconds"
+          runbook_url: "https://docs.guts.network/runbooks/node-not-syncing"
 
-  parameters:
-    min_stake: 100000
-    max_validators: 100
-    epoch_duration: 3600  # 1 hour
-    voting_period: 86400  # 24 hours
+      # Peer connectivity
+      - alert: GutsLowPeerCount
+        expr: guts_p2p_peers_connected < 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low peer count"
+          description: "Node {{ $labels.instance }} has fewer than 3 peers"
+          runbook_url: "https://docs.guts.network/runbooks/low-peers"
 
-bootstrap_nodes:
-  - "/dns4/bootstrap1.testnet.guts.network/tcp/9000/p2p/..."
-  - "/dns4/bootstrap2.testnet.guts.network/tcp/9000/p2p/..."
-  - "/dns4/bootstrap3.testnet.guts.network/tcp/9000/p2p/..."
+      # API latency
+      - alert: GutsHighAPILatency
+        expr: histogram_quantile(0.99, rate(guts_http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API latency"
+          description: "API p99 latency is above 1 second"
+          runbook_url: "https://docs.guts.network/runbooks/high-latency"
 
-regions:
-  - name: "us-east"
-    nodes: 5
-  - name: "eu-west"
-    nodes: 5
-  - name: "ap-southeast"
-    nodes: 5
-  - name: "sa-east"
-    nodes: 5
+      # Resource usage
+      - alert: GutsHighMemoryUsage
+        expr: guts_process_resident_memory_bytes / guts_config_max_memory > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is above 90%"
+          runbook_url: "https://docs.guts.network/runbooks/high-memory"
+
+      # Disk space
+      - alert: GutsDiskSpaceLow
+        expr: guts_storage_available_bytes / guts_storage_total_bytes < 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk space critically low"
+          description: "Less than 10% disk space remaining"
+          runbook_url: "https://docs.guts.network/runbooks/disk-full"
+
+      # Consensus
+      - alert: GutsConsensusStalled
+        expr: rate(guts_consensus_commits_total[5m]) == 0
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Consensus stalled"
+          description: "No consensus commits in 10 minutes"
+          runbook_url: "https://docs.guts.network/runbooks/consensus-stuck"
 ```
 
-#### 6.2 Testnet Faucet
+### Phase 4: Disaster Recovery
 
-```rust
-pub struct TestnetFaucet {
-    /// Available balance
-    balance: AtomicU64,
+#### 4.1 Backup Procedures
 
-    /// Per-identity limit
-    limit_per_identity: u64,
+```markdown
+# Backup Procedures
 
-    /// Cooldown period
-    cooldown: Duration,
+## Overview
 
-    /// Recent requests
-    recent_requests: Mutex<HashMap<PublicKey, Instant>>,
+Guts nodes should be backed up regularly to enable recovery from:
+- Hardware failures
+- Data corruption
+- Accidental deletion
+- Ransomware attacks
+
+## What to Backup
+
+| Component | Location | Frequency | Retention |
+|-----------|----------|-----------|-----------|
+| Node key | `/etc/guts/node.key` | Once (after creation) | Forever |
+| Configuration | `/etc/guts/config.toml` | On change | 30 days |
+| Data directory | `/var/lib/guts/data` | Daily | 7 days |
+| Consensus state | `/var/lib/guts/consensus` | Hourly | 24 hours |
+
+## Backup Methods
+
+### Method 1: Snapshot (Recommended)
+
+\`\`\`bash
+# Create consistent snapshot
+guts-node backup create --output /backup/guts-$(date +%Y%m%d).tar.gz
+
+# Upload to S3
+aws s3 cp /backup/guts-$(date +%Y%m%d).tar.gz s3://guts-backups/
+\`\`\`
+
+### Method 2: Filesystem Snapshot (LVM/ZFS)
+
+\`\`\`bash
+# Pause writes
+guts-node maintenance enter
+
+# Create LVM snapshot
+lvcreate -L 10G -s -n guts-snap /dev/vg0/guts-data
+
+# Resume writes
+guts-node maintenance exit
+
+# Backup snapshot
+tar -czf /backup/guts-$(date +%Y%m%d).tar.gz /mnt/snap
+\`\`\`
+
+### Method 3: Continuous Replication
+
+\`\`\`bash
+# Set up WAL archiving to S3
+guts-node config set wal.archive_command "aws s3 cp %f s3://guts-wal/"
+guts-node config set wal.restore_command "aws s3 cp s3://guts-wal/%f %p"
+\`\`\`
+
+## Backup Verification
+
+\`\`\`bash
+# Verify backup integrity
+guts-node backup verify /backup/guts-20250101.tar.gz
+
+# Test restore to temporary location
+guts-node backup restore /backup/guts-20250101.tar.gz --target /tmp/guts-test
+\`\`\`
+
+## Automation
+
+\`\`\`yaml
+# /etc/cron.d/guts-backup
+0 */6 * * * root /usr/local/bin/guts-backup.sh >> /var/log/guts-backup.log 2>&1
+\`\`\`
+```
+
+#### 4.2 Restore Procedures
+
+```markdown
+# Restore Procedures
+
+## Prerequisites
+
+- Fresh server meeting [system requirements](../requirements.md)
+- Access to backup files
+- Node key backup (if restoring identity)
+
+## Restore Scenarios
+
+### Scenario 1: Same Server, New Disk
+
+\`\`\`bash
+# Install Guts
+curl -sSL https://get.guts.network | sh
+
+# Restore from backup
+guts-node backup restore /backup/guts-latest.tar.gz
+
+# Start node
+systemctl start guts-node
+
+# Verify
+guts-node status
+\`\`\`
+
+### Scenario 2: New Server, Same Identity
+
+\`\`\`bash
+# Install Guts
+curl -sSL https://get.guts.network | sh
+
+# Restore node key
+cp /backup/node.key /etc/guts/node.key
+chmod 600 /etc/guts/node.key
+
+# Restore configuration
+cp /backup/config.toml /etc/guts/config.toml
+
+# Restore data
+guts-node backup restore /backup/guts-latest.tar.gz
+
+# Update DNS/IP as needed
+# ...
+
+# Start node
+systemctl start guts-node
+\`\`\`
+
+### Scenario 3: New Server, New Identity
+
+\`\`\`bash
+# Install Guts
+curl -sSL https://get.guts.network | sh
+
+# Generate new identity
+guts-node keygen > /etc/guts/node.key
+
+# Configure
+guts-node config init
+
+# Start fresh (will sync from network)
+systemctl start guts-node
+\`\`\`
+
+## Recovery Time Objectives
+
+| Scenario | RTO Target | Notes |
+|----------|------------|-------|
+| Restart after crash | < 5 min | Automatic |
+| Restore from snapshot | < 30 min | Depends on data size |
+| Full resync | < 4 hours | Depends on network |
+
+## Validation After Restore
+
+\`\`\`bash
+# Check sync status
+guts-node status
+
+# Verify data integrity
+guts-node verify --full
+
+# Check peer connectivity
+guts-node peers list
+
+# Verify API functionality
+curl http://localhost:8080/api/repos
+\`\`\`
+```
+
+### Phase 5: Upgrade Procedures
+
+#### 5.1 Zero-Downtime Upgrades
+
+```markdown
+# Upgrade Procedures
+
+## Pre-Upgrade Checklist
+
+- [ ] Review release notes for breaking changes
+- [ ] Backup current installation
+- [ ] Verify new version compatibility
+- [ ] Test upgrade in staging environment
+- [ ] Schedule maintenance window (for major upgrades)
+
+## Upgrade Methods
+
+### Method 1: Rolling Upgrade (Kubernetes)
+
+\`\`\`bash
+# Update Helm values
+helm upgrade guts-node guts/guts-node --set image.tag=v1.2.0
+
+# Monitor rollout
+kubectl rollout status statefulset/guts-node
+\`\`\`
+
+### Method 2: Blue-Green Deployment
+
+\`\`\`bash
+# Deploy new version alongside old
+docker run -d --name guts-node-new -p 8081:8080 guts/node:v1.2.0
+
+# Verify new version
+curl http://localhost:8081/health/ready
+
+# Switch traffic
+# (Update load balancer or DNS)
+
+# Stop old version
+docker stop guts-node-old
+\`\`\`
+
+### Method 3: In-Place Upgrade (Single Node)
+
+\`\`\`bash
+# Stop node
+systemctl stop guts-node
+
+# Backup current binary
+cp /usr/local/bin/guts-node /usr/local/bin/guts-node.bak
+
+# Download new version
+curl -sSL https://get.guts.network/v1.2.0 | sh
+
+# Start node
+systemctl start guts-node
+
+# Verify
+guts-node version
+\`\`\`
+
+## Rollback Procedures
+
+If upgrade fails:
+
+\`\`\`bash
+# Stop node
+systemctl stop guts-node
+
+# Restore previous binary
+cp /usr/local/bin/guts-node.bak /usr/local/bin/guts-node
+
+# Restore data if needed
+guts-node backup restore /backup/pre-upgrade.tar.gz
+
+# Start node
+systemctl start guts-node
+\`\`\`
+
+## Version Compatibility
+
+| Upgrade Path | Compatible | Notes |
+|--------------|------------|-------|
+| 1.0.x → 1.0.y | Yes | Patch upgrades always compatible |
+| 1.x.0 → 1.y.0 | Yes | Minor upgrades compatible |
+| 1.x.x → 2.0.0 | Check | Major upgrades may require migration |
+```
+
+### Phase 6: Cloud Deployment Guides
+
+#### 6.1 AWS Terraform Module
+
+```hcl
+# infra/terraform/aws/modules/guts-node/main.tf
+
+variable "instance_type" {
+  default = "c6i.2xlarge"
 }
 
-impl TestnetFaucet {
-    /// Request testnet tokens
-    pub async fn request(&self, identity: PublicKey, amount: u64) -> Result<()> {
-        // Check cooldown
-        if let Some(last) = self.recent_requests.lock().await.get(&identity) {
-            if last.elapsed() < self.cooldown {
-                return Err(Error::CooldownActive);
-            }
-        }
+variable "volume_size" {
+  default = 500
+}
 
-        // Check limit
-        if amount > self.limit_per_identity {
-            return Err(Error::ExceedsLimit);
-        }
+variable "vpc_id" {
+  type = string
+}
 
-        // Check balance
-        let current = self.balance.load(Ordering::Relaxed);
-        if current < amount {
-            return Err(Error::FaucetEmpty);
-        }
+variable "subnet_id" {
+  type = string
+}
 
-        // Dispense tokens
-        self.balance.fetch_sub(amount, Ordering::Relaxed);
-        self.recent_requests.lock().await.insert(identity, Instant::now());
+resource "aws_security_group" "guts_node" {
+  name        = "guts-node"
+  description = "Security group for Guts node"
+  vpc_id      = var.vpc_id
 
-        // Transfer tokens
-        self.transfer_tokens(identity, amount).await?;
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTP API"
+  }
 
-        Ok(())
-    }
+  ingress {
+    from_port   = 9000
+    to_port     = 9000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "P2P TCP"
+  }
+
+  ingress {
+    from_port   = 9000
+    to_port     = 9000
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "P2P QUIC"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_instance" "guts_node" {
+  ami           = data.aws_ami.ubuntu.id
+  instance_type = var.instance_type
+  subnet_id     = var.subnet_id
+
+  vpc_security_group_ids = [aws_security_group.guts_node.id]
+
+  root_block_device {
+    volume_size = var.volume_size
+    volume_type = "gp3"
+    iops        = 3000
+    throughput  = 125
+  }
+
+  user_data = <<-EOF
+    #!/bin/bash
+    curl -sSL https://get.guts.network | sh
+    systemctl enable guts-node
+    systemctl start guts-node
+  EOF
+
+  tags = {
+    Name = "guts-node"
+  }
+}
+
+output "public_ip" {
+  value = aws_instance.guts_node.public_ip
+}
+
+output "api_endpoint" {
+  value = "http://${aws_instance.guts_node.public_ip}:8080"
 }
 ```
 
 ## Implementation Plan
 
-### Phase 1: DHT Discovery (Week 1-3)
-- [ ] Integrate libp2p Kademlia
-- [ ] Implement multi-address support
-- [ ] Add mDNS for local discovery
-- [ ] Create bootstrap node infrastructure
-- [ ] Test peer discovery in isolation
+### Phase 1: Core Documentation (Week 1-3)
+- [ ] Create documentation structure
+- [ ] Write quickstart guide
+- [ ] Document requirements
+- [ ] Write installation guides (Docker, K8s, bare metal)
+- [ ] Create configuration reference
 
-### Phase 2: Gossip Protocol (Week 3-5)
-- [ ] Implement Plumtree gossip
-- [ ] Define gossip message types
-- [ ] Integrate with consensus layer
-- [ ] Benchmark message propagation
-- [ ] Tune gossip parameters
+### Phase 2: Runbooks (Week 3-5)
+- [ ] Create runbook template
+- [ ] Write 15+ operational runbooks
+- [ ] Link runbooks to alerts
+- [ ] Create troubleshooting guides
+- [ ] Document diagnostic procedures
 
-### Phase 3: Validator Governance (Week 5-7)
-- [ ] Implement staking module
-- [ ] Add validator set management
-- [ ] Implement governance voting
-- [ ] Add proposal types
-- [ ] Test epoch transitions
+### Phase 3: Monitoring (Week 5-7)
+- [ ] Create Grafana dashboards
+- [ ] Define alert rules
+- [ ] Set up PagerDuty/OpsGenie integration
+- [ ] Create SLO/SLI documentation
+- [ ] Document metrics
 
-### Phase 4: Sybil Resistance (Week 7-8)
-- [ ] Implement stake-based protection
-- [ ] Add optional PoW fallback
-- [ ] Integrate with action authorization
-- [ ] Test attack scenarios
+### Phase 4: Disaster Recovery (Week 7-8)
+- [ ] Document backup procedures
+- [ ] Document restore procedures
+- [ ] Test and validate procedures
+- [ ] Create automation scripts
+- [ ] Define RTO/RPO
 
-### Phase 5: Partition Handling (Week 8-9)
-- [ ] Implement partition detection
-- [ ] Add recovery strategies
-- [ ] Test partition scenarios
-- [ ] Document recovery procedures
+### Phase 5: Upgrades (Week 8-9)
+- [ ] Document upgrade procedures
+- [ ] Create rollback procedures
+- [ ] Test zero-downtime upgrades
+- [ ] Document version compatibility
 
-### Phase 6: Testnet Launch (Week 9-12)
-- [ ] Set up testnet infrastructure
-- [ ] Deploy 20+ validator nodes
-- [ ] Launch testnet faucet
-- [ ] Create onboarding documentation
-- [ ] Monitor and iterate
+### Phase 6: Cloud Guides (Week 9-11)
+- [ ] Create AWS deployment guide
+- [ ] Create GCP deployment guide
+- [ ] Create Azure deployment guide
+- [ ] Create Terraform modules
+- [ ] Create Helm charts
+
+### Phase 7: Validation (Week 11-12)
+- [ ] User testing with operators
+- [ ] Incorporate feedback
+- [ ] Create video tutorials
+- [ ] Launch documentation site
 
 ## Success Criteria
 
-- [ ] Nodes discover peers without bootstrap after initial connection
-- [ ] Message propagation reaches all nodes within 2 seconds
-- [ ] Validator set changes propagate correctly
-- [ ] Network survives 30% node failures
-- [ ] Partition recovery completes within 1 hour
-- [ ] 20+ independent operators running validators
-- [ ] Testnet stable for 30+ days
-- [ ] Geographic distribution across 4+ regions
-- [ ] Documentation complete for operators
-
-## Security Considerations
-
-1. **Eclipse Attacks**: Implement peer diversity requirements
-2. **Sybil Attacks**: Require stake or PoW for all actions
-3. **Long-Range Attacks**: Implement checkpointing
-4. **Partition Attacks**: Require supermajority for consensus
-5. **Governance Attacks**: Time-lock and veto mechanisms
+- [ ] Complete operator documentation covering all scenarios
+- [ ] 15+ operational runbooks with step-by-step procedures
+- [ ] Pre-built Grafana dashboards for key metrics
+- [ ] Alert rules with runbook links
+- [ ] Tested backup/restore procedures with documented RTO
+- [ ] Zero-downtime upgrade procedure validated
+- [ ] Terraform modules for AWS, GCP, Azure
+- [ ] Helm charts published to public repository
+- [ ] 5+ operators successfully deploy using documentation
 
 ## Dependencies
 
-- libp2p for networking primitives
-- External stake/token bridge (if using external token)
-- Multi-region infrastructure (AWS, GCP, Azure)
-- Independent validator operators
+- Documentation hosting (GitHub Pages, Docusaurus)
+- Grafana Cloud or self-hosted Grafana
+- Alertmanager configuration
+- Cloud provider accounts for testing
+- Helm chart repository
 
 ## References
 
-- [Kademlia Paper](https://pdos.csail.mit.edu/~petar/papers/maymounkov-kademlia-lncs.pdf)
-- [Plumtree Paper](https://asc.di.fct.unl.pt/~jleitao/pdf/srds07-leitao.pdf)
-- [libp2p Specifications](https://github.com/libp2p/specs)
-- [Cosmos SDK Staking](https://docs.cosmos.network/main/build/modules/staking)
+- [Google SRE Book](https://sre.google/sre-book/table-of-contents/)
+- [Kubernetes Documentation Best Practices](https://kubernetes.io/docs/contribute/style/)
+- [Terraform Module Best Practices](https://www.terraform.io/language/modules/develop)
+- [Grafana Dashboard Best Practices](https://grafana.com/docs/grafana/latest/best-practices/)
