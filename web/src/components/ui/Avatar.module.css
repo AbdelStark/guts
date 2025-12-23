@@ -1,22 +1,62 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Avatar — Premium User Representation
+   Gradient borders with refined fallback states
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Base Avatar
+   ───────────────────────────────────────────────────────────────────────────── */
+
 .root {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-radius: 50%;
-  background: var(--surface-1);
-  border: 2px solid var(--bg-obsidian);
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  flex-shrink: 0;
 }
 
-/* Sizes */
+/* Gradient ring effect */
+.hasRing {
+  padding: 2px;
+  background: linear-gradient(
+    135deg,
+    var(--accent-primary) 0%,
+    var(--accent-violet) 50%,
+    var(--accent-secondary) 100%
+  );
+}
+
+.hasRing .imageWrapper {
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: var(--bg-base);
+}
+
+/* Subtle border */
+.hasBorder {
+  border: 2px solid var(--surface-3);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Size Variants
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.xs {
+  width: 24px;
+  height: 24px;
+}
+
 .sm {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
 }
 
 .md {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
 }
 
 .lg {
@@ -24,11 +64,34 @@
   height: 48px;
 }
 
+.xl {
+  width: 64px;
+  height: 64px;
+}
+
+.xxl {
+  width: 96px;
+  height: 96px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Image
+   ───────────────────────────────────────────────────────────────────────────── */
+
 .image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform var(--duration-normal) var(--ease-out);
 }
+
+.root:hover .image {
+  transform: scale(1.05);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Fallback (Initials)
+   ───────────────────────────────────────────────────────────────────────────── */
 
 .fallback {
   display: flex;
@@ -36,37 +99,125 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, var(--surface-1) 0%, var(--surface-2) 100%);
-  font-family: var(--font-ui);
-  font-weight: 600;
+  background: linear-gradient(
+    135deg,
+    var(--surface-2) 0%,
+    var(--surface-3) 100%
+  );
+  font-family: var(--font-sans);
+  font-weight: var(--font-semibold);
   color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.xs .fallback {
+  font-size: 9px;
 }
 
 .sm .fallback {
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .md .fallback {
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .lg .fallback {
-  font-size: 14px;
+  font-size: 15px;
 }
 
-/* Avatar Group */
+.xl .fallback {
+  font-size: 18px;
+}
+
+.xxl .fallback {
+  font-size: 24px;
+}
+
+/* Colored fallback variants */
+.fallbackEmber {
+  background: linear-gradient(135deg, var(--accent-primary) 0%, #dc2626 100%);
+  color: white;
+}
+
+.fallbackCipher {
+  background: linear-gradient(135deg, var(--accent-secondary) 0%, #06b6d4 100%);
+  color: var(--bg-base);
+}
+
+.fallbackViolet {
+  background: linear-gradient(135deg, var(--accent-violet) 0%, #7c3aed 100%);
+  color: white;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Status Indicator
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.statusIndicator {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 25%;
+  height: 25%;
+  min-width: 8px;
+  min-height: 8px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--bg-base);
+}
+
+.statusOnline {
+  background: var(--status-success);
+  box-shadow: 0 0 0 2px var(--status-success-muted);
+}
+
+.statusOffline {
+  background: var(--text-tertiary);
+}
+
+.statusBusy {
+  background: var(--status-error);
+}
+
+.statusAway {
+  background: var(--status-warning);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Avatar Group
+   ───────────────────────────────────────────────────────────────────────────── */
+
 .group {
   display: flex;
   align-items: center;
 }
 
-.group > * {
+.group .root {
   margin-left: -8px;
+  border: 2px solid var(--bg-base);
+  transition: transform var(--duration-fast) var(--ease-out);
 }
 
-.group > *:first-child {
+.group .root:first-child {
   margin-left: 0;
 }
+
+.group .root:hover {
+  transform: translateY(-2px);
+  z-index: 1;
+}
+
+/* Stacking order (first on top) */
+.group .root:nth-child(1) { z-index: 5; }
+.group .root:nth-child(2) { z-index: 4; }
+.group .root:nth-child(3) { z-index: 3; }
+.group .root:nth-child(4) { z-index: 2; }
+.group .root:nth-child(5) { z-index: 1; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Remaining Count
+   ───────────────────────────────────────────────────────────────────────────── */
 
 .remaining {
   display: inline-flex;
@@ -74,11 +225,45 @@
   justify-content: center;
   margin-left: -8px;
   padding: 0 var(--space-2);
-  height: 28px;
-  background: var(--surface-1);
-  border: 2px solid var(--bg-obsidian);
-  border-radius: 14px;
+  height: 32px;
+  min-width: 32px;
+  background: var(--surface-2);
+  border: 2px solid var(--bg-base);
+  border-radius: var(--radius-full);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   color: var(--text-secondary);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.remaining:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Interactive Avatar (clickable)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.interactive {
+  cursor: pointer;
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.interactive:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-lg);
+}
+
+.interactive:active {
+  transform: scale(0.98);
+}
+
+.interactive:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
 }
