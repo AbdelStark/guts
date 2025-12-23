@@ -103,7 +103,8 @@ jobs:
           sudo apt-get install -y valgrind heaptrack
 
       - name: Build with debug info
-        run: cargo build --release --workspace
+        # Exclude guts-desktop (requires GTK/webkit2gtk on Linux)
+        run: cargo build --release --workspace --exclude guts-desktop
 
       - name: Run memory profile
         run: |
