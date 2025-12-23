@@ -1,15 +1,17 @@
-name: Web App
+name: Web App & Docs
 
 on:
   push:
     branches: [main]
     paths:
       - 'web/**'
+      - 'docs-site/**'
       - '.github/workflows/web.yml'
   pull_request:
     branches: [main]
     paths:
       - 'web/**'
+      - 'docs-site/**'
       - '.github/workflows/web.yml'
   # Allow manual deployment
   workflow_dispatch:
@@ -31,7 +33,7 @@ env:
 
 jobs:
   # ============================================================================
-  # Build the Next.js static site
+  # Build the Next.js static site and VitePress docs
   # ============================================================================
   build:
     name: Build
@@ -44,23 +46,37 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
 
-      - name: Install dependencies
+      # Build the main web app
+      - name: Install web dependencies
         working-directory: web
         run: npm ci
 
-      - name: Lint
+      - name: Lint web
         working-directory: web
         run: npm run lint
 
-      - name: Build
+      - name: Build web app
         working-directory: web
         env:
           # Set base path for GitHub Pages (repo name)
           NEXT_PUBLIC_BASE_PATH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && '/guts' || '' }}
         run: npm run build
+
+      # Build the documentation site
+      - name: Install docs dependencies
+        working-directory: docs-site
+        run: npm ci
+
+      - name: Build docs
+        working-directory: docs-site
+        run: npm run build
+
+      # Combine outputs - copy docs into web/out/docs
+      - name: Combine outputs
+        run: |
+          mkdir -p web/out/docs
+          cp -r docs-site/.vitepress/dist/* web/out/docs/
 
       - name: Upload artifact for Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
