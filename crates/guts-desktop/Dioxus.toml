@@ -1,0 +1,9 @@
+[application]
+name = "guts-desktop"
+default_platform = "desktop"
+
+[bundle]
+identifier = "org.guts.desktop"
+publisher = "Guts Contributors"
+icon = ["assets/icon.png"]
+short_description = "Desktop client for Guts decentralized code collaboration"

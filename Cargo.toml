@@ -14,6 +14,24 @@ members = [
     "crates/guts-migrate",
     "crates/guts-node",
     "crates/guts-cli",
+    "crates/guts-desktop",
+]
+# Default members exclude guts-desktop (requires GTK/webkit2gtk on Linux)
+# Build desktop explicitly with: cargo build -p guts-desktop
+default-members = [
+    "crates/guts-types",
+    "crates/guts-storage",
+    "crates/guts-git",
+    "crates/guts-p2p",
+    "crates/guts-collaboration",
+    "crates/guts-auth",
+    "crates/guts-web",
+    "crates/guts-realtime",
+    "crates/guts-ci",
+    "crates/guts-compat",
+    "crates/guts-consensus",
+    "crates/guts-node",
+    "crates/guts-cli",
 ]
 resolver = "2"
 
@@ -125,6 +143,12 @@ validator = { version = "0.20", features = ["derive"] }
 config = "0.15"
 once_cell = "1.19"
 regex = "1.10"
+
+# HTTP Client (for guts-desktop)
+reqwest = { version = "0.12", features = ["json"] }
+
+# Desktop UI (for guts-desktop)
+dioxus = { version = "0.7.2", features = ["desktop", "router"] }
 
 [profile.bench]
 overflow-checks = true

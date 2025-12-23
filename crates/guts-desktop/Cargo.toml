@@ -1,0 +1,43 @@
+[package]
+name = "guts-desktop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Desktop client for Guts - decentralized code collaboration"
+keywords = ["git", "decentralized", "desktop", "dioxus"]
+categories = ["development-tools", "gui"]
+
+[dependencies]
+# UI Framework
+dioxus = { workspace = true }
+
+# Async Runtime
+tokio = { workspace = true }
+
+# HTTP Client
+reqwest = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error Handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Config persistence
+dirs = "5"
+
+# Cryptography (for Ed25519 identity)
+commonware-cryptography = { workspace = true }
+commonware-utils = { workspace = true }
+rand = { workspace = true }
+
+[dev-dependencies]
+wiremock = "0.6"
+tokio-test = "0.4"

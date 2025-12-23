@@ -47,7 +47,8 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Run Clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        # Exclude guts-desktop (requires GTK/webkit2gtk on Linux)
+        run: cargo clippy --workspace --exclude guts-desktop --all-targets -- -D warnings
 
   # ============================================================================
   # Unit Tests
@@ -69,10 +70,12 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Run unit tests
-        run: cargo test --workspace --lib
+        # Exclude guts-desktop (requires GTK/webkit2gtk on Linux)
+        run: cargo test --workspace --exclude guts-desktop --lib
 
       - name: Run integration tests
-        run: cargo test --workspace --test '*'
+        # Exclude guts-desktop (requires GTK/webkit2gtk on Linux)
+        run: cargo test --workspace --exclude guts-desktop --test '*'
 
   # ============================================================================
   # E2E Collaboration Test
@@ -108,7 +111,8 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build documentation
-        run: cargo doc --workspace --no-deps
+        # Exclude guts-desktop (requires GTK/webkit2gtk on Linux)
+        run: cargo doc --workspace --exclude guts-desktop --no-deps
 
   # ============================================================================
   # Build
@@ -126,7 +130,8 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build
-        run: cargo build --workspace --release
+        # Exclude guts-desktop (requires GTK/webkit2gtk on Linux)
+        run: cargo build --workspace --exclude guts-desktop --release
 
       - name: Upload binaries
         uses: actions/upload-artifact@v4
