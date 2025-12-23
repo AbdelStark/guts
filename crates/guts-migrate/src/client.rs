@@ -229,12 +229,7 @@ impl GutsClient {
     }
 
     /// Close an issue.
-    pub async fn close_issue(
-        &self,
-        owner: &str,
-        repo: &str,
-        number: u64,
-    ) -> Result<IssueResponse> {
+    pub async fn close_issue(&self, owner: &str, repo: &str, number: u64) -> Result<IssueResponse> {
         #[derive(Serialize)]
         struct CloseRequest {
             state: String,
@@ -398,11 +393,8 @@ mod tests {
 
     #[test]
     fn test_client_with_token() {
-        let client = GutsClient::new(
-            "http://localhost:8080",
-            Some("guts_test_token".to_string()),
-        )
-        .unwrap();
+        let client =
+            GutsClient::new("http://localhost:8080", Some("guts_test_token".to_string())).unwrap();
         assert!(client.auth_headers().is_some());
     }
 }

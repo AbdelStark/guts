@@ -120,10 +120,7 @@ impl MigrationVerifier {
 
         // Verify Git data
         if report.git_mirrored {
-            match self
-                .verify_git(source_url, target_owner, target_repo)
-                .await
-            {
+            match self.verify_git(source_url, target_owner, target_repo).await {
                 Ok((commits, branches, tags)) => {
                     result.git_verified = true;
                     result.commits_verified = commits;
@@ -153,7 +150,9 @@ impl MigrationVerifier {
                     }
                 }
                 Err(e) => {
-                    result.errors.push(format!("Issues verification failed: {e}"));
+                    result
+                        .errors
+                        .push(format!("Issues verification failed: {e}"));
                 }
             }
         } else {
@@ -291,10 +290,9 @@ fn count_commits(repo_path: &std::path::Path) -> Result<usize> {
     }
 
     let count_str = String::from_utf8_lossy(&output.stdout);
-    count_str
-        .trim()
-        .parse()
-        .map_err(|e| MigrationError::VerificationFailed(format!("Failed to parse commit count: {e}")))
+    count_str.trim().parse().map_err(|e| {
+        MigrationError::VerificationFailed(format!("Failed to parse commit count: {e}"))
+    })
 }
 
 fn count_branches(repo_path: &std::path::Path) -> Result<usize> {
@@ -327,22 +325,26 @@ mod tests {
 
     #[test]
     fn test_verification_result() {
-        let mut result = VerificationResult::default();
-        result.git_verified = true;
-        result.commits_verified = 100;
-        result.branches_verified = 5;
-        result.tags_verified = 3;
-        result.issues_verified = true;
-        result.prs_verified = true;
-        result.releases_verified = true;
+        let result = VerificationResult {
+            git_verified: true,
+            commits_verified: 100,
+            branches_verified: 5,
+            tags_verified: 3,
+            issues_verified: true,
+            prs_verified: true,
+            releases_verified: true,
+            ..Default::default()
+        };
 
         assert!(result.is_success());
     }
 
     #[test]
     fn test_verification_failure() {
-        let mut result = VerificationResult::default();
-        result.git_verified = false;
+        let mut result = VerificationResult {
+            git_verified: false,
+            ..Default::default()
+        };
         result.errors.push("Git mismatch".to_string());
 
         assert!(!result.is_success());

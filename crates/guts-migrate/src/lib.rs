@@ -47,11 +47,11 @@ pub mod types;
 pub mod verify;
 
 // Re-export main types
+pub use bitbucket::BitbucketMigrator;
 pub use client::GutsClient;
 pub use error::{MigrationError, Result};
 pub use github::GitHubMigrator;
 pub use gitlab::GitLabMigrator;
-pub use bitbucket::BitbucketMigrator;
 pub use progress::{MigrationProgress, ProgressCallback};
 pub use types::*;
 pub use verify::MigrationVerifier;

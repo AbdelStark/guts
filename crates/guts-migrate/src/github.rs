@@ -1,6 +1,8 @@
 //! GitHub migration implementation.
 
-use crate::client::{CreateIssueRequest, CreatePullRequestRequest, CreateReleaseRequest, GutsClient};
+use crate::client::{
+    CreateIssueRequest, CreatePullRequestRequest, CreateReleaseRequest, GutsClient,
+};
 use crate::error::{MigrationError, Result};
 use crate::progress::{MigrationPhase, MigrationProgress};
 use crate::types::{MigrationConfig, MigrationOptions, MigrationReport};
@@ -141,13 +143,10 @@ impl GitHubMigrator {
         debug!("Fetched repo info: {:?}", gh_repo.name);
 
         // Step 2: Create repository on Guts
-        self.progress.set_phase(MigrationPhase::CreatingRepository, 1);
+        self.progress
+            .set_phase(MigrationPhase::CreatingRepository, 1);
         let target_owner = self.config.target_owner.as_deref().unwrap_or(&owner);
-        let target_name = self
-            .config
-            .target_name
-            .as_deref()
-            .unwrap_or(&gh_repo.name);
+        let target_name = self.config.target_name.as_deref().unwrap_or(&gh_repo.name);
 
         match self
             .guts_client
@@ -166,8 +165,12 @@ impl GitHubMigrator {
         }
 
         // Step 3: Mirror Git repository
-        self.progress.set_phase(MigrationPhase::CloningRepository, 1);
-        match self.mirror_git_repo(&gh_repo, target_owner, target_name).await {
+        self.progress
+            .set_phase(MigrationPhase::CloningRepository, 1);
+        match self
+            .mirror_git_repo(&gh_repo, target_owner, target_name)
+            .await
+        {
             Ok((branches, tags)) => {
                 report.git_mirrored = true;
                 report.branches_migrated = branches;
@@ -183,7 +186,10 @@ impl GitHubMigrator {
         // Step 4: Migrate labels
         if options.migrate_labels {
             self.progress.set_phase(MigrationPhase::MigratingLabels, 1);
-            match self.migrate_labels(&owner, &repo_name, target_owner, target_name).await {
+            match self
+                .migrate_labels(&owner, &repo_name, target_owner, target_name)
+                .await
+            {
                 Ok(count) => {
                     report.labels_migrated = count;
                     info!("Migrated {count} labels");
@@ -197,13 +203,10 @@ impl GitHubMigrator {
 
         // Step 5: Migrate issues
         if options.migrate_issues {
-            match self.migrate_issues(
-                &owner,
-                &repo_name,
-                target_owner,
-                target_name,
-                &options,
-            ).await {
+            match self
+                .migrate_issues(&owner, &repo_name, target_owner, target_name, &options)
+                .await
+            {
                 Ok(count) => {
                     report.issues_migrated = count;
                     info!("Migrated {count} issues");
@@ -217,13 +220,10 @@ impl GitHubMigrator {
 
         // Step 6: Migrate pull requests
         if options.migrate_pull_requests {
-            match self.migrate_pull_requests(
-                &owner,
-                &repo_name,
-                target_owner,
-                target_name,
-                &options,
-            ).await {
+            match self
+                .migrate_pull_requests(&owner, &repo_name, target_owner, target_name, &options)
+                .await
+            {
                 Ok(count) => {
                     report.prs_migrated = count;
                     info!("Migrated {count} pull requests");
@@ -237,12 +237,10 @@ impl GitHubMigrator {
 
         // Step 7: Migrate releases
         if options.migrate_releases {
-            match self.migrate_releases(
-                &owner,
-                &repo_name,
-                target_owner,
-                target_name,
-            ).await {
+            match self
+                .migrate_releases(&owner, &repo_name, target_owner, target_name)
+                .await
+            {
                 Ok((releases, assets)) => {
                     report.releases_migrated = releases;
                     report.assets_migrated = assets;
@@ -258,7 +256,10 @@ impl GitHubMigrator {
         // Step 8: Migrate wiki (if available)
         if options.migrate_wiki && gh_repo.has_wiki {
             self.progress.set_phase(MigrationPhase::MigratingWiki, 1);
-            match self.migrate_wiki(&owner, &repo_name, target_owner, target_name).await {
+            match self
+                .migrate_wiki(&owner, &repo_name, target_owner, target_name)
+                .await
+            {
                 Ok(migrated) => {
                     report.wiki_migrated = migrated;
                     if migrated {
@@ -379,8 +380,7 @@ impl GitHubMigrator {
         // Clone with all branches and tags (mirror)
         let clone_url = format!(
             "https://{}@github.com/{}.git",
-            self.github_token,
-            self.config.source_repo
+            self.github_token, self.config.source_repo
         );
 
         let output = Command::new("git")
@@ -414,7 +414,8 @@ impl GitHubMigrator {
             .count();
 
         // Push to Guts
-        self.progress.set_phase(MigrationPhase::PushingRepository, 1);
+        self.progress
+            .set_phase(MigrationPhase::PushingRepository, 1);
 
         let guts_url = format!(
             "{}/git/{}/{}.git",
@@ -445,7 +446,8 @@ impl GitHubMigrator {
         let url = format!("https://api.github.com/repos/{owner}/{repo}/labels");
         let labels: Vec<GitHubLabel> = self.github_get_paginated(&url).await?;
 
-        self.progress.set_phase(MigrationPhase::MigratingLabels, labels.len() as u64);
+        self.progress
+            .set_phase(MigrationPhase::MigratingLabels, labels.len() as u64);
 
         let mut count = 0;
         for label in &labels {
@@ -481,26 +483,32 @@ impl GitHubMigrator {
         target_name: &str,
         options: &MigrationOptions,
     ) -> Result<usize> {
-        let state = if options.include_closed { "all" } else { "open" };
+        let state = if options.include_closed {
+            "all"
+        } else {
+            "open"
+        };
         let url = format!("https://api.github.com/repos/{owner}/{repo}/issues?state={state}");
         let issues: Vec<GitHubIssue> = self.github_get_paginated(&url).await?;
 
         // Filter out pull requests (GitHub API returns PRs in issues endpoint)
         let issues: Vec<_> = issues
             .into_iter()
-            .filter(|i| !i.body.as_deref().map(|b| b.contains("<!-- PR -->")).unwrap_or(false))
+            .filter(|i| {
+                !i.body
+                    .as_deref()
+                    .map(|b| b.contains("<!-- PR -->"))
+                    .unwrap_or(false)
+            })
             .collect();
 
-        self.progress.set_phase(MigrationPhase::MigratingIssues, issues.len() as u64);
+        self.progress
+            .set_phase(MigrationPhase::MigratingIssues, issues.len() as u64);
 
         let mut count = 0;
         for issue in &issues {
-            let body = self.rewrite_content(
-                issue.body.as_deref().unwrap_or(""),
-                owner,
-                repo,
-                options,
-            );
+            let body =
+                self.rewrite_content(issue.body.as_deref().unwrap_or(""), owner, repo, options);
 
             // Add migration note
             let body_with_note = format!(
@@ -538,7 +546,10 @@ impl GitHubMigrator {
                         )
                         .await
                     {
-                        debug!("Failed to migrate comments for issue #{}: {e}", issue.number);
+                        debug!(
+                            "Failed to migrate comments for issue #{}: {e}",
+                            issue.number
+                        );
                     }
 
                     // Close if closed on GitHub
@@ -550,7 +561,8 @@ impl GitHubMigrator {
                     }
 
                     count += 1;
-                    self.progress.increment(Some(&format!("Issue #{}", issue.number)));
+                    self.progress
+                        .increment(Some(&format!("Issue #{}", issue.number)));
                 }
                 Err(e) => {
                     debug!("Failed to create issue #{}: {e}", issue.number);
@@ -561,6 +573,7 @@ impl GitHubMigrator {
         Ok(count)
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn migrate_issue_comments(
         &self,
         owner: &str,
@@ -571,9 +584,8 @@ impl GitHubMigrator {
         guts_issue_number: u64,
         options: &MigrationOptions,
     ) -> Result<()> {
-        let url = format!(
-            "https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}/comments"
-        );
+        let url =
+            format!("https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}/comments");
         let comments: Vec<GitHubComment> = self.github_get_paginated(&url).await?;
 
         for comment in comments {
@@ -605,20 +617,20 @@ impl GitHubMigrator {
         target_name: &str,
         options: &MigrationOptions,
     ) -> Result<usize> {
-        let state = if options.include_closed { "all" } else { "open" };
+        let state = if options.include_closed {
+            "all"
+        } else {
+            "open"
+        };
         let url = format!("https://api.github.com/repos/{owner}/{repo}/pulls?state={state}");
         let prs: Vec<GitHubPullRequest> = self.github_get_paginated(&url).await?;
 
-        self.progress.set_phase(MigrationPhase::MigratingPullRequests, prs.len() as u64);
+        self.progress
+            .set_phase(MigrationPhase::MigratingPullRequests, prs.len() as u64);
 
         let mut count = 0;
         for pr in &prs {
-            let body = self.rewrite_content(
-                pr.body.as_deref().unwrap_or(""),
-                owner,
-                repo,
-                options,
-            );
+            let body = self.rewrite_content(pr.body.as_deref().unwrap_or(""), owner, repo, options);
 
             // Add migration note with status
             let status = if pr.merged {
@@ -671,7 +683,8 @@ impl GitHubMigrator {
         let url = format!("https://api.github.com/repos/{owner}/{repo}/releases");
         let releases: Vec<GitHubRelease> = self.github_get_paginated(&url).await?;
 
-        self.progress.set_phase(MigrationPhase::MigratingReleases, releases.len() as u64);
+        self.progress
+            .set_phase(MigrationPhase::MigratingReleases, releases.len() as u64);
 
         let mut release_count = 0;
         let mut asset_count = 0;
@@ -684,7 +697,10 @@ impl GitHubMigrator {
                     target_name,
                     &CreateReleaseRequest {
                         tag_name: release.tag_name.clone(),
-                        name: release.name.clone().unwrap_or_else(|| release.tag_name.clone()),
+                        name: release
+                            .name
+                            .clone()
+                            .unwrap_or_else(|| release.tag_name.clone()),
                         body: release.body.clone(),
                         prerelease: Some(release.prerelease),
                         draft: Some(release.draft),
@@ -819,11 +835,9 @@ mod tests {
         let config = MigrationConfig::new("old-owner/old-repo", "https://guts.network");
         let migrator = GitHubMigrator::new("token", config).unwrap();
 
-        let options = MigrationOptions::default()
-            .with_user_mapping("github-user", "guts-user");
+        let options = MigrationOptions::default().with_user_mapping("github-user", "guts-user");
 
-        let content =
-            "Check https://github.com/old-owner/old-repo/issues/1 by @github-user";
+        let content = "Check https://github.com/old-owner/old-repo/issues/1 by @github-user";
         let rewritten = migrator.rewrite_content(content, "old-owner", "old-repo", &options);
 
         assert!(rewritten.contains("https://guts.network/old-owner/old-repo"));

@@ -230,9 +230,7 @@ impl MigrationReport {
 
     /// Check if the migration was successful (no critical errors).
     pub fn is_successful(&self) -> bool {
-        self.repo_created
-            && self.git_mirrored
-            && self.errors.iter().all(|e| !e.is_critical)
+        self.repo_created && self.git_mirrored && self.errors.iter().all(|e| !e.is_critical)
     }
 
     /// Get the total number of items migrated.
@@ -299,10 +297,7 @@ impl MigrationReport {
         }
 
         if let Some(duration) = self.duration() {
-            println!(
-                "\nCompleted in {} seconds",
-                duration.num_seconds()
-            );
+            println!("\nCompleted in {} seconds", duration.num_seconds());
         }
 
         if !self.errors.is_empty() {

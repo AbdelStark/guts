@@ -1,6 +1,8 @@
 //! GitLab migration implementation.
 
-use crate::client::{CreateIssueRequest, CreatePullRequestRequest, CreateReleaseRequest, GutsClient};
+use crate::client::{
+    CreateIssueRequest, CreatePullRequestRequest, CreateReleaseRequest, GutsClient,
+};
 use crate::error::{MigrationError, Result};
 use crate::progress::{MigrationPhase, MigrationProgress};
 use crate::types::{MigrationConfig, MigrationOptions, MigrationReport};
@@ -153,7 +155,8 @@ impl GitLabMigrator {
             .to_string();
 
         // Step 2: Create repository on Guts
-        self.progress.set_phase(MigrationPhase::CreatingRepository, 1);
+        self.progress
+            .set_phase(MigrationPhase::CreatingRepository, 1);
         let target_owner = self.config.target_owner.as_deref().unwrap_or(&owner);
         let target_name = self
             .config
@@ -179,8 +182,12 @@ impl GitLabMigrator {
         }
 
         // Step 3: Mirror Git repository
-        self.progress.set_phase(MigrationPhase::CloningRepository, 1);
-        match self.mirror_git_repo(&gl_project, target_owner, target_name).await {
+        self.progress
+            .set_phase(MigrationPhase::CloningRepository, 1);
+        match self
+            .mirror_git_repo(&gl_project, target_owner, target_name)
+            .await
+        {
             Ok((branches, tags)) => {
                 report.git_mirrored = true;
                 report.branches_migrated = branches;
@@ -196,7 +203,10 @@ impl GitLabMigrator {
         // Step 4: Migrate labels
         if options.migrate_labels {
             self.progress.set_phase(MigrationPhase::MigratingLabels, 1);
-            match self.migrate_labels(gl_project.id, target_owner, target_name).await {
+            match self
+                .migrate_labels(gl_project.id, target_owner, target_name)
+                .await
+            {
                 Ok(count) => {
                     report.labels_migrated = count;
                     info!("Migrated {count} labels");
@@ -210,12 +220,10 @@ impl GitLabMigrator {
 
         // Step 5: Migrate issues
         if options.migrate_issues {
-            match self.migrate_issues(
-                gl_project.id,
-                target_owner,
-                target_name,
-                &options,
-            ).await {
+            match self
+                .migrate_issues(gl_project.id, target_owner, target_name, &options)
+                .await
+            {
                 Ok(count) => {
                     report.issues_migrated = count;
                     info!("Migrated {count} issues");
@@ -229,12 +237,10 @@ impl GitLabMigrator {
 
         // Step 6: Migrate merge requests
         if options.migrate_pull_requests {
-            match self.migrate_merge_requests(
-                gl_project.id,
-                target_owner,
-                target_name,
-                &options,
-            ).await {
+            match self
+                .migrate_merge_requests(gl_project.id, target_owner, target_name, &options)
+                .await
+            {
                 Ok(count) => {
                     report.prs_migrated = count;
                     info!("Migrated {count} merge requests");
@@ -248,7 +254,10 @@ impl GitLabMigrator {
 
         // Step 7: Migrate releases
         if options.migrate_releases {
-            match self.migrate_releases(gl_project.id, target_owner, target_name).await {
+            match self
+                .migrate_releases(gl_project.id, target_owner, target_name)
+                .await
+            {
                 Ok((releases, assets)) => {
                     report.releases_migrated = releases;
                     report.assets_migrated = assets;
@@ -264,7 +273,10 @@ impl GitLabMigrator {
         // Step 8: Migrate wiki (if available)
         if options.migrate_wiki && gl_project.wiki_enabled {
             self.progress.set_phase(MigrationPhase::MigratingWiki, 1);
-            match self.migrate_wiki(&gl_project, target_owner, target_name).await {
+            match self
+                .migrate_wiki(&gl_project, target_owner, target_name)
+                .await
+            {
                 Ok(migrated) => {
                     report.wiki_migrated = migrated;
                     if migrated {
@@ -366,9 +378,10 @@ impl GitLabMigrator {
 
         // Clone with all branches and tags (mirror)
         // GitLab uses oauth2:TOKEN format for authentication
-        let clone_url = gl_project
-            .http_url_to_repo
-            .replace("https://", &format!("https://oauth2:{}@", self.gitlab_token));
+        let clone_url = gl_project.http_url_to_repo.replace(
+            "https://",
+            &format!("https://oauth2:{}@", self.gitlab_token),
+        );
 
         let output = Command::new("git")
             .args(["clone", "--mirror", &clone_url])
@@ -401,7 +414,8 @@ impl GitLabMigrator {
             .count();
 
         // Push to Guts
-        self.progress.set_phase(MigrationPhase::PushingRepository, 1);
+        self.progress
+            .set_phase(MigrationPhase::PushingRepository, 1);
 
         let guts_url = format!(
             "{}/git/{}/{}.git",
@@ -432,7 +446,8 @@ impl GitLabMigrator {
             .gitlab_get_paginated(&format!("/projects/{project_id}/labels"))
             .await?;
 
-        self.progress.set_phase(MigrationPhase::MigratingLabels, labels.len() as u64);
+        self.progress
+            .set_phase(MigrationPhase::MigratingLabels, labels.len() as u64);
 
         let mut count = 0;
         for label in &labels {
@@ -470,12 +485,17 @@ impl GitLabMigrator {
         target_name: &str,
         options: &MigrationOptions,
     ) -> Result<usize> {
-        let state = if options.include_closed { "all" } else { "opened" };
+        let state = if options.include_closed {
+            "all"
+        } else {
+            "opened"
+        };
         let issues: Vec<GitLabIssue> = self
             .gitlab_get_paginated(&format!("/projects/{project_id}/issues?state={state}"))
             .await?;
 
-        self.progress.set_phase(MigrationPhase::MigratingIssues, issues.len() as u64);
+        self.progress
+            .set_phase(MigrationPhase::MigratingIssues, issues.len() as u64);
 
         let mut count = 0;
         for issue in &issues {
@@ -509,7 +529,8 @@ impl GitLabMigrator {
                     }
 
                     count += 1;
-                    self.progress.increment(Some(&format!("Issue #{}", issue.iid)));
+                    self.progress
+                        .increment(Some(&format!("Issue #{}", issue.iid)));
                 }
                 Err(e) => {
                     debug!("Failed to create issue #{}: {e}", issue.iid);
@@ -527,12 +548,19 @@ impl GitLabMigrator {
         target_name: &str,
         options: &MigrationOptions,
     ) -> Result<usize> {
-        let state = if options.include_closed { "all" } else { "opened" };
+        let state = if options.include_closed {
+            "all"
+        } else {
+            "opened"
+        };
         let mrs: Vec<GitLabMergeRequest> = self
-            .gitlab_get_paginated(&format!("/projects/{project_id}/merge_requests?state={state}"))
+            .gitlab_get_paginated(&format!(
+                "/projects/{project_id}/merge_requests?state={state}"
+            ))
             .await?;
 
-        self.progress.set_phase(MigrationPhase::MigratingPullRequests, mrs.len() as u64);
+        self.progress
+            .set_phase(MigrationPhase::MigratingPullRequests, mrs.len() as u64);
 
         let mut count = 0;
         for mr in &mrs {
@@ -579,7 +607,8 @@ impl GitLabMigrator {
             .gitlab_get_paginated(&format!("/projects/{project_id}/releases"))
             .await?;
 
-        self.progress.set_phase(MigrationPhase::MigratingReleases, releases.len() as u64);
+        self.progress
+            .set_phase(MigrationPhase::MigratingReleases, releases.len() as u64);
 
         let mut release_count = 0;
         let asset_count = 0;
@@ -592,7 +621,10 @@ impl GitLabMigrator {
                     target_name,
                     &CreateReleaseRequest {
                         tag_name: release.tag_name.clone(),
-                        name: release.name.clone().unwrap_or_else(|| release.tag_name.clone()),
+                        name: release
+                            .name
+                            .clone()
+                            .unwrap_or_else(|| release.tag_name.clone()),
                         body: release.description.clone(),
                         prerelease: Some(false),
                         draft: Some(false),

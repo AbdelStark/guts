@@ -158,13 +158,18 @@ impl BitbucketMigrator {
         debug!("Fetched repo info: {:?}", bb_repo.name);
 
         // Step 2: Create repository on Guts
-        self.progress.set_phase(MigrationPhase::CreatingRepository, 1);
+        self.progress
+            .set_phase(MigrationPhase::CreatingRepository, 1);
         let target_owner = self.config.target_owner.as_deref().unwrap_or(&workspace);
         let target_name = self.config.target_name.as_deref().unwrap_or(&bb_repo.name);
 
         match self
             .guts_client
-            .create_repo(target_name, bb_repo.description.as_deref(), bb_repo.is_private)
+            .create_repo(
+                target_name,
+                bb_repo.description.as_deref(),
+                bb_repo.is_private,
+            )
             .await
         {
             Ok(guts_repo) => {
@@ -179,7 +184,8 @@ impl BitbucketMigrator {
         }
 
         // Step 3: Mirror Git repository
-        self.progress.set_phase(MigrationPhase::CloningRepository, 1);
+        self.progress
+            .set_phase(MigrationPhase::CloningRepository, 1);
         match self
             .mirror_git_repo(&bb_repo, target_owner, target_name)
             .await
@@ -217,13 +223,7 @@ impl BitbucketMigrator {
         // Step 5: Migrate pull requests
         if options.migrate_pull_requests {
             match self
-                .migrate_pull_requests(
-                    &workspace,
-                    &repo_slug,
-                    target_owner,
-                    target_name,
-                    &options,
-                )
+                .migrate_pull_requests(&workspace, &repo_slug, target_owner, target_name, &options)
                 .await
             {
                 Ok(count) => {
@@ -304,9 +304,7 @@ impl BitbucketMigrator {
     }
 
     async fn fetch_repo_info(&self, workspace: &str, repo_slug: &str) -> Result<BitbucketRepo> {
-        let url = format!(
-            "https://api.bitbucket.org/2.0/repositories/{workspace}/{repo_slug}"
-        );
+        let url = format!("https://api.bitbucket.org/2.0/repositories/{workspace}/{repo_slug}");
         self.bitbucket_get(&url).await
     }
 
@@ -365,7 +363,8 @@ impl BitbucketMigrator {
             .count();
 
         // Push to Guts
-        self.progress.set_phase(MigrationPhase::PushingRepository, 1);
+        self.progress
+            .set_phase(MigrationPhase::PushingRepository, 1);
 
         let guts_url = format!(
             "{}/git/{}/{}.git",
@@ -394,9 +393,8 @@ impl BitbucketMigrator {
         target_name: &str,
         _options: &MigrationOptions,
     ) -> Result<usize> {
-        let url = format!(
-            "https://api.bitbucket.org/2.0/repositories/{workspace}/{repo_slug}/issues"
-        );
+        let url =
+            format!("https://api.bitbucket.org/2.0/repositories/{workspace}/{repo_slug}/issues");
         let issues: Vec<BitbucketIssue> = self.bitbucket_get_paginated(&url).await?;
 
         self.progress
@@ -482,7 +480,9 @@ impl BitbucketMigrator {
             let body = pr.description.as_deref().unwrap_or("");
             let body_with_note = format!(
                 "{body}\n\n---\n*Migrated from Bitbucket PR #{} ({}) by {}*",
-                pr.id, pr.state, pr.author.name()
+                pr.id,
+                pr.state,
+                pr.author.name()
             );
 
             match self
