@@ -1,0 +1,46 @@
+[package]
+name = "guts-migrate"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "Migration tools for importing repositories from GitHub, GitLab, and Bitbucket to Guts"
+
+[dependencies]
+# Internal crates
+guts-types = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json", "stream"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# CLI support
+clap = { workspace = true }
+indicatif = "0.17"
+console = "0.15"
+
+# Utilities
+url = "2.5"
+chrono = { version = "0.4", features = ["serde"] }
+tempfile = { workspace = true }
+base64 = { workspace = true }
+regex = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+wiremock = "0.6"

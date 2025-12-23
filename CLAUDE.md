@@ -1,7 +1,7 @@
 # Guts - AI Agent Development Guide
 
 > This file provides context for AI agents (Claude, Codex, etc.) working on the Guts codebase.
-> Last updated: 2025-12-22
+> Last updated: 2025-12-23
 
 ## Project Overview
 
@@ -64,7 +64,7 @@ cd web && npm run build
 
 ```
 guts/
-├── crates/                     # Rust workspace crates (13 crates)
+├── crates/                     # Rust workspace crates (14 crates)
 │   ├── guts-types/             # Core types and primitives
 │   ├── guts-storage/           # Git object storage (content-addressed)
 │   ├── guts-git/               # Git protocol (pack files, smart HTTP)
@@ -76,8 +76,14 @@ guts/
 │   ├── guts-realtime/          # WebSocket real-time updates and notifications
 │   ├── guts-ci/                # CI/CD pipelines, workflows, runs, artifacts
 │   ├── guts-compat/            # Git/GitHub compatibility (tokens, users, releases)
+│   ├── guts-migrate/           # Migration tools (GitHub, GitLab, Bitbucket)
 │   ├── guts-node/              # Full node binary & HTTP API
 │   └── guts-cli/               # CLI client binary
+├── packages/                   # SDK packages
+│   ├── guts-sdk/               # TypeScript SDK (@guts/sdk)
+│   └── guts-python/            # Python SDK (guts-sdk)
+├── tools/                      # Developer tools
+│   └── git-credential-guts/    # Git credential helper
 ├── web/                        # Next.js frontend (mocked MVP)
 │   ├── src/app/                # App router pages
 │   ├── src/components/         # React components (layout, UI)
@@ -89,6 +95,8 @@ guts/
 │   └── k8s/                    # Kubernetes manifests
 ├── docs/                       # Documentation
 │   ├── adr/                    # Architecture Decision Records
+│   ├── developer/              # Developer documentation
+│   ├── operator/               # Operator documentation
 │   └── *.md                    # Milestone specs, PRD, roadmap
 ├── .github/workflows/          # CI/CD pipelines
 └── .claude/                    # AI agent configuration
@@ -142,14 +150,14 @@ guts/
 | Milestone 9 | ✅ Complete | Production Quality (Observability, Testing, Resilience) |
 | Milestone 10 | ✅ Complete | Performance & Scalability (RocksDB, Caching, Benchmarks) |
 | Milestone 11 | ✅ Complete | True Decentralization (Simplex BFT Consensus, Validators) |
+| Milestone 12 | ✅ Complete | Operator Experience & Documentation |
+| Milestone 13 | ✅ Complete | User Adoption & Ecosystem (SDKs, Migration Tools) |
 
 ### Planned Milestones (Production Readiness)
 
 | Milestone | Status | Description | Priority |
 |-----------|--------|-------------|----------|
-| Milestone 12 | 🚧 Next | Operator Experience & Documentation | High |
-| Milestone 13 | 📋 Planned | User Adoption & Ecosystem | High |
-| Milestone 14 | 📋 Planned | Security Hardening & Audit Preparation | Critical |
+| Milestone 14 | 🚧 Next | Security Hardening & Audit Preparation | Critical |
 
 ### Test Coverage
 

@@ -11,6 +11,7 @@ members = [
     "crates/guts-ci",
     "crates/guts-compat",
     "crates/guts-consensus",
+    "crates/guts-migrate",
     "crates/guts-node",
     "crates/guts-cli",
 ]
@@ -37,6 +38,7 @@ guts-realtime = { version = "0.1.0", path = "crates/guts-realtime" }
 guts-ci = { version = "0.1.0", path = "crates/guts-ci" }
 guts-compat = { version = "0.1.0", path = "crates/guts-compat" }
 guts-consensus = { version = "0.1.0", path = "crates/guts-consensus" }
+guts-migrate = { version = "0.1.0", path = "crates/guts-migrate" }
 
 # Commonware dependencies (matching Alto's versions)
 # Note: Keeping at 0.0.63 as 0.0.64 has significant API changes requiring migration
