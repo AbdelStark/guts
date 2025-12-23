@@ -1,0 +1,105 @@
+# Prometheus Configuration for Guts Monitoring
+# See: https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'guts-production'
+    env: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+      timeout: 10s
+      api_version: v2
+
+# Rule files to load
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+# Scrape configurations
+scrape_configs:
+  #─────────────────────────────────────────────────────────────────────────────
+  # Guts Node Metrics
+  #─────────────────────────────────────────────────────────────────────────────
+  - job_name: 'guts-node'
+    metrics_path: /metrics
+    scheme: http
+
+    # Static configuration (for simple setups)
+    static_configs:
+      - targets:
+          - 'guts-node-1:9090'
+          - 'guts-node-2:9090'
+          - 'guts-node-3:9090'
+        labels:
+          env: 'production'
+
+    # For Kubernetes - uncomment this section:
+    # kubernetes_sd_configs:
+    #   - role: pod
+    #     namespaces:
+    #       names:
+    #         - guts
+    # relabel_configs:
+    #   - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+    #     action: keep
+    #     regex: guts-node
+    #   - source_labels: [__meta_kubernetes_pod_name]
+    #     target_label: pod
+    #   - source_labels: [__meta_kubernetes_namespace]
+    #     target_label: namespace
+
+    # Relabel for easier identification
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '([^:]+):\d+'
+        replacement: '${1}'
+
+  #─────────────────────────────────────────────────────────────────────────────
+  # Guts Validators (BFT Consensus)
+  #─────────────────────────────────────────────────────────────────────────────
+  - job_name: 'guts-validators'
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets:
+          - 'validator1:9090'
+          - 'validator2:9090'
+          - 'validator3:9090'
+          - 'validator4:9090'
+        labels:
+          role: 'validator'
+          env: 'production'
+
+  #─────────────────────────────────────────────────────────────────────────────
+  # Node Exporter (System Metrics)
+  #─────────────────────────────────────────────────────────────────────────────
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets:
+          - 'node-exporter:9100'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '([^:]+):\d+'
+        replacement: '${1}'
+
+  #─────────────────────────────────────────────────────────────────────────────
+  # Prometheus Self-Monitoring
+  #─────────────────────────────────────────────────────────────────────────────
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  #─────────────────────────────────────────────────────────────────────────────
+  # Alertmanager
+  #─────────────────────────────────────────────────────────────────────────────
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']

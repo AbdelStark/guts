@@ -1737,6 +1737,7 @@ dependencies = [
  "commonware-stream",
  "commonware-utils",
  "config",
+ "flate2",
  "futures",
  "futures-util",
  "governor",
@@ -1763,6 +1764,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "sha2 0.10.9",
+ "tar",
  "tempfile",
  "thiserror 2.0.17",
  "tokio",
@@ -1772,6 +1774,7 @@ dependencies = [
  "tracing-subscriber",
  "uuid",
  "validator",
+ "walkdir",
 ]
 
 [[package]]

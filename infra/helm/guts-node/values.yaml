@@ -1,0 +1,222 @@
+# Default values for guts-node.
+# This is a YAML-formatted file.
+
+# Number of replicas (for StatefulSet)
+replicaCount: 3
+
+# Image configuration
+image:
+  repository: ghcr.io/guts-network/guts-node
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Service account configuration
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod annotations
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9090"
+  prometheus.io/path: "/metrics"
+
+# Pod security context
+podSecurityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  capabilities:
+    drop:
+      - ALL
+
+# Service configuration
+service:
+  type: ClusterIP
+  api:
+    port: 8080
+    targetPort: 8080
+  p2p:
+    port: 9000
+    targetPort: 9000
+  metrics:
+    port: 9090
+    targetPort: 9090
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: guts.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: guts-tls
+  #    hosts:
+  #      - guts.local
+
+# Resource limits and requests
+resources:
+  requests:
+    cpu: "500m"
+    memory: "2Gi"
+  limits:
+    cpu: "4"
+    memory: "16Gi"
+
+# Node configuration
+config:
+  # Log level: trace, debug, info, warn, error
+  logLevel: "info"
+  # Log format: json or pretty
+  logFormat: "json"
+
+  # Consensus configuration
+  consensus:
+    enabled: false
+    useSimplex: false
+    blockTimeMs: 2000
+    maxTxsPerBlock: 1000
+
+  # Storage configuration
+  storage:
+    dataDir: "/data"
+
+  # P2P configuration
+  p2p:
+    bootstrapNodes: []
+    # bootstrapNodes:
+    #   - "/ip4/1.2.3.4/tcp/9000/p2p/12D3KooW..."
+
+# Persistence configuration
+persistence:
+  enabled: true
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 100Gi
+  annotations: {}
+
+# Liveness probe
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Readiness probe
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Startup probe
+startupProbe:
+  httpGet:
+    path: /health/startup
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 30
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity rules
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: guts-node
+          topologyKey: kubernetes.io/hostname
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+  # maxUnavailable: 1
+
+# Prometheus ServiceMonitor
+serviceMonitor:
+  enabled: false
+  interval: 15s
+  scrapeTimeout: 10s
+  labels: {}
+  # release: prometheus
+
+# Prometheus PodMonitor (alternative to ServiceMonitor)
+podMonitor:
+  enabled: false
+  interval: 15s
+  scrapeTimeout: 10s
+  labels: {}
+
+# Network policy
+networkPolicy:
+  enabled: false
+  ingress:
+    # Allow from all namespaces
+    - {}
+  egress:
+    # Allow to all
+    - {}
+
+# Extra environment variables
+extraEnv: []
+  # - name: GUTS_LOG_LEVEL
+  #   value: debug
+
+# Extra volumes
+extraVolumes: []
+  # - name: secrets
+  #   secret:
+  #     secretName: guts-secrets
+
+# Extra volume mounts
+extraVolumeMounts: []
+  # - name: secrets
+  #   mountPath: /etc/guts/secrets
+  #   readOnly: true
+
+# Init containers
+initContainers: []
+  # - name: init-config
+  #   image: busybox
+  #   command: ['sh', '-c', 'echo init']
+
+# Sidecar containers
+sidecars: []
+  # - name: log-forwarder
+  #   image: fluent-bit

@@ -1,0 +1,30 @@
+apiVersion: v2
+name: guts-node
+description: A Helm chart for deploying Guts nodes - decentralized code collaboration infrastructure
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+
+home: https://github.com/guts-network/guts
+sources:
+  - https://github.com/guts-network/guts
+
+maintainers:
+  - name: Guts Team
+    email: team@guts.network
+    url: https://guts.network
+
+keywords:
+  - git
+  - decentralized
+  - code-collaboration
+  - p2p
+  - consensus
+
+annotations:
+  artifacthub.io/license: MIT
+  artifacthub.io/links: |
+    - name: Documentation
+      url: https://docs.guts.network
+    - name: GitHub
+      url: https://github.com/guts-network/guts

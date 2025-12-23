@@ -1,0 +1,43 @@
+---
+# Headless service for StatefulSet
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "guts-node.headlessServiceName" . }}
+  labels:
+    {{- include "guts-node.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    {{- include "guts-node.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: p2p-tcp
+      port: {{ .Values.service.p2p.port }}
+      targetPort: p2p-tcp
+      protocol: TCP
+    - name: p2p-udp
+      port: {{ .Values.service.p2p.port }}
+      targetPort: p2p-udp
+      protocol: UDP
+
+---
+# API service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "guts-node.fullname" . }}
+  labels:
+    {{- include "guts-node.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "guts-node.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.service.api.port }}
+      targetPort: api
+      protocol: TCP
+    - name: metrics
+      port: {{ .Values.service.metrics.port }}
+      targetPort: metrics
+      protocol: TCP
