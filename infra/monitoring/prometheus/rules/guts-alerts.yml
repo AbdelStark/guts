@@ -1,0 +1,296 @@
+# Guts Alert Rules
+# See: https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/
+
+groups:
+  #─────────────────────────────────────────────────────────────────────────────
+  # Node Availability Alerts
+  #─────────────────────────────────────────────────────────────────────────────
+  - name: guts-availability
+    interval: 30s
+    rules:
+      - alert: GutsNodeDown
+        expr: up{job="guts-node"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Guts node is down"
+          description: "Node {{ $labels.instance }} has been unreachable for more than 1 minute"
+          runbook_url: "https://docs.guts.network/operator/runbooks/node-down"
+
+      - alert: GutsNodeUnhealthy
+        expr: guts_health_status != 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Guts node unhealthy"
+          description: "Node {{ $labels.instance }} health check is failing"
+          runbook_url: "https://docs.guts.network/operator/runbooks/node-not-syncing"
+
+  #─────────────────────────────────────────────────────────────────────────────
+  # Sync Alerts
+  #─────────────────────────────────────────────────────────────────────────────
+  - name: guts-sync
+    interval: 30s
+    rules:
+      - alert: GutsNodeNotSyncing
+        expr: time() - guts_last_block_time > 60
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Guts node not syncing"
+          description: "Node {{ $labels.instance }} hasn't received a block in {{ $value | humanizeDuration }}"
+          runbook_url: "https://docs.guts.network/operator/runbooks/node-not-syncing"
+
+      - alert: GutsNodeSyncStalled
+        expr: time() - guts_last_block_time > 300
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Guts node sync stalled"
+          description: "Node {{ $labels.instance }} sync has been stalled for more than 5 minutes"
+          runbook_url: "https://docs.guts.network/operator/runbooks/node-not-syncing"
+
+      - alert: GutsNodeBehind
+        expr: guts_consensus_block_height < (max(guts_consensus_block_height) - 10)
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Guts node behind"
+          description: "Node {{ $labels.instance }} is {{ $value }} blocks behind the network"
+          runbook_url: "https://docs.guts.network/operator/runbooks/node-not-syncing"
+
+  #─────────────────────────────────────────────────────────────────────────────
+  # Consensus Alerts
+  #─────────────────────────────────────────────────────────────────────────────
+  - name: guts-consensus
+    interval: 30s
+    rules:
+      - alert: GutsConsensusStalled
+        expr: rate(guts_consensus_commits_total[5m]) == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Consensus stalled"
+          description: "No consensus commits in 5 minutes"
+          runbook_url: "https://docs.guts.network/operator/runbooks/consensus-stuck"
+
+      - alert: GutsValidatorDown
+        expr: up{job="guts-validators"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Validator down"
+          description: "Validator {{ $labels.instance }} is unreachable"
+          runbook_url: "https://docs.guts.network/operator/runbooks/validator-down"
+
+      - alert: GutsLowValidatorCount
+        expr: count(up{job="guts-validators"} == 1) < 3
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low validator count"
+          description: "Only {{ $value }} validators are online, consensus may halt"
+          runbook_url: "https://docs.guts.network/operator/runbooks/consensus-stuck"
+
+      - alert: GutsMempoolBacklog
+        expr: guts_consensus_mempool_size > 5000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mempool backlog"
+          description: "Mempool has {{ $value }} pending transactions"
+          runbook_url: "https://docs.guts.network/operator/troubleshooting/common-issues"
+
+  #─────────────────────────────────────────────────────────────────────────────
+  # P2P Network Alerts
+  #─────────────────────────────────────────────────────────────────────────────
+  - name: guts-p2p
+    interval: 30s
+    rules:
+      - alert: GutsLowPeerCount
+        expr: guts_p2p_peers_connected < 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low peer count"
+          description: "Node {{ $labels.instance }} has only {{ $value }} peers"
+          runbook_url: "https://docs.guts.network/operator/runbooks/low-peers"
+
+      - alert: GutsNoPeers
+        expr: guts_p2p_peers_connected == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No peers connected"
+          description: "Node {{ $labels.instance }} has no peer connections"
+          runbook_url: "https://docs.guts.network/operator/runbooks/network-partition"
+
+      - alert: GutsHighP2PLatency
+        expr: histogram_quantile(0.99, rate(guts_p2p_message_latency_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High P2P latency"
+          description: "P2P message latency p99 is {{ $value | humanizeDuration }}"
+          runbook_url: "https://docs.guts.network/operator/troubleshooting/common-issues"
+
+  #─────────────────────────────────────────────────────────────────────────────
+  # API Performance Alerts
+  #─────────────────────────────────────────────────────────────────────────────
+  - name: guts-api
+    interval: 30s
+    rules:
+      - alert: GutsHighAPILatency
+        expr: histogram_quantile(0.99, rate(guts_http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API latency"
+          description: "API p99 latency is {{ $value | humanizeDuration }}"
+          runbook_url: "https://docs.guts.network/operator/runbooks/high-latency"
+
+      - alert: GutsHighErrorRate
+        expr: |
+          sum(rate(guts_http_requests_total{status=~"5.."}[5m]))
+          /
+          sum(rate(guts_http_requests_total[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate"
+          description: "API error rate is {{ $value | humanizePercentage }}"
+          runbook_url: "https://docs.guts.network/operator/troubleshooting/common-issues"
+
+      - alert: GutsHighErrorRateCritical
+        expr: |
+          sum(rate(guts_http_requests_total{status=~"5.."}[5m]))
+          /
+          sum(rate(guts_http_requests_total[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical error rate"
+          description: "API error rate is {{ $value | humanizePercentage }}"
+          runbook_url: "https://docs.guts.network/operator/troubleshooting/common-issues"
+
+  #─────────────────────────────────────────────────────────────────────────────
+  # Resource Usage Alerts
+  #─────────────────────────────────────────────────────────────────────────────
+  - name: guts-resources
+    interval: 30s
+    rules:
+      - alert: GutsHighMemoryUsage
+        expr: guts_process_resident_memory_bytes / 1024 / 1024 / 1024 > 28
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanize1024 }}B"
+          runbook_url: "https://docs.guts.network/operator/runbooks/high-memory"
+
+      - alert: GutsHighMemoryUsageCritical
+        expr: guts_process_resident_memory_bytes / 1024 / 1024 / 1024 > 30
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical memory usage"
+          description: "Memory usage is {{ $value | humanize1024 }}B"
+          runbook_url: "https://docs.guts.network/operator/runbooks/high-memory"
+
+      - alert: GutsDiskSpaceWarning
+        expr: guts_storage_available_bytes / guts_storage_total_bytes < 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space"
+          description: "Only {{ $value | humanizePercentage }} disk space remaining"
+          runbook_url: "https://docs.guts.network/operator/runbooks/disk-full"
+
+      - alert: GutsDiskSpaceCritical
+        expr: guts_storage_available_bytes / guts_storage_total_bytes < 0.1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critically low disk space"
+          description: "Only {{ $value | humanizePercentage }} disk space remaining"
+          runbook_url: "https://docs.guts.network/operator/runbooks/disk-full"
+
+  #─────────────────────────────────────────────────────────────────────────────
+  # Storage Alerts
+  #─────────────────────────────────────────────────────────────────────────────
+  - name: guts-storage
+    interval: 60s
+    rules:
+      - alert: GutsLowCacheHitRate
+        expr: |
+          rate(guts_storage_cache_hits_total[5m])
+          /
+          (rate(guts_storage_cache_hits_total[5m]) + rate(guts_storage_cache_misses_total[5m])) < 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}"
+          runbook_url: "https://docs.guts.network/operator/configuration/performance"
+
+      - alert: GutsHighStorageLatency
+        expr: histogram_quantile(0.99, rate(guts_storage_operation_duration_seconds_bucket[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High storage latency"
+          description: "Storage operation p99 latency is {{ $value | humanizeDuration }}"
+          runbook_url: "https://docs.guts.network/operator/troubleshooting/common-issues"
+
+  #─────────────────────────────────────────────────────────────────────────────
+  # Recording Rules for Dashboards
+  #─────────────────────────────────────────────────────────────────────────────
+  - name: guts-recording
+    interval: 30s
+    rules:
+      # Request rate
+      - record: guts:http_requests:rate5m
+        expr: sum(rate(guts_http_requests_total[5m])) by (instance)
+
+      # Error rate
+      - record: guts:http_errors:rate5m
+        expr: sum(rate(guts_http_requests_total{status=~"5.."}[5m])) by (instance)
+
+      # Latency percentiles
+      - record: guts:http_latency:p50
+        expr: histogram_quantile(0.50, sum(rate(guts_http_request_duration_seconds_bucket[5m])) by (le, instance))
+
+      - record: guts:http_latency:p95
+        expr: histogram_quantile(0.95, sum(rate(guts_http_request_duration_seconds_bucket[5m])) by (le, instance))
+
+      - record: guts:http_latency:p99
+        expr: histogram_quantile(0.99, sum(rate(guts_http_request_duration_seconds_bucket[5m])) by (le, instance))
+
+      # Availability
+      - record: guts:availability:ratio
+        expr: avg_over_time(up{job="guts-node"}[5m])
+
+      # Block production rate
+      - record: guts:consensus:commits_rate
+        expr: sum(rate(guts_consensus_commits_total[5m]))

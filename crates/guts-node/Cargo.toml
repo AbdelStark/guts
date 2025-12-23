@@ -68,8 +68,13 @@ config = { workspace = true }
 once_cell = { workspace = true }
 regex = { workspace = true }
 
-[dev-dependencies]
+# Operator utilities (backup, diagnostics)
+tar = "0.4"
+flate2 = "1.0"
+walkdir = "2.5"
 tempfile = { workspace = true }
+
+[dev-dependencies]
 proptest = { workspace = true }
 
 [[bin]]

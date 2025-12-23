@@ -49,8 +49,8 @@ All running on a 3-node Guts network with consensus.
 | Milestone | Status | Description |
 |-----------|--------|-------------|
 | Milestone 11 | ✅ Complete | True Decentralization (BFT Consensus, P2P Bootstrap) |
-| Milestone 12 | 🚧 Next | Operator Experience & Documentation |
-| Milestone 13 | 📋 Planned | User Adoption & Ecosystem |
+| Milestone 12 | ✅ Complete | Operator Experience & Documentation |
+| Milestone 13 | 🚧 Next | User Adoption & Ecosystem |
 | Milestone 14 | 📋 Planned | Security Hardening & Audit Preparation |
 
 ## Phase 1: Core Infrastructure ✅
@@ -294,8 +294,7 @@ The following milestones represent the path from current state to a production-g
 
 | Milestone | Status | Description | Priority |
 |-----------|--------|-------------|----------|
-| Milestone 12 | 🚧 Next | [Operator Experience & Documentation](MILESTONE-12.md) | High |
-| Milestone 13 | Planned | [User Adoption & Ecosystem](MILESTONE-13.md) | High |
+| Milestone 13 | 🚧 Next | [User Adoption & Ecosystem](MILESTONE-13.md) | High |
 | Milestone 14 | Planned | [Security Hardening & Audit Preparation](MILESTONE-14.md) | Critical |
 
 ## Completed: Milestone 11 (True Decentralization)
@@ -314,18 +313,22 @@ The following features have been implemented:
 | 4-Node Devnet | Docker-based BFT network for testing | ✅ Complete |
 | E2E Test Suite | Comprehensive BFT consensus testing | ✅ Complete |
 
-### Milestone 12: Operator Experience & Documentation
+## Completed: Milestone 12 (Operator Experience & Documentation)
 
-Make Guts easy to deploy, operate, and maintain.
+The following features have been implemented:
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| Operator Documentation | Comprehensive deployment guides | Planned |
-| Runbooks | 15+ operational runbooks | Planned |
-| Monitoring Dashboards | Pre-built Grafana dashboards | Planned |
-| Alert Rules | PagerDuty/OpsGenie integration | Planned |
-| Disaster Recovery | Backup/restore procedures | Planned |
-| Cloud Deployment | AWS, GCP, Azure Terraform modules | Planned |
+| Operator Documentation | Comprehensive deployment guides (quickstart, architecture, installation) | ✅ Complete |
+| Configuration Reference | Complete YAML config reference with all options | ✅ Complete |
+| Operational Runbooks | 8 runbooks (node sync, consensus, disk, memory, shutdown, keys, corruption) | ✅ Complete |
+| Prometheus Config | Scrape configs, recording rules, alert rules | ✅ Complete |
+| Grafana Dashboards | Pre-built overview dashboard with 30+ panels | ✅ Complete |
+| Alertmanager Setup | PagerDuty/Slack integration with routing | ✅ Complete |
+| Backup/Restore | CLI commands + shell scripts with S3 support | ✅ Complete |
+| CLI Operator Commands | keygen, backup, restore, diagnostics, verify-data | ✅ Complete |
+| Helm Chart | Complete K8s deployment chart with StatefulSet, PDB, ServiceMonitor | ✅ Complete |
+| Terraform Modules | AWS, GCP, Azure multi-cloud infrastructure | ✅ Complete |
 
 ### Milestone 13: User Adoption & Ecosystem
 

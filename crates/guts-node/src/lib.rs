@@ -109,6 +109,7 @@ pub mod consensus_app;
 pub mod consensus_simplex;
 pub mod health;
 pub mod observability;
+pub mod operator;
 pub mod p2p;
 pub mod performance;
 pub mod realtime_api;
