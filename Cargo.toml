@@ -15,6 +15,23 @@ members = [
     "crates/guts-cli",
     "crates/guts-desktop",
 ]
+# Default members exclude guts-desktop (requires GTK/webkit2gtk on Linux)
+# Build desktop explicitly with: cargo build -p guts-desktop
+default-members = [
+    "crates/guts-types",
+    "crates/guts-storage",
+    "crates/guts-git",
+    "crates/guts-p2p",
+    "crates/guts-collaboration",
+    "crates/guts-auth",
+    "crates/guts-web",
+    "crates/guts-realtime",
+    "crates/guts-ci",
+    "crates/guts-compat",
+    "crates/guts-consensus",
+    "crates/guts-node",
+    "crates/guts-cli",
+]
 resolver = "2"
 
 [workspace.package]
