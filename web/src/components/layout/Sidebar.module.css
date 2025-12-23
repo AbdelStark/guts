@@ -1,30 +1,84 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Sidebar — Premium Navigation
+   Glass morphism with subtle animations
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Mobile overlay backdrop */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: calc(var(--z-sticky) - 1);
+  opacity: 0;
+  transition: opacity var(--duration-moderate) var(--ease-out);
+}
+
+.overlay.visible {
+  display: block;
+  opacity: 1;
+}
+
+@media (min-width: 1024px) {
+  .overlay {
+    display: none !important;
+  }
+}
+
+/* Sidebar container */
 .sidebar {
   position: fixed;
   top: 0;
   left: 0;
   width: var(--sidebar-width);
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: var(--bg-ink);
-  border-right: 1px solid var(--border-hairline);
-  z-index: 100;
+  background: var(--bg-base);
+  border-right: 1px solid var(--border-subtle);
+  z-index: var(--z-sticky);
+  transform: translateX(-100%);
+  transition: transform var(--duration-moderate) var(--ease-smooth);
 }
 
-/* Header with logo */
+.sidebar.open {
+  transform: translateX(0);
+}
+
+@media (min-width: 1024px) {
+  .sidebar {
+    transform: translateX(0);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Header — Logo and brand
+   ───────────────────────────────────────────────────────────────────────────── */
+
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-3);
   padding: var(--space-4);
-  border-bottom: 1px solid var(--border-hairline);
+  height: var(--topbar-height);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   text-decoration: none;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.logo:hover {
+  opacity: 0.85;
 }
 
 .logoMark {
@@ -32,44 +86,56 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, var(--accent-ember) 0%, #c42f24 100%);
-  border-radius: 8px;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 16px;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(
+    135deg,
+    var(--accent-primary) 0%,
+    var(--accent-primary-active) 100%
+  );
+  border-radius: var(--radius-lg);
+  font-family: var(--font-sans);
+  font-weight: var(--font-bold);
+  font-size: var(--text-lg);
   color: white;
+  box-shadow:
+    0 2px 8px rgba(239, 68, 68, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  overflow: hidden;
 }
 
 .logoSlash {
   position: absolute;
   top: 0;
   right: 0;
-  width: 10px;
-  height: 16px;
+  width: 14px;
+  height: 18px;
   background: linear-gradient(
-    168deg,
-    rgba(255, 255, 255, 0.3) 0%,
-    rgba(255, 255, 255, 0.3) 50%,
+    160deg,
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(255, 255, 255, 0.35) 50%,
     transparent 50%
   );
-  border-radius: 0 8px 0 0;
+  border-radius: 0 var(--radius-lg) 0 0;
 }
 
 .logoText {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: var(--text-lg);
-  letter-spacing: 0.04em;
+  font-family: var(--font-sans);
+  font-weight: var(--font-bold);
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-wide);
   color: var(--text-primary);
 }
 
-/* Navigation */
+/* ─────────────────────────────────────────────────────────────────────────────
+   Navigation
+   ───────────────────────────────────────────────────────────────────────────── */
+
 .nav {
   flex: 1;
   padding: var(--space-3);
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .navList {
@@ -86,23 +152,28 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
+  padding: var(--space-2-5) var(--space-3);
+  border-radius: var(--radius-lg);
   color: var(--text-secondary);
   text-decoration: none;
-  transition: all var(--duration-micro) var(--ease-micro);
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
 }
 
 .navItem:hover {
-  background: var(--surface-0);
+  background: var(--surface-1);
   color: var(--text-primary);
 }
 
 .navItem.active {
-  background: var(--surface-0);
+  background: var(--surface-2);
   color: var(--text-primary);
 }
 
+/* Active indicator bar */
 .navItem.active::before {
   content: "";
   position: absolute;
@@ -111,26 +182,27 @@
   transform: translateY(-50%);
   width: 3px;
   height: 20px;
-  background: var(--accent-ember);
+  background: var(--accent-primary);
   border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
 }
 
-/* The Slash notch on active nav item */
+/* The Slash notch */
 .slashNotch {
   position: absolute;
   top: 0;
   right: 0;
   width: 8px;
-  height: 12px;
+  height: 14px;
   background: linear-gradient(
-    168deg,
-    var(--accent-ember) 0%,
-    var(--accent-ember) 50%,
+    160deg,
+    var(--accent-primary) 0%,
+    var(--accent-primary) 50%,
     transparent 50%
   );
-  border-radius: 0 var(--radius-md) 0 0;
+  border-radius: 0 var(--radius-lg) 0 0;
   opacity: 0;
-  transition: opacity var(--duration-micro) var(--ease-micro);
+  transition: opacity var(--duration-fast) var(--ease-out);
 }
 
 .navItem.active .slashNotch {
@@ -143,22 +215,49 @@
   justify-content: center;
   width: 20px;
   height: 20px;
+  flex-shrink: 0;
 }
 
 .navIcon svg {
   width: 20px;
   height: 20px;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.navItem:hover .navIcon svg {
+  transform: scale(1.05);
 }
 
 .navLabel {
-  font-size: var(--text-sm);
-  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Bottom section */
+.navBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--space-1-5);
+  background: var(--accent-primary-subtle);
+  border-radius: var(--radius-full);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-semibold);
+  color: var(--accent-primary);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Bottom section
+   ───────────────────────────────────────────────────────────────────────────── */
+
 .bottom {
   padding: var(--space-3);
-  border-top: 1px solid var(--border-hairline);
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
 }
 
 .helpLink {
@@ -167,19 +266,91 @@
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   margin-top: var(--space-2);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  font-size: var(--text-xs);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   text-decoration: none;
-  transition: all var(--duration-micro) var(--ease-micro);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
 }
 
 .helpLink:hover {
-  background: var(--surface-0);
+  background: var(--surface-1);
   color: var(--text-secondary);
 }
 
 .helpLink svg {
   width: 16px;
   height: 16px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Mobile menu button
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.menuButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.menuButton:hover {
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+
+.menuButton svg {
+  width: 22px;
+  height: 22px;
+}
+
+@media (min-width: 1024px) {
+  .menuButton {
+    display: none;
+  }
+}
+
+/* Close button in sidebar (mobile) */
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.closeButton:hover {
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+
+.closeButton svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (min-width: 1024px) {
+  .closeButton {
+    display: none;
+  }
 }

@@ -1,14 +1,40 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Pull Requests — PR Listing Page
+   Premium table with responsive cards on mobile
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 .content {
-  padding: var(--space-5);
+  padding: var(--space-4);
 }
+
+@media (min-width: 768px) {
+  .content {
+    padding: var(--space-6);
+  }
+}
+
+@media (min-width: 1024px) {
+  .content {
+    padding: var(--space-8);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Table Row
+   ───────────────────────────────────────────────────────────────────────────── */
 
 .row {
   cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
 }
 
 .row:hover {
-  background: var(--surface-1);
+  background: var(--surface-2);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PR Info Cell
+   ───────────────────────────────────────────────────────────────────────────── */
 
 .prInfo {
   display: flex;
@@ -16,41 +42,142 @@
   gap: var(--space-2);
 }
 
+.prHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.prIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--status-success);
+}
+
+.prIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.prIconMerged {
+  color: var(--accent-violet);
+}
+
+.prIconClosed {
+  color: var(--status-error);
+}
+
 .prNumber {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  color: var(--text-muted);
+  color: var(--text-tertiary);
 }
 
 .prTitle {
-  font-weight: 500;
+  font-weight: var(--font-medium);
   color: var(--text-primary);
+  line-height: var(--leading-snug);
+}
+
+.prTitleMerged {
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
 }
 
 .labels {
   display: flex;
   gap: var(--space-1);
   flex-wrap: wrap;
+  margin-left: 24px;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Author & Branches
+   ───────────────────────────────────────────────────────────────────────────── */
 
 .author {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   color: var(--text-secondary);
+  font-size: var(--text-sm);
 }
 
 .branches {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.branchName {
+  padding: var(--space-1) var(--space-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
 }
 
 .arrow {
-  color: var(--text-muted);
+  color: var(--text-quaternary);
 }
+
+.arrow svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Reviewers
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.reviewers {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Time & Meta
+   ───────────────────────────────────────────────────────────────────────────── */
 
 .time {
   font-size: var(--text-xs);
-  color: var(--text-muted);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Mobile Card View
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .prCard {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    margin-bottom: var(--space-3);
+  }
+
+  .prCardHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  .prCardMeta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+  }
 }
