@@ -30,8 +30,8 @@ anyhow = { workspace = true }
 
 # CLI support
 clap = { workspace = true }
-indicatif = "0.17"
-console = "0.15"
+indicatif = "0.18"
+console = "0.16"
 
 # Utilities
 url = "2.5"
