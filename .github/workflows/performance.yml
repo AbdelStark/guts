@@ -35,7 +35,7 @@ jobs:
           components: llvm-tools-preview
 
       - name: Cache cargo registry
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -64,7 +64,7 @@ jobs:
           retention-days: 30
 
       - name: Download previous benchmark results
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: benchmark-baseline
           key: benchmark-baseline-${{ github.ref_name }}
