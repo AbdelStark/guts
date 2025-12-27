@@ -86,7 +86,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download image artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: guts-node-image
           path: /tmp
@@ -230,7 +230,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download image artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: guts-node-image
           path: /tmp
@@ -291,7 +291,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download image artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: guts-node-image
           path: /tmp
@@ -345,7 +345,7 @@ jobs:
     if: always()
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: all-artifacts
         continue-on-error: true
