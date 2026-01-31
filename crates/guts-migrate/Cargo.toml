@@ -18,7 +18,7 @@ async-trait = { workspace = true }
 futures = { workspace = true }
 
 # HTTP client
-reqwest = { version = "0.12", features = ["json", "stream"] }
+reqwest = { version = "0.13", features = ["json", "stream"] }
 
 # Serialization
 serde = { workspace = true }
@@ -30,8 +30,8 @@ anyhow = { workspace = true }
 
 # CLI support
 clap = { workspace = true }
-indicatif = "0.17"
-console = "0.15"
+indicatif = "0.18"
+console = "0.16"
 
 # Utilities
 url = "2.5"
