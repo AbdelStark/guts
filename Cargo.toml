@@ -42,18 +42,18 @@ guts-migrate = { version = "0.1.0", path = "crates/guts-migrate" }
 
 # Commonware dependencies (matching Alto's versions)
 # Note: Keeping at 0.0.63 as 0.0.64 has significant API changes requiring migration
-commonware-broadcast = "0.0.63"
-commonware-codec = "0.0.63"
-commonware-consensus = "0.0.63"
-commonware-cryptography = "0.0.63"
-commonware-deployer = { version = "0.0.63", default-features = false }
-commonware-macros = "0.0.63"
-commonware-p2p = "0.0.63"
-commonware-resolver = "0.0.63"
-commonware-runtime = "0.0.63"
-commonware-storage = "0.0.63"
-commonware-stream = "0.0.63"
-commonware-utils = "0.0.63"
+commonware-broadcast = "2026.2.0"
+commonware-codec = "2026.2.0"
+commonware-consensus = "2026.2.0"
+commonware-cryptography = "2026.2.0"
+commonware-deployer = { version = "2026.2.0", default-features = false }
+commonware-macros = "2026.2.0"
+commonware-p2p = "2026.2.0"
+commonware-resolver = "2026.2.0"
+commonware-runtime = "2026.2.0"
+commonware-storage = "2026.2.0"
+commonware-stream = "2026.2.0"
+commonware-utils = "2026.2.0"
 
 # HTTP server
 axum = { version = "0.8", features = ["ws"] }
@@ -69,11 +69,11 @@ prost = "0.13.5"
 prost-build = "0.13.5"
 
 # Error handling
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 anyhow = "1.0"
 
 # Async
-futures = "0.3.31"
+futures = "0.3.32"
 futures-util = "0.3.31"
 tokio = { version = "1.43", features = ["full"] }
 tokio-util = { version = "0.7", features = ["io"] }
@@ -87,27 +87,27 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 ed25519-consensus = "2.1"
 
 # Utilities
-bytes = "1.7.1"
-rand = "0.8.5"
+bytes = "1.11.1"
+rand = "0.9.2"
 clap = { version = "4.5", features = ["derive"] }
-uuid = { version = "1.15", features = ["v4"] }
-governor = "0.6.3"
+uuid = { version = "1.21", features = ["v4"] }
+governor = "0.10.4"
 prometheus-client = "0.24.0"
 hex = "0.4"
 sha1 = "0.10"
 sha2 = "0.10"
-flate2 = "1.0"
+flate2 = "1.1"
 parking_lot = "0.12"
 
 # Web/HTML
-askama = "0.13"
+askama = "0.15"
 pulldown-cmark = "0.13"
 mime_guess = "2.0"
 
 # Testing & Benchmarking
-proptest = "1.5"
-tempfile = "3.14"
-criterion = { version = "0.7", features = ["html_reports"] }
+proptest = "1.10"
+tempfile = "3.26"
+criterion = { version = "0.8", features = ["html_reports"] }
 
 # Storage (RocksDB)
 rocksdb = { version = "0.24", default-features = false, features = ["lz4"] }
@@ -118,13 +118,13 @@ smallvec = { version = "1.13", features = ["serde"] }
 argon2 = "0.5"
 base64 = "0.22"
 tar = "0.4"
-zip = { version = "7.0", default-features = false, features = ["deflate"] }
+zip = { version = "8.1", default-features = false, features = ["deflate"] }
 
 # Validation & Configuration
 validator = { version = "0.20", features = ["derive"] }
 config = "0.15"
 once_cell = "1.19"
-regex = "1.10"
+regex = "1.12"
 
 [profile.bench]
 overflow-checks = true
